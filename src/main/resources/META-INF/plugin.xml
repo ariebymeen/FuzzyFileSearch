@@ -1,0 +1,51 @@
+<!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <!-- Unique identifier of the plugin. It should be FQN. It cannot be changed between the plugin versions. -->
+    <id>com.OpenRelativeFile</id>
+
+    <!-- Public plugin name should be written in Title Case.
+         Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-name -->
+    <name>OpenRelativeFile</name>
+
+    <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
+    <vendor email="support@yourcompany.com" url="https://www.yourcompany.com">YourCompany</vendor>
+
+    <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
+         Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
+         Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
+    <description><![CDATA[
+    Enter short description for your plugin here.<br>
+    <em>most HTML tags may be used</em>
+  ]]></description>
+
+    <!-- Product and plugin compatibility requirements.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
+    <depends>com.intellij.modules.platform</depends>
+
+    <!-- Extension points defined by the plugin.
+         Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
+    <extensions defaultExtensionNs="com.intellij">
+        <postStartupActivity implementation="com.openrelativefile.Settings.InitialSetupActions"/>
+
+        <applicationConfigurable
+                parentId="tools"
+                instance="com.openrelativefile.Settings.GlobalSettingsConfigurable"
+                id="com.openrelativefile.Settings.GlobalSettingsConfigurable"
+                displayName="OpenRelativeFile Settings"/>
+        <projectConfigurable
+                parentId="tools"
+                instance="com.openrelativefile.Settings.ProjectSettingsConfigurable"
+                id="com.openrelativefile.Settings.ProjectSettingsConfigurable"
+                displayName="Project OpenRelativeFile Settings"/>
+        <notificationGroup id="OpenRelativeFileGroup"
+                           displayType="BALLOON"
+                           toolWindowId="Event Log"
+                           isLogByDefault="true"/>
+    </extensions>
+    <actions>
+<!--        <action id="com.arnold.openrelativefile.SearchAction" class="com.arnold.openrelativefile.Actions.OpenSearchBoxAction" text="Search Action">-->
+<!--            <add-to-group group-id="MainMenu" anchor="last"/>-->
+<!--            <keyboard-shortcut keymap="$default" first-keystroke="alt shift O"/>-->
+<!--        </action>-->
+    </actions>
+</idea-plugin>
