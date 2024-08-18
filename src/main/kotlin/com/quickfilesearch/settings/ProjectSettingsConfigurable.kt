@@ -1,7 +1,7 @@
-package com.openrelativefile.Settings
+package com.quickfilesearch.settings
 
 import com.intellij.openapi.options.Configurable
-import com.openrelativefile.Actions.*
+import com.quickfilesearch.actions.*
 import javax.swing.JComponent
 
 class ProjectSettingsConfigurable : Configurable {
@@ -38,9 +38,9 @@ class ProjectSettingsConfigurable : Configurable {
 
     override fun apply() {
         if (!isEqual(settings.state.openRelativeFileActions, component.openRelativeFileActionsTable.getData())) {
-            unregisterActions(settings.state.openRelativeFileActions, OpenRelativeFileAction::getActionName, OpenRelativeFileAction::getActionShortcut)
+            unregisterActions(settings.state.openRelativeFileActions, QuickFileSearchAction::getActionName, QuickFileSearchAction::getActionShortcut)
             settings.state.openRelativeFileActions = component.openRelativeFileActionsTable.getData()
-            registerOpenRelativeFileActions(settings.state.openRelativeFileActions, globalSettings.state)
+            registerQuickFileSearchActions(settings.state.openRelativeFileActions, globalSettings.state)
         }
 
         if (!isEqual(settings.state.searchRelativeFileActions, component.searchRelativeFileActionsTable.getData())) {
@@ -57,6 +57,6 @@ class ProjectSettingsConfigurable : Configurable {
     }
 
     override fun getDisplayName(): String {
-        return "Project specific OpenRelativeFile Settings"
+        return "Project specific QuickFileSearch Settings"
     }
 }

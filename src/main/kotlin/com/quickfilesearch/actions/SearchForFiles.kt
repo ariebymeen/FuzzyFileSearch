@@ -1,14 +1,14 @@
-package com.openrelativefile.Actions
+package com.quickfilesearch.actions
 
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import com.openrelativefile.PopupInstance
-import com.openrelativefile.Settings.GlobalSettings
-import com.openrelativefile.Settings.PathDisplayType
-import com.openrelativefile.createPopupInstance
-import com.openrelativefile.runFzf
-import com.openrelativefile.sortCandidatesBasedOnPattern
+import com.quickfilesearch.searchbox.PopupInstance
+import com.quickfilesearch.settings.GlobalSettings
+import com.quickfilesearch.settings.PathDisplayType
+import com.quickfilesearch.searchbox.createPopupInstance
+import com.quickfilesearch.searchbox.runFzf
+import com.quickfilesearch.searchbox.sortCandidatesBasedOnPattern
 import kotlin.math.min
 
 class SearchForFiles(val files: List<VirtualFile>,

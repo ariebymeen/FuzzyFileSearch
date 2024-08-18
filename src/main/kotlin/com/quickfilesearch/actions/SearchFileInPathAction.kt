@@ -1,12 +1,14 @@
-package com.openrelativefile.Actions
+package com.quickfilesearch.actions
 
-import com.openrelativefile.Settings.GlobalSettings
+import com.quickfilesearch.settings.GlobalSettings
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
-import com.openrelativefile.*
+import com.quickfilesearch.*
+import com.quickfilesearch.searchbox.PopupInstance
+import com.quickfilesearch.searchbox.getAllFilesInRoot
 import kotlin.io.path.Path
 
 class SearchFileInPathAction(val action: Array<String>,
@@ -33,7 +35,7 @@ class SearchFileInPathAction(val action: Array<String>,
         println("Action performed!")
         val project = e.project ?: return
 
-        var searchPath = ""
+        var searchPath: String
         if (location[0] == '/') { // Search from project root
             searchPath = project.basePath + location
             println("Search from project root. Search path: $searchPath")

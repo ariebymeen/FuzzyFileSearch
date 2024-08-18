@@ -1,4 +1,4 @@
-package com.openrelativefile.Settings
+package com.quickfilesearch.settings
 
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.ui.ComboBox
@@ -8,8 +8,6 @@ import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.FormBuilder
-import java.awt.BorderLayout
-import javax.swing.JComboBox
 import javax.swing.JPanel
 import javax.swing.JSpinner
 import javax.swing.SpinnerNumberModel
@@ -31,7 +29,7 @@ class GlobalSettingsComponent {
 
     init {
         panel = FormBuilder()
-            .addComponent(JBLabel("<html><strong>Settings for OpenRelativeFile</strong></html>"))
+            .addComponent(JBLabel("<html><strong>Settings for QuickFileSearch</strong></html>"))
             .addSeparator()
 
             .addComponent(createLabelWithDescription("Excluded folders", "Wildcards are not supported, enter the full name of the folder"))

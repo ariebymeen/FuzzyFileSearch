@@ -1,4 +1,4 @@
-package com.openrelativefile
+package com.quickfilesearch.searchbox
 
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupFactory
@@ -17,7 +17,7 @@ import javax.swing.*
 import javax.swing.border.EmptyBorder
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
-import com.openrelativefile.Settings.GlobalSettings
+import com.quickfilesearch.settings.GlobalSettings
 import kotlinx.coroutines.*
 
 class PopupInstance {

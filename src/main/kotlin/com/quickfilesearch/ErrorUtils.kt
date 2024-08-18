@@ -1,4 +1,4 @@
-package com.openrelativefile
+package com.quickfilesearch
 
 import com.intellij.notification.Notification
 import com.intellij.notification.NotificationType
@@ -8,12 +8,12 @@ import javax.swing.SwingUtilities
 
 
 fun showErrorNotification(title: String, content: String) {
-    val notification = Notification("OpenRelativeFileGroup", title, content, NotificationType.ERROR)
+    val notification = Notification("QuickFileSearchGroup", title, content, NotificationType.ERROR)
     Notifications.Bus.notify(notification)
 }
 
 fun showTimedNotification(title: String, content: String) {
-    val notification = Notification("OpenRelativeFileGroup", title, content, NotificationType.INFORMATION)
+    val notification = Notification("QuickFileSearchGroup", title, content, NotificationType.INFORMATION)
     Notifications.Bus.notify(notification)
 
     // Schedule a task to close the notification after the specified duration

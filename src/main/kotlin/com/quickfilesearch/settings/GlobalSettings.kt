@@ -1,4 +1,4 @@
-package com.openrelativefile.Settings
+package com.quickfilesearch.settings
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.*
@@ -11,7 +11,7 @@ enum class PathDisplayType {
 }
 
 @State(
-    name = "com.openrelativefile.settings.GlobalSettings",
+    name = "com.quickfilesearch.settings.GlobalSettings",
     storages = [Storage(StoragePathMacros.NON_ROAMABLE_FILE)]
 )
 @Service

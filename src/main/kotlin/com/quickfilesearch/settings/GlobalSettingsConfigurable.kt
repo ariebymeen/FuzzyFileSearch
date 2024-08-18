@@ -1,7 +1,7 @@
-package com.openrelativefile.Settings
+package com.quickfilesearch.settings
 
 import com.intellij.openapi.options.Configurable
-import com.openrelativefile.Actions.*
+import com.quickfilesearch.actions.*
 import javax.swing.JComponent
 
 class GlobalSettingsConfigurable : Configurable {
@@ -56,9 +56,9 @@ class GlobalSettingsConfigurable : Configurable {
 
     override fun apply() {
         if (!isEqual(settings.state.openRelativeFileActions, component.openRelativeFileActionsTable.getData())) {
-            unregisterActions(settings.state.openRelativeFileActions, OpenRelativeFileAction::getActionName, OpenRelativeFileAction::getActionShortcut)
+            unregisterActions(settings.state.openRelativeFileActions, QuickFileSearchAction::getActionName, QuickFileSearchAction::getActionShortcut)
             settings.state.openRelativeFileActions = component.openRelativeFileActionsTable.getData()
-            registerOpenRelativeFileActions(settings.state.openRelativeFileActions, settings.state)
+            registerQuickFileSearchActions(settings.state.openRelativeFileActions, settings.state)
         }
 
         if (!isEqual(settings.state.searchRelativeFileActions, component.searchRelativeFileActionsTable.getData())) {
@@ -87,7 +87,7 @@ class GlobalSettingsConfigurable : Configurable {
     }
 
     override fun getDisplayName(): String {
-        return "Global OpenRelativeFile Settings"
+        return "Global QuickFileSearch Settings"
     }
 
     // TODO: Perform some sensible validation on the shortcuts and the actions that you try to register

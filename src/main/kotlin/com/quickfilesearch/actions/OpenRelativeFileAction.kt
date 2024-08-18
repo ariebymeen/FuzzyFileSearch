@@ -1,15 +1,14 @@
-package com.openrelativefile.Actions
+package com.quickfilesearch.actions
 
-import com.openrelativefile.getParentSatisfyingRegex
-import com.openrelativefile.showTimedNotification
+import com.quickfilesearch.searchbox.getParentSatisfyingRegex
+import com.quickfilesearch.showTimedNotification
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.vfs.LocalFileSystem
 
-class OpenRelativeFileAction(var action: Array<String>,
-                             var excludedDirs: Set<String>,
-                             var maxDistance: Int) : AnAction(getActionName(action))
+class QuickFileSearchAction(var action: Array<String>,
+                             var excludedDirs: Set<String>) : AnAction(getActionName(action))
 {
     val regex = Regex(pattern = action[1], options = setOf(RegexOption.IGNORE_CASE))
 
@@ -22,7 +21,7 @@ class OpenRelativeFileAction(var action: Array<String>,
             return
         }
 
-        val matchingFile = getParentSatisfyingRegex(project, currentFile, regex, excludedDirs, 0, maxDistance)
+        val matchingFile = getParentSatisfyingRegex(project, currentFile, regex, excludedDirs)
         if (matchingFile == null) {
             showTimedNotification("${action[0]} Could not find file", "Could not find file satisfying regex ${regex.pattern}");
             return

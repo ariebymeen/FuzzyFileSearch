@@ -1,10 +1,10 @@
-package com.openrelativefile.Actions
+package com.quickfilesearch.actions
 
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.KeyboardShortcut
 import com.intellij.openapi.keymap.KeymapManager
-import com.openrelativefile.Settings.*
+import com.quickfilesearch.settings.*
 import javax.swing.KeyStroke
 
 fun registerAction(name: String, shortcut: String, action: AnAction) {
@@ -26,13 +26,13 @@ fun unregisterAction(name: String, shortcut: String) {
     }
 }
 
-fun registerOpenRelativeFileActions(actions: Array<Array<String>>, settings: GlobalSettings.SettingsState) {
+fun registerQuickFileSearchActions(actions: Array<Array<String>>, settings: GlobalSettings.SettingsState) {
     actions.forEach { action ->
         run {
             registerAction(
-                OpenRelativeFileAction.getActionName(action),
-                OpenRelativeFileAction.getActionShortcut(action),
-                OpenRelativeFileAction(action, settings.excludedDirs, settings.distanceSearchMaxFileDistance)
+                QuickFileSearchAction.getActionName(action),
+                QuickFileSearchAction.getActionShortcut(action),
+                QuickFileSearchAction(action, settings.excludedDirs)
             )
         }
     }

@@ -1,7 +1,7 @@
-package com.openrelativefile
+package com.quickfilesearch.searchbox
 
 import com.intellij.openapi.vfs.VirtualFile
-import com.openrelativefile.Settings.PathDisplayType
+import com.quickfilesearch.settings.PathDisplayType
 import java.awt.Component
 import javax.swing.BorderFactory
 import javax.swing.DefaultListCellRenderer

@@ -1,9 +1,8 @@
-package com.openrelativefile.Settings
+package com.quickfilesearch.settings
 
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.util.preferredHeight
 import java.awt.BorderLayout
-import java.util.*
 import javax.swing.BoxLayout
 import javax.swing.JButton
 import javax.swing.JScrollPane

@@ -1,16 +1,12 @@
-package com.openrelativefile
+package com.quickfilesearch.searchbox
 
 import ai.grazie.text.find
-import com.intellij.ide.projectView.ProjectView
-import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.isFile
-import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.math.min
-import com.intellij.openapi.progress.ModalTaskOwner.project
 
 
 fun getParentSatisfyingRegex(project: Project,

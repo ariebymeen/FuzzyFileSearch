@@ -1,15 +1,8 @@
-package com.openrelativefile.Settings
+package com.quickfilesearch.settings
 
-import com.intellij.icons.AllIcons
-import com.intellij.ui.JBIntSpinner
-import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.FormBuilder
-import java.awt.BorderLayout
 import javax.swing.JPanel
-import javax.swing.JSpinner
-import javax.swing.SpinnerNumberModel
 
 
 class ProjectSettingsComponent {
@@ -22,7 +15,7 @@ class ProjectSettingsComponent {
 
     init {
         panel = FormBuilder()
-            .addComponent(JBLabel("<html><strong>Project specific settings for OpenRelativeFile</strong></html>"))
+            .addComponent(JBLabel("<html><strong>Project specific settings for QuickFileSearch</strong></html>"))
             .addSeparator()
             .addComponent(warningText)
 

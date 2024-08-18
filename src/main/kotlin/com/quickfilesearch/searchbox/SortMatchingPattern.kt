@@ -1,5 +1,6 @@
-package com.openrelativefile
+package com.quickfilesearch.searchbox
 
+import com.quickfilesearch.showErrorNotification
 import java.io.BufferedReader
 import java.io.InputStreamReader
 

@@ -1,11 +1,14 @@
-package com.openrelativefile.Actions
+package com.quickfilesearch.actions
 
-import com.openrelativefile.Settings.GlobalSettings
+import com.quickfilesearch.settings.GlobalSettings
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import com.openrelativefile.*
+import com.quickfilesearch.*
+import com.quickfilesearch.searchbox.PopupInstance
+import com.quickfilesearch.searchbox.getAllFilesInRoot
+import com.quickfilesearch.searchbox.getParentSatisfyingRegex
 
 class SearchRelativeFileAction(val action: Array<String>,
                                val settings: GlobalSettings.SettingsState) : AnAction(getActionName(action))
@@ -40,9 +43,9 @@ class SearchRelativeFileAction(val action: Array<String>,
             files = getAllFilesInRoot(currentFile.parent, settings.excludedDirs, action[2])
         } else {
             // Else try finding a file matching pattern
-            val matchingFile = getParentSatisfyingRegex(project!!, currentFile, regex, settings.excludedDirs, 0, settings.distanceSearchMaxFileDistance)
+            val matchingFile = getParentSatisfyingRegex(project!!, currentFile, regex, settings.excludedDirs)
             if (matchingFile == null) {
-                showTimedNotification("${name} Could not find file", "Could not find file satisfying regex ${regex.pattern}");
+                showTimedNotification("$name Could not find file", "Could not find file satisfying regex ${regex.pattern}");
                 return
             }
             files = getAllFilesInRoot(matchingFile.parent, settings.excludedDirs, extension)

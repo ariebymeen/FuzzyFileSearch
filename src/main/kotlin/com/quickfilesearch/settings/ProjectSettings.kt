@@ -1,12 +1,12 @@
-package com.openrelativefile.Settings
+package com.quickfilesearch.settings
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.*
 
 
 @State(
-    name = "com.openrelativefile.settings.ProjectSettings",
-    storages = [Storage("OpenRelativeFileSettings.xml")]
+    name = "com.quickfilesearch.settings.ProjectSettings",
+    storages = [Storage("QuickFileSearchSettings.xml")]
 )
 @Service
 class ProjectSettings : PersistentStateComponent<ProjectSettings.SettingsState> {
