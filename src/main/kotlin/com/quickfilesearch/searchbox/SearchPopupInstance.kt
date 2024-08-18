@@ -99,10 +99,8 @@ fun createPopupInstance(
     getSearchResultCallback: ((String) -> List<VirtualFile>),
     itemSelectedCallback: ((VirtualFile) -> Unit),
     settings: GlobalSettings.SettingsState,
-    basePath: String
-) : PopupInstance
+    basePath: String) : PopupInstance
 {
-
     val instance = PopupInstance();
     instance.maxNofItemsInPopup = settings.numberOfFilesInSearchView
     instance.onSearchBoxChanged = getSearchResultCallback;

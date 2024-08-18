@@ -30,27 +30,26 @@ class SearchForFiles(val files: List<VirtualFile>,
     }
 
     fun getSortedFileList(query: String) : List<VirtualFile> {
-        val start = System.nanoTime();
-
-        var startFzf = start // TODO: Remove
-        var stopFzf = start
-        var filteredFiles: List<String>
+//        val start = System.nanoTime();
+//        var startFzf = start // TODO: Remove
+//        var stopFzf = start
+        val filteredFiles: List<String>
         if (query.isNotEmpty()) {
             if (settings.useFzfForSearching) {
-                startFzf = System.nanoTime()
+//                startFzf = System.nanoTime()
                 filteredFiles = runFzf(fileNamesConcat, query, settings.numberOfFilesInSearchView)
-                stopFzf = System.nanoTime()
+//                stopFzf = System.nanoTime()
             } else {
                 filteredFiles = sortCandidatesBasedOnPattern(query, files.map { file -> file.name })
             }
 
-            println("Nof files: ${filteredFiles.size}, nofFilesInView: ${settings.numberOfFilesInSearchView}")
+//            println("Nof files: ${filteredFiles.size}, nofFilesInView: ${settings.numberOfFilesInSearchView}")
             val visibleList = filteredFiles.subList(0, min(filteredFiles.size, settings.numberOfFilesInSearchView))
             val visibleFiles = visibleList.map { file -> fileNames.indexOfFirst{ name  -> name == file } }
                 .map { index -> files[index] }
 
-            val stop = System.nanoTime();
-            println("Searching through files took ${(stop - start) / 1000000} ms. Fzf took ${(stopFzf - startFzf) /1000000}, nof files: ${files.size}")
+//            val stop = System.nanoTime();
+//            println("Searching through files took ${(stop - start) / 1000000} ms. Fzf took ${(stopFzf - startFzf) /1000000}, nof files: ${files.size}")
             return visibleFiles
         }
         else {

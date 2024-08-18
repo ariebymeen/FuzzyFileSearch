@@ -24,21 +24,15 @@ class SearchFileInPathAction(val action: Array<String>,
     var searchAction: SearchForFiles? = null
 
     init {
-        if (action[2].isNotEmpty() && action[2][0] == '.') {
-            extension = action[2].substring(1)
-        } else {
-            extension = action[2]
-        }
+        extension = sanitizeExtension(action[2])
     }
 
     override fun actionPerformed(e: AnActionEvent) {
-        println("Action performed!")
         val project = e.project ?: return
 
         var searchPath: String
         if (location[0] == '/') { // Search from project root
             searchPath = project.basePath + location
-            println("Search from project root. Search path: $searchPath")
         } else { // Search from current file
             val currentFile = e.getData(com.intellij.openapi.actionSystem.CommonDataKeys.VIRTUAL_FILE)
             if (currentFile == null) {
@@ -46,7 +40,6 @@ class SearchFileInPathAction(val action: Array<String>,
                 return
             }
             searchPath = currentFile.parent.path + "/" + location
-            println("Search from current file. Search path: $searchPath")
         }
 
         val vfPath = getVirtualFileFromPath(searchPath)

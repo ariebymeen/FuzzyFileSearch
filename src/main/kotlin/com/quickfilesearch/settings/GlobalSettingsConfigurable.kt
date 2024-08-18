@@ -22,6 +22,13 @@ class GlobalSettingsConfigurable : Configurable {
         component.searchRelativeFileActionsTable.setData(settings.state.searchRelativeFileActions)
         component.searchPathActionsTable.setData(settings.state.searchPathActions)
 
+        if (settings.state.searchRecentFilesActions.isNotEmpty()) {
+            component.searchRecentFiles.setData(settings.state.searchRecentFilesActions)
+        }
+        if (settings.state.searchOpenFilesActions.isNotEmpty()) {
+            component.searchOpenFiles.setData(settings.state.searchOpenFilesActions)
+        }
+
         return component.panel
     }
 
@@ -40,6 +47,8 @@ class GlobalSettingsConfigurable : Configurable {
                 || !isEqual(settings.state.openRelativeFileActions, component.openRelativeFileActionsTable.getData())
                 || !isEqual(settings.state.searchRelativeFileActions, component.searchRelativeFileActionsTable.getData())
                 || !isEqual(settings.state.searchPathActions, component.searchPathActionsTable.getData())
+                || !isEqual(settings.state.searchRecentFilesActions, component.searchRecentFiles.getData())
+                || !isEqual(settings.state.searchOpenFilesActions, component.searchOpenFiles.getData())
 
         if (modified) {
             val error = checkSettings(component, null)
@@ -62,7 +71,7 @@ class GlobalSettingsConfigurable : Configurable {
         }
 
         if (!isEqual(settings.state.searchRelativeFileActions, component.searchRelativeFileActionsTable.getData())) {
-            unregisterActions(settings.state.openRelativeFileActions, SearchRelativeFileAction::getActionName, SearchRelativeFileAction::getActionShortcut)
+            unregisterActions(settings.state.searchRelativeFileActions, SearchRelativeFileAction::getActionName, SearchRelativeFileAction::getActionShortcut)
             settings.state.searchRelativeFileActions = component.searchRelativeFileActionsTable.getData()
             registerSearchRelativeFileActions(settings.state.searchRelativeFileActions, settings.state)
         }
@@ -71,6 +80,18 @@ class GlobalSettingsConfigurable : Configurable {
             unregisterActions(settings.state.searchPathActions, SearchFileInPathAction::getActionName, SearchFileInPathAction::getActionShortcut)
             settings.state.searchPathActions = component.searchPathActionsTable.getData()
             registerSearchFileInPathActions(settings.state.searchPathActions, settings.state)
+        }
+
+        if (!isEqual(settings.state.searchRecentFilesActions, component.searchRecentFiles.getData())) {
+            unregisterActions(settings.state.searchRecentFilesActions, SearchRecentFilesAction::getActionName, SearchRecentFilesAction::getActionShortcut)
+            settings.state.searchRecentFilesActions= component.searchRecentFiles.getData()
+            registerSearchRecentFiles(settings.state.searchRecentFilesActions, settings.state)
+        }
+
+        if (!isEqual(settings.state.searchOpenFilesActions, component.searchOpenFiles.getData())) {
+            unregisterActions(settings.state.searchOpenFilesActions, SearchOpenFilesAction::getActionName, SearchOpenFilesAction::getActionShortcut)
+            settings.state.searchOpenFilesActions = component.searchOpenFiles.getData()
+            registerSearchOpenFiles(settings.state.searchOpenFilesActions, settings.state)
         }
 
         val newSet = component.excludedDirs.text

@@ -26,6 +26,8 @@ class GlobalSettingsComponent {
     var openRelativeFileActionsTable = ActionsTable(arrayOf("Name", "Reference file", "Open path", "Shortcut"), arrayOf("MyActionName", "Regex", "src/%name%Test.cc", "alt shift P"))
     var searchPathActionsTable = ActionsTable(arrayOf("Name", "Path", "Extension", "Shortcut"), arrayOf("ActionName", "/files", "txt", "alt shift H"))
     var searchRelativeFileActionsTable = ActionsTable(arrayOf("Name", "Reference file", "Extension", "Shortcut"), arrayOf("MyActionName", "Regex", "h", "alt shift P"))
+    var searchRecentFiles = StaticTable(arrayOf("Name", "History length", "Extension", "Shortcut"), arrayOf(arrayOf("SearchRecentFiles", "10", "", "alt shift R")))
+    var searchOpenFiles = StaticTable(arrayOf("Name", "Extension", "Shortcut"), arrayOf(arrayOf("SearchOpenFiles", "", "alt shift O")))
 
     init {
         panel = FormBuilder()
@@ -94,6 +96,21 @@ class GlobalSettingsComponent {
                 """.trimIndent())
             )
             .addComponent(searchPathActionsTable)
+
+            .addComponent(
+                createLabelWithDescription("Search in most recently opened files", """
+                    Search through all the files that you have opened most recently. Also includes all files that are currently open in your editor.
+                    If the extension is empty, include all.
+                """.trimIndent())
+            )
+            .addComponent(searchRecentFiles)
+
+            .addComponent(
+                createLabelWithDescription("Search in all files currently open in editor", """
+                    Search through files currently open in your editor with extension. If extension is empty, include all.
+                """.trimIndent())
+            )
+            .addComponent(searchOpenFiles)
 
             .addComponentFillVertically(JPanel(), 0)
             .panel

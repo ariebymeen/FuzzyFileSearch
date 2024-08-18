@@ -10,8 +10,8 @@ import javax.swing.JScrollPane
 import javax.swing.JTable
 import javax.swing.table.DefaultTableModel
 
-class ActionsTable(columnNames: Array<String>,
-                   private val emptyItem: Array<String>) : JBPanel<ActionsTable>() {
+class StaticTable(columnNames: Array<String>,
+                  data: Array<Array<String>>) : JBPanel<StaticTable>() {
 
     private val tableModel = DefaultTableModel(columnNames, 0)
 
@@ -26,37 +26,10 @@ class ActionsTable(columnNames: Array<String>,
             layout = BorderLayout()
             add(JScrollPane(table), BorderLayout.CENTER)
         }
-        tablePanel.preferredHeight = 30 * 5
+        tablePanel.preferredHeight = 30 * (data.size + 1)
 
         add(tablePanel, BorderLayout.CENTER)
-
-        val formPanel = JBPanel<JBPanel<*>>().apply {
-            layout = BoxLayout(this, BoxLayout.X_AXIS)
-            val addButton = JButton("Add new action").apply {
-                addActionListener {
-                    tableModel.addRow(emptyItem)
-                }
-            }
-            add(addButton)
-            val removeButton = JButton("Remove action").apply {
-                addActionListener {
-                    if (table.selectedRow >= 0) {
-                        tableModel.removeRow(table.selectedRow)
-                    }
-                }
-            }
-            add(removeButton)
-            val duplicateButton = JButton("Duplicate action").apply {
-                addActionListener {
-                    if (table.selectedRow >= 0) {
-                        val row = getRowEntry(table.selectedRow) ?: return@addActionListener
-                        tableModel.addRow(row)
-                    }
-                }
-            }
-            add(duplicateButton)
-        }
-        add(formPanel, BorderLayout.SOUTH)
+        setData(data)
     }
 
     fun getRowEntry(rowIndex: Int) : Array<String>? {

@@ -15,18 +15,13 @@ class SearchRelativeFileAction(val action: Array<String>,
 {
     val regex = Regex(pattern = action[1], options = setOf(RegexOption.IGNORE_CASE))
     val name = getActionName(action)
-    var popup : PopupInstance? = null
     var files: List<VirtualFile>? = null
     var project: Project? = null
     var searchAction: SearchForFiles? = null
     val extension: String
 
     init {
-        if (action[2].isNotEmpty() && action[2][0] == '.') {
-            extension = action[2].substring(1)
-        } else {
-            extension = action[2]
-        }
+        extension = sanitizeExtension(action[2])
     }
 
     override fun actionPerformed(e: AnActionEvent) {
@@ -34,7 +29,7 @@ class SearchRelativeFileAction(val action: Array<String>,
 
         val currentFile = e.getData(com.intellij.openapi.actionSystem.CommonDataKeys.VIRTUAL_FILE)
         if (currentFile == null) {
-            showTimedNotification("${name} No open file", "Cannot perform action when no file is opened");
+            showTimedNotification("$name No open file", "Cannot perform action when no file is opened");
             return
         }
 

@@ -2,6 +2,7 @@ package com.quickfilesearch.settings
 
 import com.quickfilesearch.actions.QuickFileSearchAction
 import com.quickfilesearch.actions.SearchFileInPathAction
+import com.quickfilesearch.actions.SearchOpenFilesAction
 import com.quickfilesearch.actions.SearchRelativeFileAction
 
 // Check if settings are correct. If not, return a string with the error message
@@ -27,6 +28,8 @@ fun checkActionNames(globalSettings: GlobalSettingsComponent?, projectSettings: 
         names = globalSettings.openRelativeFileActionsTable.getData().map{ action -> QuickFileSearchAction.getActionName(action) }
         names += globalSettings.searchRelativeFileActionsTable.getData().map{ action -> SearchRelativeFileAction.getActionName(action) }
         names += globalSettings.searchPathActionsTable.getData().map{ action -> SearchFileInPathAction.getActionName(action) }
+        names += globalSettings.searchRecentFiles.getData().map{ action -> SearchFileInPathAction.getActionName(action) } // TODO
+        names += globalSettings.searchOpenFiles.getData().map{ action -> SearchOpenFilesAction.getActionName(action) }
     }
     if (projectSettings!= null) {
         names = projectSettings.openRelativeFileActionsTable.getData().map{ action -> QuickFileSearchAction.getActionName(action) }
@@ -54,6 +57,8 @@ fun checkShortcuts(globalSettings: GlobalSettingsComponent?, projectSettings: Pr
         shortcuts = globalSettings.openRelativeFileActionsTable.getData().map{ action -> QuickFileSearchAction.getActionShortcut(action) }
         shortcuts += globalSettings.searchRelativeFileActionsTable.getData().map{ action -> SearchRelativeFileAction.getActionShortcut(action) }
         shortcuts += globalSettings.searchPathActionsTable.getData().map{ action -> SearchFileInPathAction.getActionShortcut(action) }
+        shortcuts += globalSettings.searchRecentFiles.getData().map{ action -> SearchFileInPathAction.getActionShortcut(action) } // TODO
+        shortcuts += globalSettings.searchOpenFiles.getData().map{ action -> SearchOpenFilesAction.getActionShortcut(action) }
     }
     if (projectSettings != null) {
         shortcuts = projectSettings.openRelativeFileActionsTable.getData().map{ action -> QuickFileSearchAction.getActionShortcut(action) }

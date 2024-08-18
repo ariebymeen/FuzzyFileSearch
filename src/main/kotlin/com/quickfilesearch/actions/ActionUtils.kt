@@ -7,6 +7,13 @@ import com.intellij.openapi.keymap.KeymapManager
 import com.quickfilesearch.settings.*
 import javax.swing.KeyStroke
 
+fun sanitizeExtension(extension: String): String {
+    if (extension.isNotEmpty() && extension[0] == '.') {
+        return extension.substring(1)
+    }
+    return extension
+}
+
 fun registerAction(name: String, shortcut: String, action: AnAction) {
     println("Registering action: $name")
     ActionManager.getInstance().registerAction(name, action)
@@ -57,6 +64,31 @@ fun registerSearchFileInPathActions(actions: Array<Array<String>>, settings: Glo
                 SearchFileInPathAction.getActionName(action),
                 SearchFileInPathAction.getActionShortcut(action),
                 SearchFileInPathAction(action, settings)
+            )
+        }
+    }
+}
+
+fun registerSearchRecentFiles(actions: Array<Array<String>>, settings: GlobalSettings.SettingsState) {
+    actions.forEach { action ->
+        run {
+            println("register recent files with sc ${SearchRecentFilesAction.getActionShortcut(action)}")
+            registerAction(
+                SearchRecentFilesAction.getActionName(action),
+                SearchRecentFilesAction.getActionShortcut(action),
+                SearchRecentFilesAction(action, settings)
+            )
+        }
+    }
+}
+
+fun registerSearchOpenFiles(actions: Array<Array<String>>, settings: GlobalSettings.SettingsState) {
+    actions.forEach { action ->
+        run {
+            registerAction(
+                SearchOpenFilesAction.getActionName(action),
+                SearchOpenFilesAction.getActionShortcut(action),
+                SearchOpenFilesAction(action, settings)
             )
         }
     }

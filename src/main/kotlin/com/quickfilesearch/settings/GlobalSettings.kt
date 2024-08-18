@@ -28,6 +28,8 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         var openRelativeFileActions: Array<Array<String>> = emptyArray()
         var searchRelativeFileActions: Array<Array<String>> = emptyArray()
         var searchPathActions: Array<Array<String>> = emptyArray()
+        var searchRecentFilesActions: Array<Array<String>> = arrayOf(arrayOf("SearchRecentFiles", "10", "", "alt shift R"))
+        var searchOpenFilesActions: Array<Array<String>> = arrayOf(arrayOf("SearchOpenFiles", "", "alt shift O"))
     }
 
     fun getInstance() : GlobalSettings {
