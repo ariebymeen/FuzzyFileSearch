@@ -16,7 +16,8 @@ fun sanitizeExtension(extension: String): String {
 
 fun registerAction(name: String, shortcut: String, action: AnAction) {
     println("Registering action: $name")
-    ActionManager.getInstance().registerAction(name, action)
+    val alreadyRegistered = ActionManager.getInstance().getAction(name) != null
+    if (!alreadyRegistered) ActionManager.getInstance().registerAction(name, action)
 
     if (shortcut.isNotEmpty()) {
         val shortcut = KeyboardShortcut(KeyStroke.getKeyStroke(shortcut), null)

@@ -26,7 +26,7 @@ class SearchForFiles(val files: List<VirtualFile>,
             fileNames = files.map { file -> file.name}
         }
         fileNamesConcat = fileNames.joinToString("\n")
-        popup = createPopupInstance(::getSortedFileList, ::openSelectedFile, settings, project.basePath!!)
+        popup = createPopupInstance(::getSortedFileList, ::openSelectedFile, settings, project.basePath!!, project)
     }
 
     fun getSortedFileList(query: String) : List<VirtualFile> {
@@ -40,13 +40,20 @@ class SearchForFiles(val files: List<VirtualFile>,
                 filteredFiles = runFzf(fileNamesConcat, query, settings.numberOfFilesInSearchView)
 //                stopFzf = System.nanoTime()
             } else {
-                filteredFiles = sortCandidatesBasedOnPattern(query, files.map { file -> file.name })
+                filteredFiles = sortCandidatesBasedOnPattern(query, fileNames)
             }
 
 //            println("Nof files: ${filteredFiles.size}, nofFilesInView: ${settings.numberOfFilesInSearchView}")
             val visibleList = filteredFiles.subList(0, min(filteredFiles.size, settings.numberOfFilesInSearchView))
             val visibleFiles = visibleList.map { file -> fileNames.indexOfFirst{ name  -> name == file } }
-                .map { index -> files[index] }
+                .map { index ->
+                    if (index > 0) {
+                        files[index]
+                    } else {
+                        println("Error, unexpected index < 0. Filtered files size: ${filteredFiles.size}, file size: ${files.size}, index: $index")
+                        files[0]
+                    }
+                }
 
 //            val stop = System.nanoTime();
 //            println("Searching through files took ${(stop - start) / 1000000} ms. Fzf took ${(stopFzf - startFzf) /1000000}, nof files: ${files.size}")

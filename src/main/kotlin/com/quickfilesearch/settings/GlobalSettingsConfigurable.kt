@@ -2,6 +2,7 @@ package com.quickfilesearch.settings
 
 import com.intellij.openapi.options.Configurable
 import com.quickfilesearch.actions.*
+import com.quickfilesearch.searchbox.isFzfAvailable
 import javax.swing.JComponent
 
 class GlobalSettingsConfigurable : Configurable {
@@ -27,6 +28,11 @@ class GlobalSettingsConfigurable : Configurable {
         }
         if (settings.state.searchOpenFilesActions.isNotEmpty()) {
             component.searchOpenFiles.setData(settings.state.searchOpenFilesActions)
+        }
+        if (!isFzfAvailable()) {
+            component.useFzfCheckbox.isEnabled = false
+        } else {
+            component.useFzfCheckbox.isEnabled = true
         }
 
         return component.panel
@@ -110,20 +116,4 @@ class GlobalSettingsConfigurable : Configurable {
     override fun getDisplayName(): String {
         return "Global QuickFileSearch Settings"
     }
-
-    // TODO: Perform some sensible validation on the shortcuts and the actions that you try to register
-//    private fun validateInput() : Boolean {
-//        component.openRelativeFileWarningLabel.isVisible = false
-//
-//        val shortcutsOpenActions = component.openRelativeFileActionsTable.getData().map { entry -> entry.shortcut }
-//        val shortcutsSearchActions = component.searchRelativeFileActionsTable.getData().map { entry -> entry.shortcut }
-//
-//        val shortcuts = shortcutsOpenActions + shortcutsSearchActions;
-//        if (shortcuts.size != shortcuts.distinct().size) {
-//            component.openRelativeFileWarningLabel.text = "Warning some shortcuts are registered twice, this will give problems"
-//            component.openRelativeFileWarningLabel.isVisible = true
-//        }
-//
-//        return false
-//    }
 }

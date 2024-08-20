@@ -1,8 +1,10 @@
 package com.quickfilesearch.searchbox
 
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.wm.WindowManager
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
@@ -99,7 +101,9 @@ fun createPopupInstance(
     getSearchResultCallback: ((String) -> List<VirtualFile>),
     itemSelectedCallback: ((VirtualFile) -> Unit),
     settings: GlobalSettings.SettingsState,
-    basePath: String) : PopupInstance
+    basePath: String,
+    project: Project
+) : PopupInstance
 {
     val instance = PopupInstance();
     instance.maxNofItemsInPopup = settings.numberOfFilesInSearchView
@@ -145,13 +149,16 @@ fun createPopupInstance(
     val width = (screenSize.width * settings.searchPopupWidth).toInt()
     val height = (screenSize.height * settings.searchPopupHeight).toInt()
 
+    // Get the window of the current project
+    val currentWindow = WindowManager.getInstance().getFrame(project)
+    if (currentWindow != null) {
+        instance.popup!!.setLocation(currentWindow.locationOnScreen)
+    }
+
     instance.popup!!.setSize(Dimension(width, height))
     instance.popup!!.showInFocusCenter()
 
-    // Set focus to searchField
     SwingUtilities.invokeLater { instance.searchField.requestFocusInWindow() }
-
-    // Initial population of the search list
     updateListedItems(instance);
 
     return instance;
