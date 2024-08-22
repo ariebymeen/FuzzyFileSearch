@@ -5,6 +5,8 @@ import com.quickfilesearch.settings.GlobalSettings
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.components.Service
+import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.project.Project
@@ -19,35 +21,49 @@ import com.quickfilesearch.searchbox.PopupInstance
 import com.quickfilesearch.searchbox.getAllFilesInRoot
 import javax.swing.SwingUtilities
 import kotlin.io.path.Path
+import kotlin.math.min
 
-class RecentFilesKeeper(private val historyLength: Int) : FileEditorManagerListener {
-    var history = mutableListOf<VirtualFile>()
+
+@Service(Service.Level.PROJECT)
+class RecentFilesKeeper(private val project: Project): FileEditorManagerListener {
+    val settings = GlobalSettings().getInstance().state
+    var connection: MessageBusConnection
+    var historyList = mutableListOf<VirtualFile>()
+    var historyLength = 100 // Max history length
+
+    init {
+        println("Project level service initialized")
+        connection = project.messageBus.connect()
+        connection.subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER, this)
+    }
 
     override fun fileOpened(source: FileEditorManager, file: VirtualFile) {
-        super.fileOpened(source, file)
         println("File opened: ${file.name}")
 
-        if (history.contains(file)) {
-            history.remove(file)
+        if (historyList.contains(file)) {
+            historyList.remove(file)
         }
-        if (history.size >= historyLength) {
-            history.removeAt(0)
+        while (historyList.size >= historyLength) {
+            historyList.removeAt(0)
         }
-        history.add(file)
+        historyList.add(file)
+    }
+
+    fun getRecentFiles(nofFiles: Int) : List<VirtualFile> {
+        val nofFiles = min(nofFiles, historyList.size)
+        if (historyList.isEmpty()) return emptyList()
+        return historyList.subList(historyList.size - nofFiles, historyList.size - 1)
     }
 }
 
 class SearchRecentFilesAction(val action: Array<String>,
-                              val settings: GlobalSettings.SettingsState) : AnAction(getActionName(action)), AutoCloseable
+                              val settings: GlobalSettings.SettingsState) : AnAction(getActionName(action))
 {
     val name = action[0]
     var history: Int
     val extension: String
 
-    var project: Project? = null
     var searchAction: SearchForFiles? = null
-    var recentFilesKeeper: RecentFilesKeeper
-    var connection: MessageBusConnection? = null
 
     init {
         try {
@@ -58,42 +74,37 @@ class SearchRecentFilesAction(val action: Array<String>,
         }
 
         extension = sanitizeExtension(action[2])
-        recentFilesKeeper = RecentFilesKeeper(history)
-
-        // TODO: This does not work? as you do not know which project you will get back when multiple are opened
-        SwingUtilities.invokeLater {
-            // Replace this with another option, maybe keep a longer list and filter out the onces with the correct project?
-            val window = WindowManager.getInstance().mostRecentFocusedWindow
-            if (window == null) {
-                showErrorNotification("Could not get project", "$name: Error getting project (window). Searching for recent files will not work correctly")
-            }
-            val dataContext = DataManager.getInstance().getDataContext(window);
-            project = CommonDataKeys.PROJECT.getData(dataContext)
-            if (project == null) {
-                showErrorNotification("Could not get project", "$name: Error getting project. Searching for recent files will not work correctly")
-            } else {
-                connection = project!!.messageBus.connect()
-                connection!!.subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER, recentFilesKeeper)
-            }
-        }
-    }
-
-    override fun close() {
-        if (connection != null) {
-            connection!!.disconnect()
-        }
+//        recentFilesKeeper = RecentFilesKeeper(history)
+//
+//        // TODO: This does not work? as you do not know which project you will get back when multiple are opened
+//        SwingUtilities.invokeLater {
+//            // Replace this with another option, maybe keep a longer list and filter out the onces with the correct project?
+//            val window = WindowManager.getInstance().mostRecentFocusedWindow
+//            if (window == null) {
+//                showErrorNotification("Could not get project", "$name: Error getting project (window). Searching for recent files will not work correctly")
+//            }
+//            val dataContext = DataManager.getInstance().getDataContext(window);
+//            project = CommonDataKeys.PROJECT.getData(dataContext)
+//            if (project == null) {
+//                showErrorNotification("Could not get project", "$name: Error getting project. Searching for recent files will not work correctly")
+//            } else {
+//                connection = project!!.messageBus.connect()
+//                connection!!.subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER, recentFilesKeeper)
+//            }
+//        }
     }
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
 
-        val files = getAllOpenFiles(project).toMutableList()
-        for (file in getAllOpenFiles(project)) {
-            if (!recentFilesKeeper.history.contains(file)) {
-                files += file
+        val recentFiles = project.service<RecentFilesKeeper>().getRecentFiles(history).toMutableList()
+        val openFiles = getAllOpenFiles(project).toMutableList()
+        for (file in openFiles) {
+            if (!recentFiles.contains(file)) {
+                recentFiles += file
             }
         }
-        searchAction = SearchForFiles(files, settings, project);
+        searchAction = SearchForFiles(recentFiles, settings, project);
     }
 
     companion object {

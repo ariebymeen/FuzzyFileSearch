@@ -4,15 +4,6 @@ import com.quickfilesearch.showErrorNotification
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
-//fun countNumberOfMatchingChars(matrix: Array<IntArray>) : Int {
-//    var count = 0
-//    for (row in matrix) {
-//        for (item in row) {
-//            if (item > 0) ++count
-//        }
-//    }
-//    return count
-//}
 fun sumMatchingMatrix(matrix: Array<IntArray>) : Int {
     var count = 0
     for (row in matrix) {
@@ -49,19 +40,16 @@ fun constructCommonCharsMatrix(searchPattern: String, s2: String): Array<IntArra
 }
 
 fun sortCandidatesBasedOnPattern(pattern: String, candidates: List<String>): List<String> {
-//    val matchScores = IntArray(candidates.size)
-//    var idx = 0
     val matchScores = candidates.map { candidate -> constructCommonCharsMatrix(pattern, candidate) }
                                 .map { matrix -> sumMatchingMatrix(matrix) }
-//    for (candidate in candidates) {
-//        val matrix = constructCommonCharsMatrix(pattern, candidate);
-//        val totalCount = sumMatchingMatrix(matrix);
-//        matchScores[idx] = totalCount
-//        ++idx
-//    }
 
     val sortedMatchIndices = matchScores.indices.sortedByDescending { matchScores[it] }
     val sortedCandidates = sortedMatchIndices.map { candidates[it] }.toList()
+    val sortedScores = matchScores.sortedDescending()
+//    for (idx in 0.. sortedScores.size - 1) {
+//        println("$idx -> ${sortedCandidates[idx]} - ${sortedScores[idx]}")
+//    }
+
     return ArrayList(sortedCandidates)
 }
 

@@ -25,17 +25,16 @@
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-        <postStartupActivity implementation="com.quickfilesearch.settings.InitialSetupActions"/>
-
+        <postStartupActivity implementation="com.quickfilesearch.settings.ApplicationStartupSetup"/>
+<!--        <applicationStartupActivity implementation="com.example.MyApplicationStartupActivity"/>-->
+        <projectService
+                serviceInterface="com.quickfilesearch.actions.RecentFilesKeeper"
+                serviceImplementation="com.quickfilesearch.actions.RecentFilesKeeper"/>
         <applicationConfigurable
                 parentId="tools"
                 instance="com.quickfilesearch.settings.GlobalSettingsConfigurable"
                 id="com.quickfilesearch.settings.GlobalSettingsConfigurable"
                 displayName="QuickFileSearch GlobalSettings"/>
-        <projectConfigurable
-                parentId="tools"
-                instance="com.quickfilesearch.settings.ProjectSettingsConfigurable"
-                id="com.quickfilesearch.settings.ProjectSettingsConfigurable"
                 displayName="QuickFileSearch ProjectSettings"/>
         <notificationGroup id="QuickFileSearchGroup"
                            displayType="BALLOON"

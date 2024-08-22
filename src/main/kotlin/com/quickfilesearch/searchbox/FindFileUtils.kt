@@ -38,7 +38,6 @@ fun getFileSatisfyingRegex(project: Project,
                            excludeDirectory: VirtualFile? = null,
                            distance: Int = 0,
                            maxDistance: Int = 1000): VirtualFile? {
-    println("Searching in directory ${directory.path}")
     for (child in directory.children!!) {
         if (child.isFile) {
             if (regex.matches(child.name) || regex.pattern == child.name) return child
@@ -54,7 +53,6 @@ fun getFileSatisfyingRegex(project: Project,
     directory.parent ?: return null
 
     val isPreviouslyVisited = (excludeDirectory != null && excludeDirectory == directory.parent)
-    println("Distance: $distance, maxDistance: $maxDistance, isPreviouslyVisited: $isPreviouslyVisited, isFileInProj: ${isFileInProject(project, directory.parent)}")
     if (distance <= maxDistance && !isPreviouslyVisited && isFileInProject(project, directory.parent)) {
         val file = getFileSatisfyingRegex(project, directory.parent, regex, excludedDirs, directory, distance + 1, maxDistance);
         if (file != null) return file

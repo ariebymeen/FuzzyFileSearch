@@ -57,7 +57,7 @@ class GlobalSettingsConfigurable : Configurable {
                 || !isEqual(settings.state.searchOpenFilesActions, component.searchOpenFiles.getData())
 
         if (modified) {
-            val error = checkSettings(component, null)
+            val error = checkSettings(component)
             if (error != null) {
                 // show error message
                 component.warningText.text = error

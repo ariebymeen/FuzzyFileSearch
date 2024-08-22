@@ -21,9 +21,9 @@ class SearchForFiles(val files: List<VirtualFile>,
 
     init {
         if (settings.filePathDisplayType != PathDisplayType.FILENAME_ONLY) {
-            fileNames = files.map { file -> file.path }
+            fileNames = files.map { file -> file.path.substring(project.basePath!!.length) }
         } else {
-            fileNames = files.map { file -> file.name}
+            fileNames = files.map { file -> file.name }
         }
         fileNamesConcat = fileNames.joinToString("\n")
         popup = createPopupInstance(::getSortedFileList, ::openSelectedFile, settings, project.basePath!!, project)
@@ -31,23 +31,19 @@ class SearchForFiles(val files: List<VirtualFile>,
 
     fun getSortedFileList(query: String) : List<VirtualFile> {
 //        val start = System.nanoTime();
-//        var startFzf = start // TODO: Remove
-//        var stopFzf = start
         val filteredFiles: List<String>
         if (query.isNotEmpty()) {
             if (settings.useFzfForSearching) {
-//                startFzf = System.nanoTime()
+                // TODO: This approach is not working when there are too many files
                 filteredFiles = runFzf(fileNamesConcat, query, settings.numberOfFilesInSearchView)
-//                stopFzf = System.nanoTime()
             } else {
                 filteredFiles = sortCandidatesBasedOnPattern(query, fileNames)
             }
 
-//            println("Nof files: ${filteredFiles.size}, nofFilesInView: ${settings.numberOfFilesInSearchView}")
             val visibleList = filteredFiles.subList(0, min(filteredFiles.size, settings.numberOfFilesInSearchView))
             val visibleFiles = visibleList.map { file -> fileNames.indexOfFirst{ name  -> name == file } }
                 .map { index ->
-                    if (index > 0) {
+                    if (index >= 0) {
                         files[index]
                     } else {
                         println("Error, unexpected index < 0. Filtered files size: ${filteredFiles.size}, file size: ${files.size}, index: $index")

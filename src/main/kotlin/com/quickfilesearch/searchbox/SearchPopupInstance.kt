@@ -55,13 +55,11 @@ fun updateListedItems(instance: PopupInstance) {
         instance.listModel.addElement(item)
     }
     instance.resultsList.selectedIndex = 0
-//    instance.resultsList.ensureIndexIsVisible(0)
 }
 
 fun keyTypedEvent(instance: PopupInstance, e: KeyEvent) {
     if (Character.isDigit(e.keyChar) && (instance.searchField.text.isEmpty() || e.isControlDown)) {
         e.consume() // Consume the event to prevent the character from being added
-        // TODO: Add VIM integration
         instance.resultsList.selectedIndex = e.keyChar.digitToInt()
         instance.popup?.dispose()
         instance.onItemSelected?.invoke(instance.resultsList.selectedValue)
@@ -73,6 +71,7 @@ fun keyReleasedEvent(instance: PopupInstance, e: KeyEvent) {
     when (e.keyCode) {
         KeyEvent.VK_UP -> instance.resultsList.selectedIndex -= 1
         KeyEvent.VK_DOWN -> instance.resultsList.selectedIndex += 1
+        KeyEvent.VK_TAB -> instance.resultsList.selectedIndex += 1
         KeyEvent.VK_ENTER -> {
             instance.onItemSelected?.invoke(instance.resultsList.selectedValue)
             instance.popup?.dispose()

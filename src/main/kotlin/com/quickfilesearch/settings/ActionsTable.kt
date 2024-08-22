@@ -1,6 +1,7 @@
 package com.quickfilesearch.settings
 
 import com.intellij.ui.components.JBPanel
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.table.JBTable
 import com.intellij.ui.util.preferredHeight
 import java.awt.BorderLayout
@@ -24,10 +25,15 @@ class ActionsTable(columnNames: Array<String>,
         table.rowHeight = 30 // Set each row's height to 30 pixels
         val tablePanel = JBPanel<JBPanel<*>>().apply {
             layout = BorderLayout()
-            add(JScrollPane(table), BorderLayout.CENTER)
+            val scrollTable = JBScrollPane(table)
+            for (listener in scrollTable.mouseWheelListeners) {
+                // Remove existing MouseWheelListeners to ensure scrolling still works nicely
+                scrollTable.removeMouseWheelListener(listener)
+            }
+
+            add(scrollTable, BorderLayout.CENTER)
         }
         tablePanel.preferredHeight = 30 * 5
-
         add(tablePanel, BorderLayout.CENTER)
 
         val formPanel = JBPanel<JBPanel<*>>().apply {
