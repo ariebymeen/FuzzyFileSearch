@@ -16,7 +16,7 @@ class QuickFileSearchAction(var action: Array<String>,
         val project = e.project ?: return
 
         val currentFile = e.getData(com.intellij.openapi.actionSystem.CommonDataKeys.VIRTUAL_FILE)
-        if (currentFile  == null) {
+        if (currentFile == null) {
             showTimedNotification("${action[0]} No open file", "Cannot perform action when no file is opened");
             return
         }

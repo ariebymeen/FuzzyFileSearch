@@ -121,17 +121,17 @@ fun getAllFilesWithinDistance(referenceFile: VirtualFile,
     return getAllFilesInRootWithinDistance(maxRoot, referenceFile, maxDistance, excludedDirectoryList)
 }
 
-fun getAllFilesInRoot(root: VirtualFile, excludedDirectoryList: Set<String>? = null, extension: String) : ArrayList<VirtualFile> {
+fun getAllFilesInRoot(root: VirtualFile, excludedDirectoryList: Set<String>? = null, extensions: List<String>) : ArrayList<VirtualFile> {
     var files: ArrayList<VirtualFile> = ArrayList()
     if (!root.isDirectory) files.add(root)
 
     for (child in root.children!!) {
-        if (child.isFile && (extension.isEmpty() || extension == child.extension)) {
+        if (child.isFile && (extensions.isEmpty() || extensions.contains(child.extension))) {
             files.add(child)
         }
         if (child.isDirectory) {
             if (excludedDirectoryList != null && excludedDirectoryList.contains(child.name)) continue
-            files.addAll(getAllFilesInRoot(child, excludedDirectoryList, extension))
+            files.addAll(getAllFilesInRoot(child, excludedDirectoryList, extensions))
         }
     }
     return files

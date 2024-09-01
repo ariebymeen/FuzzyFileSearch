@@ -6,7 +6,6 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.quickfilesearch.*
-import com.quickfilesearch.searchbox.PopupInstance
 import com.quickfilesearch.searchbox.getAllFilesInRoot
 import com.quickfilesearch.searchbox.getParentSatisfyingRegex
 
@@ -18,10 +17,10 @@ class SearchRelativeFileAction(val action: Array<String>,
     var files: List<VirtualFile>? = null
     var project: Project? = null
     var searchAction: SearchForFiles? = null
-    val extension: String
+    val extensions: List<String>
 
     init {
-        extension = sanitizeExtension(action[2])
+        extensions = extractExtensions(action[2])
     }
 
     override fun actionPerformed(e: AnActionEvent) {
@@ -35,7 +34,7 @@ class SearchRelativeFileAction(val action: Array<String>,
 
         if (regex.pattern.isEmpty()) {
             // If pattern is empty, list all files from current directory down
-            files = getAllFilesInRoot(currentFile.parent, settings.excludedDirs, action[2])
+            files = getAllFilesInRoot(currentFile.parent, settings.excludedDirs, extensions)
         } else {
             // Else try finding a file matching pattern
             val matchingFile = getParentSatisfyingRegex(project!!, currentFile, regex, settings.excludedDirs)
@@ -43,7 +42,7 @@ class SearchRelativeFileAction(val action: Array<String>,
                 showTimedNotification("$name Could not find file", "Could not find file satisfying regex ${regex.pattern}");
                 return
             }
-            files = getAllFilesInRoot(matchingFile.parent, settings.excludedDirs, extension)
+            files = getAllFilesInRoot(matchingFile.parent, settings.excludedDirs, extensions)
         }
         files ?: return
         searchAction = SearchForFiles(files!!, settings, project!!);
