@@ -24,8 +24,7 @@ import kotlinx.coroutines.*
 
 class PopupInstance {
     val searchField: JTextField = JTextField()
-    // TODO: Use the VirtualFile as the list model. Provide a callback to convert to string. This way, we can render with or without path
-//    val listModel: DefaultListModel<String> = DefaultListModel()
+    val extensionField: JTextField = JTextField()
     val listModel: DefaultListModel<VirtualFile> = DefaultListModel()
     val resultsList = JBList(listModel)
     var onItemSelected: ((VirtualFile) -> Unit)? = null
@@ -49,10 +48,18 @@ fun <T> debounce(delayMillis: Long = 300L, coroutineScope: CoroutineScope, actio
 
 fun updateListedItems(instance: PopupInstance) {
     val items = instance.onSearchBoxChanged?.invoke(instance.searchField.text);
-    instance.listModel.clear()
-    for (item in items!!) {
-        if (instance.listModel.size() >= instance.maxNofItemsInPopup) break
-        instance.listModel.addElement(item)
+    items ?: return
+
+    if (items.size == instance.listModel.size) {
+        for (idx in items.indices) {
+            instance.listModel[idx] = items[idx]
+        }
+    } else {
+        instance.listModel.clear()
+        for (item in items) {
+            if (instance.listModel.size() >= instance.maxNofItemsInPopup) break
+            instance.listModel.addElement(item)
+        }
     }
     instance.resultsList.selectedIndex = 0
 }
@@ -101,19 +108,28 @@ fun createPopupInstance(
     itemSelectedCallback: ((VirtualFile) -> Unit),
     settings: GlobalSettings.SettingsState,
     basePath: String,
-    project: Project
+    project: Project,
+    extensions: String? = null
 ) : PopupInstance
 {
     val instance = PopupInstance();
     instance.maxNofItemsInPopup = settings.numberOfFilesInSearchView
-    instance.onSearchBoxChanged = getSearchResultCallback;
-    instance.onItemSelected = itemSelectedCallback;
+    instance.onSearchBoxChanged = getSearchResultCallback
+    instance.onItemSelected = itemSelectedCallback
 
-    val border: EmptyBorder = JBUI.Borders.empty(2, 5);
-    val panel = JPanel(BorderLayout());
-    instance.searchField.preferredSize = Dimension(100, 50);
-    instance.searchField.border = border;
+    val border: EmptyBorder = JBUI.Borders.empty(2, 5)
+    val panel = JPanel(BorderLayout())
+    instance.searchField.preferredSize = Dimension(100, 50)
+    instance.searchField.border = border
     instance.searchField.toolTipText = "Type to search..."
+
+    instance.extensionField.preferredSize = Dimension(100, 50)
+    instance.extensionField.border = border
+    instance.extensionField.toolTipText = ""
+    if (extensions != null) {
+        instance.extensionField.text = extensions
+    }
+    instance.extensionField.isEditable = false
 
     instance.searchField.addKeyListener(object : KeyAdapter() {
         override fun keyTyped(e: KeyEvent) {
@@ -127,7 +143,13 @@ fun createPopupInstance(
         override fun removeUpdate(e: DocumentEvent?) { debouncedFunction(Unit) }
         override fun changedUpdate(e: DocumentEvent?) { debouncedFunction(Unit) }
     })
-    panel.add(instance.searchField, BorderLayout.NORTH)
+//    panel.add(instance.searchField, BorderLayout.NORTH)
+
+    // Field with text header
+    val subPanel = JPanel(BorderLayout())
+    subPanel.add(instance.searchField, BorderLayout.CENTER)
+    subPanel.add(instance.extensionField, BorderLayout.EAST)
+    panel.add(subPanel, BorderLayout.NORTH)
 
     instance.resultsList.border = border;
     instance.resultsList.cellRenderer = SearchDialogCellRenderer(settings.filePathDisplayType, basePath)

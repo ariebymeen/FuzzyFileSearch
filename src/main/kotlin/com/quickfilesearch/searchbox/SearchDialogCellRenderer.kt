@@ -10,6 +10,9 @@ import javax.swing.JList
 
 class SearchDialogCellRenderer(var pathRenderType: PathDisplayType,
                                var basePath: String) : DefaultListCellRenderer() {
+
+    var emptyBorder = BorderFactory.createEmptyBorder(5, 5, 5, 5);
+
     // Custom list cell renderer
     override fun getListCellRendererComponent(
         list: JList<*>,
@@ -21,24 +24,29 @@ class SearchDialogCellRenderer(var pathRenderType: PathDisplayType,
         val value = value as VirtualFile;
 
         val label = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus) as JLabel
-        label.border = BorderFactory.createEmptyBorder(5, 5, 5, 5) // Padding
-
-        when (pathRenderType) {
-            PathDisplayType.FILENAME_ONLY -> {
-                label.text = "<html><b>$index: </b>   ${value.name}</html>"
-            }
-            PathDisplayType.FILENAME_RELATIVE_PATH -> {
-                val path = value.parent!!.path
-                label.text = "<html><b>$index: </b>   <strong>${value.name}</strong>  <i>${path.subSequence(basePath.length, path.length)}</i></html>"
-            }
-            PathDisplayType.FILENAME_FULL_PATH -> {
-                label.text = "<html><b>$index: </b>   <strong>${value.name}</strong>  <i>${value.parent!!.path}</i></html>"
-            }
-            PathDisplayType.FULL_PATH_WITH_FILENAME-> {
-                label.text = "<html><b>$index: </b>   ${value.parent!!.path}/<strong>${value.name}</strong></html>"
-            }
-        }
+        label.border = emptyBorder // Padding
+        label.text = getLabelText(value, pathRenderType, index, basePath);
 
         return label
+    }
+
+    companion object {
+        fun getLabelText(value: VirtualFile, pathRenderType: PathDisplayType, index: Int, basePath: String) : String {
+            when (pathRenderType) {
+                PathDisplayType.FILENAME_ONLY -> {
+                    return "<html><b>$index: </b>   ${value.name}</html>"
+                }
+                PathDisplayType.FILENAME_RELATIVE_PATH -> {
+                    val path = value.parent!!.path
+                    return "<html><b>$index: </b>   <strong>${value.name}</strong>  <i>${path.subSequence(basePath.length, path.length)}</i></html>"
+                }
+                PathDisplayType.FILENAME_FULL_PATH -> {
+                    return "<html><b>$index: </b>   <strong>${value.name}</strong>  <i>${value.parent!!.path}</i></html>"
+                }
+                PathDisplayType.FULL_PATH_WITH_FILENAME-> {
+                    return "<html><b>$index: </b>   ${value.parent!!.path}/<strong>${value.name}</strong></html>"
+                }
+            }
+        }
     }
 }

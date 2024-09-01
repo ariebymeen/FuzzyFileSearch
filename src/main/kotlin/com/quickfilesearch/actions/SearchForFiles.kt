@@ -13,11 +13,11 @@ import kotlin.math.min
 
 class SearchForFiles(val files: List<VirtualFile>,
                      val settings: GlobalSettings.SettingsState,
-                     var project: Project) {
+                     var project: Project,
+                     extensions: String? = null) {
     var fileNamesConcat: String
     var fileNames: List<String>
     var popup: PopupInstance
-
 
     init {
         if (settings.filePathDisplayType != PathDisplayType.FILENAME_ONLY) {
@@ -26,7 +26,7 @@ class SearchForFiles(val files: List<VirtualFile>,
             fileNames = files.map { file -> file.name }
         }
         fileNamesConcat = fileNames.joinToString("\n")
-        popup = createPopupInstance(::getSortedFileList, ::openSelectedFile, settings, project.basePath!!, project)
+        popup = createPopupInstance(::getSortedFileList, ::openSelectedFile, settings, project.basePath!!, project, extensions)
     }
 
     fun getSortedFileList(query: String) : List<VirtualFile> {

@@ -35,7 +35,7 @@
                 instance="com.quickfilesearch.settings.GlobalSettingsConfigurable"
                 id="com.quickfilesearch.settings.GlobalSettingsConfigurable"
                 displayName="QuickFileSearch GlobalSettings"/>
-                displayName="QuickFileSearch ProjectSettings"/>
+                displayName="QuickFileSearch Settings"/>
         <notificationGroup id="QuickFileSearchGroup"
                            displayType="BALLOON"
                            toolWindowId="Event Log"

@@ -18,7 +18,6 @@ class SearchFileInPathAction(val action: Array<String>,
     val location = action[1]
     val extension: String
 
-    var popup : PopupInstance? = null
     var files: List<VirtualFile>? = null
     var project: Project? = null
     var searchAction: SearchForFiles? = null
@@ -48,7 +47,7 @@ class SearchFileInPathAction(val action: Array<String>,
             return
         }
         files = getAllFilesInRoot(vfPath, settings.excludedDirs, extension)
-        searchAction = SearchForFiles(files!!, settings, project);
+        searchAction = SearchForFiles(files!!, settings, project, extension);
     }
 
     fun getVirtualFileFromPath(filePath: String): VirtualFile? {

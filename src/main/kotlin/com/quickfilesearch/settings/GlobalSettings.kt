@@ -4,8 +4,8 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.*
 
 enum class PathDisplayType {
-    FILENAME_ONLY,
     FILENAME_RELATIVE_PATH,
+    FILENAME_ONLY,
     FILENAME_FULL_PATH,
     FULL_PATH_WITH_FILENAME
 }
@@ -24,7 +24,7 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         var numberOfFilesInSearchView = 10;
         var useFzfForSearching = true
         var excludedDirs: Set<String> = setOf("build", ".gradle", ".idea", ".run")
-        var filePathDisplayType: PathDisplayType = PathDisplayType.FILENAME_ONLY
+        var filePathDisplayType: PathDisplayType = PathDisplayType.FILENAME_RELATIVE_PATH
         var openRelativeFileActions: Array<Array<String>> = emptyArray()
         var searchRelativeFileActions: Array<Array<String>> = emptyArray()
         var searchPathActions: Array<Array<String>> = emptyArray()
