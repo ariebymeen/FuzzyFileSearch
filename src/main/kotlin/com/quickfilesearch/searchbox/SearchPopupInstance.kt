@@ -1,5 +1,6 @@
 package com.quickfilesearch.searchbox
 
+import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupFactory
@@ -8,6 +9,8 @@ import com.intellij.openapi.wm.WindowManager
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
+import com.quickfilesearch.settings.GlobalSettings
+import kotlinx.coroutines.*
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.Toolkit
@@ -15,12 +18,14 @@ import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
-import javax.swing.*
+import javax.swing.DefaultListModel
+import javax.swing.JPanel
+import javax.swing.JTextField
+import javax.swing.SwingUtilities
 import javax.swing.border.EmptyBorder
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
-import com.quickfilesearch.settings.GlobalSettings
-import kotlinx.coroutines.*
+
 
 class PopupInstance {
     val searchField: JTextField = JTextField()
@@ -130,7 +135,7 @@ fun createPopupInstance(
     panel.add(instance.searchField, BorderLayout.NORTH)
 
     instance.resultsList.border = border;
-    instance.resultsList.cellRenderer = SearchDialogCellRenderer(settings.filePathDisplayType, basePath)
+    instance.resultsList.cellRenderer = SearchDialogCellRenderer(settings.filePathDisplayType, basePath, project)
     instance.resultsList.addMouseListener(object : MouseAdapter() {
         override fun mouseClicked(e: MouseEvent?) { mouseClickedEvent(instance) }
     })
@@ -148,14 +153,13 @@ fun createPopupInstance(
     val width = (screenSize.width * settings.searchPopupWidth).toInt()
     val height = (screenSize.height * settings.searchPopupHeight).toInt()
 
-    // Get the window of the current project
-    val currentWindow = WindowManager.getInstance().getFrame(project)
-    if (currentWindow != null) {
-        instance.popup!!.setLocation(currentWindow.locationOnScreen)
+    instance.popup!!.size = Dimension(width, height)
+    val ideFrame = WindowManager.getInstance().getIdeFrame(project)
+    if (ideFrame == null) {
+        instance.popup!!.showInFocusCenter()
+    } else {
+        instance.popup!!.showInCenterOf(ideFrame.component)
     }
-
-    instance.popup!!.setSize(Dimension(width, height))
-    instance.popup!!.showInFocusCenter()
 
     SwingUtilities.invokeLater { instance.searchField.requestFocusInWindow() }
     updateListedItems(instance);

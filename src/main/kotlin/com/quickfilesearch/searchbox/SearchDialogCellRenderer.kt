@@ -1,5 +1,6 @@
 package com.quickfilesearch.searchbox
 
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.quickfilesearch.settings.PathDisplayType
 import java.awt.Component
@@ -9,7 +10,10 @@ import javax.swing.JLabel
 import javax.swing.JList
 
 class SearchDialogCellRenderer(var pathRenderType: PathDisplayType,
-                               var basePath: String) : DefaultListCellRenderer() {
+                               var basePath: String,
+                               var project: Project) : DefaultListCellRenderer() {
+    val cellBorder = BorderFactory.createEmtpyBorder(5,5,5,5) // Padding
+
     // Custom list cell renderer
     override fun getListCellRendererComponent(
         list: JList<*>,
@@ -21,7 +25,7 @@ class SearchDialogCellRenderer(var pathRenderType: PathDisplayType,
         val value = value as VirtualFile;
 
         val label = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus) as JLabel
-        label.border = BorderFactory.createEmptyBorder(5, 5, 5, 5) // Padding
+        label.border = cellBorder 
 
         when (pathRenderType) {
             PathDisplayType.FILENAME_ONLY -> {
@@ -29,7 +33,11 @@ class SearchDialogCellRenderer(var pathRenderType: PathDisplayType,
             }
             PathDisplayType.FILENAME_RELATIVE_PATH -> {
                 val path = value.parent!!.path
-                label.text = "<html><b>$index: </b>   <strong>${value.name}</strong>  <i>${path.subSequence(basePath.length, path.length)}</i></html>"
+                if (isFileInProject(project, value)) {
+                    label.text = "<html><b>$index: </b>   <strong>${value.name}</strong>  <i>${path.subSequence(basePath.length, path.length)}</i></html>"
+                } else {
+                    label.text = "<html><b>$index: </b>   <strong>${value.name}</strong>  <i>${path}</i></html>"
+                }
             }
             PathDisplayType.FILENAME_FULL_PATH -> {
                 label.text = "<html><b>$index: </b>   <strong>${value.name}</strong>  <i>${value.parent!!.path}</i></html>"

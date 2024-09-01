@@ -7,17 +7,19 @@ import com.intellij.openapi.keymap.KeymapManager
 import com.quickfilesearch.settings.*
 import javax.swing.KeyStroke
 
-fun sanitizeExtension(extension: String): String {
-    if (extension.isNotEmpty() && extension[0] == '.') {
-        return extension.substring(1)
+fun extractExtensions(extension: String): List<String> {
+    if (extension.isNotEmpty()) {
+        return extension.split('|').map { ext -> ext.replace('.', ' ').trim().lowercase() }
     }
-    return extension
+    return emptyList()
 }
 
 fun registerAction(name: String, shortcut: String, action: AnAction) {
-    println("Registering action: $name")
     val alreadyRegistered = ActionManager.getInstance().getAction(name) != null
-    if (!alreadyRegistered) ActionManager.getInstance().registerAction(name, action)
+    if (!alreadyRegistered) {
+        println("Registering action: $name")
+        ActionManager.getInstance().registerAction(name, action)
+    }
 
     if (shortcut.isNotEmpty()) {
         val shortcut = KeyboardShortcut(KeyStroke.getKeyStroke(shortcut), null)
@@ -29,8 +31,8 @@ fun unregisterAction(name: String, shortcut: String) {
     println("Unregistering action: $name")
     ActionManager.getInstance().unregisterAction(name)
     if (shortcut.isNotEmpty()) {
-        val shortcut = KeyboardShortcut(KeyStroke.getKeyStroke(shortcut), null)
-        KeymapManager.getInstance().activeKeymap.removeShortcut(name, shortcut);
+        val sc = KeyboardShortcut(KeyStroke.getKeyStroke(shortcut), null)
+        KeymapManager.getInstance().activeKeymap.removeShortcut(name, sc);
     }
 }
 

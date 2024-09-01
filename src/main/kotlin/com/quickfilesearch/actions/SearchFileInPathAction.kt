@@ -16,7 +16,7 @@ class SearchFileInPathAction(val action: Array<String>,
 {
     val name = action[0]
     val location = action[1]
-    val extension: String
+    val extensions: List<String>
 
     var popup : PopupInstance? = null
     var files: List<VirtualFile>? = null
@@ -24,13 +24,13 @@ class SearchFileInPathAction(val action: Array<String>,
     var searchAction: SearchForFiles? = null
 
     init {
-        extension = sanitizeExtension(action[2])
+        extensions = extractExtensions(action[2])
     }
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
 
-        var searchPath: String
+        val searchPath: String
         if (location[0] == '/') { // Search from project root
             searchPath = project.basePath + location
         } else { // Search from current file
@@ -47,8 +47,8 @@ class SearchFileInPathAction(val action: Array<String>,
             showTimedNotification("$name path not found", "Trying to open path ${searchPath}, but this path does not exist");
             return
         }
-        files = getAllFilesInRoot(vfPath, settings.excludedDirs, extension)
-        searchAction = SearchForFiles(files!!, settings, project);
+        files = getAllFilesInRoot(vfPath, settings.excludedDirs, extensions)
+        searchAction = SearchForFiles(files!!, settings, project)
     }
 
     fun getVirtualFileFromPath(filePath: String): VirtualFile? {

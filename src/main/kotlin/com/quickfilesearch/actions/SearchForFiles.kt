@@ -1,14 +1,12 @@
 package com.quickfilesearch.actions
 
+import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import com.quickfilesearch.searchbox.PopupInstance
+import com.quickfilesearch.searchbox.*
 import com.quickfilesearch.settings.GlobalSettings
 import com.quickfilesearch.settings.PathDisplayType
-import com.quickfilesearch.searchbox.createPopupInstance
-import com.quickfilesearch.searchbox.runFzf
-import com.quickfilesearch.searchbox.sortCandidatesBasedOnPattern
 import kotlin.math.min
 
 class SearchForFiles(val files: List<VirtualFile>,
@@ -18,10 +16,15 @@ class SearchForFiles(val files: List<VirtualFile>,
     var fileNames: List<String>
     var popup: PopupInstance
 
-
     init {
         if (settings.filePathDisplayType != PathDisplayType.FILENAME_ONLY) {
-            fileNames = files.map { file -> file.path.substring(project.basePath!!.length) }
+            fileNames = files.map { file ->
+                if (isFileInProject(project, file)) {
+                    file.path.substring(project.basePath!!.length)
+                } else {
+                    file.path
+                }
+            }
         } else {
             fileNames = files.map { file -> file.name }
         }
@@ -30,7 +33,6 @@ class SearchForFiles(val files: List<VirtualFile>,
     }
 
     fun getSortedFileList(query: String) : List<VirtualFile> {
-//        val start = System.nanoTime();
         val filteredFiles: List<String>
         if (query.isNotEmpty()) {
             if (settings.useFzfForSearching) {
@@ -51,8 +53,6 @@ class SearchForFiles(val files: List<VirtualFile>,
                     }
                 }
 
-//            val stop = System.nanoTime();
-//            println("Searching through files took ${(stop - start) / 1000000} ms. Fzf took ${(stopFzf - startFzf) /1000000}, nof files: ${files.size}")
             return visibleFiles
         }
         else {
