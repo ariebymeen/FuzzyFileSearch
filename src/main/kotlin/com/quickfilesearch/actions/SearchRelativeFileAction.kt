@@ -17,11 +17,7 @@ class SearchRelativeFileAction(val action: Array<String>,
     var files: List<VirtualFile>? = null
     var project: Project? = null
     var searchAction: SearchForFiles? = null
-    val extensions: List<String>
-
-    init {
-        extensions = extractExtensions(action[2])
-    }
+    val extensions: List<String> = extractExtensions(action[2])
 
     override fun actionPerformed(e: AnActionEvent) {
         project = e.project ?: return

@@ -28,8 +28,6 @@ class RecentFilesKeeper(private val project: Project): FileEditorManagerListener
     }
 
     override fun fileOpened(source: FileEditorManager, file: VirtualFile) {
-        println("File opened: ${file.name}") // TODO: REMOVE
-
         if (historyList.contains(file)) {
             historyList.remove(file)
         }
@@ -52,7 +50,6 @@ class SearchRecentFilesAction(val action: Array<String>,
     val name = action[0]
     var history: Int
     val extensions: List<String>
-
     var searchAction: SearchForFiles? = null
 
     init {

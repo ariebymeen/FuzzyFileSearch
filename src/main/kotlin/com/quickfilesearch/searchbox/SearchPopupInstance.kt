@@ -1,6 +1,5 @@
 package com.quickfilesearch.searchbox
 
-import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupFactory
@@ -11,9 +10,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
 import com.quickfilesearch.settings.GlobalSettings
 import kotlinx.coroutines.*
-import java.awt.BorderLayout
-import java.awt.Dimension
-import java.awt.Toolkit
+import java.awt.*
 import java.awt.event.KeyAdapter
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
@@ -26,10 +23,17 @@ import javax.swing.border.EmptyBorder
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 
+class TransparentTextField(private val opacity: Float) : JTextField() {
+    override fun paintComponent(g: Graphics) {
+        val g2 = g as Graphics2D
+        g2.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, opacity)
+        super.paintComponent(g2)
+    }
+}
 
 class PopupInstance {
     val searchField: JTextField = JTextField()
-    val extensionField: JTextField = JTextField()
+    val extensionField: JTextField = TransparentTextField(0.5F)
     val listModel: DefaultListModel<VirtualFile> = DefaultListModel()
     val resultsList = JBList(listModel)
     var onItemSelected: ((VirtualFile) -> Unit)? = null
@@ -114,7 +118,7 @@ fun createPopupInstance(
     settings: GlobalSettings.SettingsState,
     basePath: String,
     project: Project,
-    extensions: String? = null
+    extensions: List<String>? = null
 ) : PopupInstance
 {
     val instance = PopupInstance();
@@ -128,11 +132,13 @@ fun createPopupInstance(
     instance.searchField.border = border
     instance.searchField.toolTipText = "Type to search..."
 
-    instance.extensionField.preferredSize = Dimension(100, 50)
     instance.extensionField.border = border
     instance.extensionField.toolTipText = ""
-    if (extensions != null) {
-        instance.extensionField.text = extensions
+    if (!extensions.isNullOrEmpty()) {
+        instance.extensionField.preferredSize = Dimension(100, 50)
+        instance.extensionField.text = extensions.map{ext -> ".$ext"}.joinToString(";")
+    } else {
+        instance.extensionField.preferredSize = Dimension(0, 50)
     }
     instance.extensionField.isEditable = false
 
@@ -148,13 +154,12 @@ fun createPopupInstance(
         override fun removeUpdate(e: DocumentEvent?) { debouncedFunction(Unit) }
         override fun changedUpdate(e: DocumentEvent?) { debouncedFunction(Unit) }
     })
-//    panel.add(instance.searchField, BorderLayout.NORTH)
 
     // Field with text header
-    val subPanel = JPanel(BorderLayout())
-    subPanel.add(instance.searchField, BorderLayout.CENTER)
-    subPanel.add(instance.extensionField, BorderLayout.EAST)
-    panel.add(subPanel, BorderLayout.NORTH)
+    val searchBar = JPanel(BorderLayout())
+    searchBar.add(instance.searchField, BorderLayout.CENTER)
+    searchBar.add(instance.extensionField, BorderLayout.EAST)
+    panel.add(searchBar, BorderLayout.NORTH)
 
     instance.resultsList.border = border;
     instance.resultsList.cellRenderer = SearchDialogCellRenderer(settings.filePathDisplayType, basePath, project)
