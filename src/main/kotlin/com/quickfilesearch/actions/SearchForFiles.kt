@@ -19,7 +19,7 @@ class SearchForFiles(val files: List<VirtualFile>,
     var popup: PopupInstance
 
     init {
-        if (files.size > 10000) {
+        if (files.size > 500) {
             showErrorNotification("Too many files to search", """
                 Too many files ${files.size} found, so these cannot be searched. Consider excluding directory with too 
                 many files or specifying what extensions you are interested in """)
@@ -56,6 +56,7 @@ class SearchForFiles(val files: List<VirtualFile>,
                         files[index]
                     } else {
                         println("Error, unexpected index < 0. Filtered files size: ${filteredFiles.size}, file size: ${files.size}, index: $index")
+                        showErrorNotification("Something went wrong searching", "$visibleList")
                         files[0]
                     }
                 }

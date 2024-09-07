@@ -68,24 +68,12 @@ fun isFzfAvailable(): Boolean {
 }
 
 fun runFzf(customInput: String, query: String, readNofLines: Int) : List<String> {
-//    fun runFzf(files: List<String>, query: String) : List<String> {
     try {
-        // Run fzf
         val process = ProcessBuilder("/bin/bash", "-c", "echo \"$customInput\" | fzf -f \"${query}\"")
             .redirectErrorStream(true)
             .start()
 
-        // Capture output
         val reader = BufferedReader(InputStreamReader(process.inputStream))
-
-//        val output = mutableListOf<String>()
-//        var line = reader.readLine()
-//        while (output.size < readNofLines && line != null) {
-//            output.add(line)
-//            line = reader.readLine()
-//        }
-//        if (line != null) output.add(line)
-
         val output = reader.readLines() // TODO: Read only required lines
         process.waitFor()
 

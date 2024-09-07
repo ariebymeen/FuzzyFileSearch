@@ -73,16 +73,6 @@ fun updateListedItems(instance: PopupInstance) {
     instance.resultsList.selectedIndex = 0
 }
 
-fun keyTypedEvent(instance: PopupInstance, e: KeyEvent) {
-    if (Character.isDigit(e.keyChar) && (instance.searchField.text.isEmpty() || e.isControlDown)) {
-        e.consume() // Consume the event to prevent the character from being added
-        instance.resultsList.selectedIndex = e.keyChar.digitToInt()
-        instance.popup?.dispose()
-        instance.onItemSelected?.invoke(instance.resultsList.selectedValue)
-        return
-    }
-}
-
 fun keyReleasedEvent(instance: PopupInstance, e: KeyEvent) {
     when (e.keyCode) {
         KeyEvent.VK_UP -> instance.resultsList.selectedIndex -= 1
@@ -94,9 +84,9 @@ fun keyReleasedEvent(instance: PopupInstance, e: KeyEvent) {
         }
     }
     if (e.isControlDown) {
-        when (e.keyChar) {
-            'k' -> instance.resultsList.selectedIndex -= 1
-            'j' -> instance.resultsList.selectedIndex += 1
+        when (e.keyCode) {
+            KeyEvent.VK_K -> instance.resultsList.selectedIndex -= 1
+            KeyEvent.VK_J -> instance.resultsList.selectedIndex += 1
         }
     }
 }
@@ -121,6 +111,7 @@ fun createPopupInstance(
     extensions: List<String>? = null
 ) : PopupInstance
 {
+    val headerHeight = 40;
     val instance = PopupInstance();
     instance.maxNofItemsInPopup = settings.numberOfFilesInSearchView
     instance.onSearchBoxChanged = getSearchResultCallback
@@ -128,24 +119,21 @@ fun createPopupInstance(
 
     val border: EmptyBorder = JBUI.Borders.empty(2, 5)
     val panel = JPanel(BorderLayout())
-    instance.searchField.preferredSize = Dimension(100, 50)
+    instance.searchField.preferredSize = Dimension(100, headerHeight)
     instance.searchField.border = border
     instance.searchField.toolTipText = "Type to search..."
 
     instance.extensionField.border = border
     instance.extensionField.toolTipText = ""
     if (!extensions.isNullOrEmpty()) {
-        instance.extensionField.preferredSize = Dimension(100, 50)
+        instance.extensionField.preferredSize = Dimension(100, headerHeight)
         instance.extensionField.text = extensions.map{ext -> ".$ext"}.joinToString(";")
     } else {
-        instance.extensionField.preferredSize = Dimension(0, 50)
+        instance.extensionField.preferredSize = Dimension(0, headerHeight)
     }
     instance.extensionField.isEditable = false
 
     instance.searchField.addKeyListener(object : KeyAdapter() {
-        override fun keyTyped(e: KeyEvent) {
-            keyTypedEvent(instance, e)
-        }
         override fun keyReleased(e: KeyEvent) { keyReleasedEvent(instance, e) }
     })
     val debouncedFunction = debounce<Unit>(50, instance.coroutineScope) { updateListedItems(instance) }
