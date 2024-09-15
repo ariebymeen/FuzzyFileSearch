@@ -28,8 +28,11 @@
         <postStartupActivity implementation="com.quickfilesearch.settings.ApplicationStartupSetup"/>
 <!--        <applicationStartupActivity implementation="com.example.MyApplicationStartupActivity"/>-->
         <projectService
-                serviceInterface="com.quickfilesearch.actions.RecentFilesKeeper"
-                serviceImplementation="com.quickfilesearch.actions.RecentFilesKeeper"/>
+                serviceInterface="com.quickfilesearch.services.RecentFilesKeeper"
+                serviceImplementation="com.quickfilesearch.services.RecentFilesKeeper"/>
+        <projectService
+                serviceInterface="com.quickfilesearch.services.FileChangeListener"
+                serviceImplementation="com.quickfilesearch.services.FileChangeListener"/>
         <applicationConfigurable
                 parentId="tools"
                 instance="com.quickfilesearch.settings.GlobalSettingsConfigurable"

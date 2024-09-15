@@ -11,38 +11,10 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.messages.MessageBusConnection
 import com.quickfilesearch.*
+import com.quickfilesearch.services.RecentFilesKeeper
 import kotlin.math.min
 
 
-@Service(Service.Level.PROJECT)
-class RecentFilesKeeper(private val project: Project): FileEditorManagerListener {
-    val settings = GlobalSettings().getInstance().state
-    var connection: MessageBusConnection
-    var historyList = mutableListOf<VirtualFile>()
-    var historyLength = 100 // Max history length
-
-    init {
-        println("Project level service initialized")
-        connection = project.messageBus.connect()
-        connection.subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER, this)
-    }
-
-    override fun fileOpened(source: FileEditorManager, file: VirtualFile) {
-        if (historyList.contains(file)) {
-            historyList.remove(file)
-        }
-        while (historyList.size >= historyLength) {
-            historyList.removeAt(0)
-        }
-        historyList.add(file)
-    }
-
-    fun getRecentFiles(nofFiles: Int) : List<VirtualFile> {
-        val nofFiles = min(nofFiles, historyList.size)
-        if (historyList.isEmpty()) return emptyList()
-        return historyList.subList(historyList.size - nofFiles, historyList.size - 1)
-    }
-}
 
 class SearchRecentFilesAction(val action: Array<String>,
                               val settings: GlobalSettings.SettingsState) : AnAction(getActionName(action))

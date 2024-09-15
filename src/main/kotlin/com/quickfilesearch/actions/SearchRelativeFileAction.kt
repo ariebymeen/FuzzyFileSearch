@@ -28,6 +28,7 @@ class SearchRelativeFileAction(val action: Array<String>,
             return
         }
 
+        var directory = currentFile.parent
         if (regex.pattern.isEmpty()) {
             // If pattern is empty, list all files from current directory down
             files = getAllFilesInRoot(currentFile.parent, settings.excludedDirs, extensions)
@@ -38,10 +39,11 @@ class SearchRelativeFileAction(val action: Array<String>,
                 showTimedNotification("$name Could not find file", "Could not find file satisfying regex ${regex.pattern}");
                 return
             }
+            directory = matchingFile.parent
             files = getAllFilesInRoot(matchingFile.parent, settings.excludedDirs, extensions)
         }
         files ?: return
-        searchAction = SearchForFiles(files!!, settings, project!!);
+        searchAction = SearchForFiles(files!!, settings, project!!, directory.path, extensions)
     }
 
     companion object {

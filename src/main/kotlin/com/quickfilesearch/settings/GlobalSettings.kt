@@ -7,7 +7,8 @@ enum class PathDisplayType {
     FILENAME_RELATIVE_PATH,
     FILENAME_ONLY,
     FILENAME_FULL_PATH,
-    FULL_PATH_WITH_FILENAME
+    FULL_PATH_WITH_FILENAME,
+    RELATIVE_PATH_WITH_FILENAME
 }
 
 @State(
@@ -19,9 +20,9 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
     private var interalState = SettingsState()
 
     class SettingsState {
-        var searchPopupWidth = 0.4;
-        var searchPopupHeight = 0.3;
-        var numberOfFilesInSearchView = 10;
+        var searchPopupWidth = 0.4
+        var searchPopupHeight = 0.3
+        var numberOfFilesInSearchView = 10
         var useFzfForSearching = true
         var excludedDirs: Set<String> = setOf("build", ".gradle", ".idea", ".run")
         var filePathDisplayType: PathDisplayType = PathDisplayType.FILENAME_RELATIVE_PATH

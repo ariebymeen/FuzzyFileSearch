@@ -1,8 +1,11 @@
 package com.quickfilesearch.settings
 
+import com.intellij.openapi.components.service
 import com.intellij.openapi.options.Configurable
+import com.intellij.openapi.project.ProjectManager
 import com.quickfilesearch.actions.*
 import com.quickfilesearch.searchbox.isFzfAvailable
+import com.quickfilesearch.services.FileChangeListener
 import javax.swing.JComponent
 
 class GlobalSettingsConfigurable : Configurable {
@@ -111,6 +114,12 @@ class GlobalSettingsConfigurable : Configurable {
         settings.state.filePathDisplayType = component.pathDisplayDropdownBox.selectedItem as PathDisplayType
         settings.state.searchPopupWidth = component.searchBoxWidth.value as Double
         settings.state.searchPopupHeight = component.searchBoxHeight.value as Double
+
+        println("Invalidate all hashes")
+        ProjectManager.getInstance().openProjects.forEach { project ->
+            // invalidate all hash files, as you do not know what settings have changed
+            project.service<FileChangeListener>().invalidateHashes()
+        }
     }
 
     override fun getDisplayName(): String {

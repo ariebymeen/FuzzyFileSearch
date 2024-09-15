@@ -46,8 +46,9 @@ class SearchFileInPathAction(val action: Array<String>,
             showTimedNotification("$name path not found", "Trying to open path ${searchPath}, but this path does not exist");
             return
         }
+
         files = getAllFilesInRoot(vfPath, settings.excludedDirs, extensions)
-        searchAction = SearchForFiles(files!!, settings, project, extensions)
+        searchAction = SearchForFiles(files!!, settings, project, searchPath, extensions)
     }
 
     fun getVirtualFileFromPath(filePath: String): VirtualFile? {

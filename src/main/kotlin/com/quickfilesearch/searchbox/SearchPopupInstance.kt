@@ -59,6 +59,7 @@ fun updateListedItems(instance: PopupInstance) {
     val items = instance.onSearchBoxChanged?.invoke(instance.searchField.text);
     items ?: return
 
+    // TODO: Add indication that not all files are listed
     if (items.size == instance.listModel.size) {
         for (idx in items.indices) {
             instance.listModel[idx] = items[idx]
@@ -128,6 +129,8 @@ fun createPopupInstance(
     if (!extensions.isNullOrEmpty()) {
         instance.extensionField.preferredSize = Dimension(100, headerHeight)
         instance.extensionField.text = extensions.map{ext -> ".$ext"}.joinToString(";")
+        val width = instance.extensionField.getFontMetrics(instance.extensionField.font).stringWidth(instance.extensionField.text)
+        instance.extensionField.preferredSize = Dimension(width + 30, headerHeight)
     } else {
         instance.extensionField.preferredSize = Dimension(0, headerHeight)
     }

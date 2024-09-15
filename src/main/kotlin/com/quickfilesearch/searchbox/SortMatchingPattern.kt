@@ -84,3 +84,21 @@ fun runFzf(customInput: String, query: String, readNofLines: Int) : List<String>
     }
     return emptyList<String>()
 }
+
+fun runFzfCat(hashFile: String, query: String) : List<String> {
+    try {
+        val process = ProcessBuilder("/bin/bash", "-c", "cat \"$hashFile\" | fzf -f \"${query}\"")
+            .redirectErrorStream(true)
+            .start()
+
+        val reader = BufferedReader(InputStreamReader(process.inputStream))
+        val output = reader.readLines() // TODO: Read only required lines
+        process.waitFor()
+
+        return output
+    } catch (e: Exception) {
+        e.printStackTrace()
+        showErrorNotification("Searching error", "Error running fzf: ${e.message}. Are you sure that fzf is installed?")
+    }
+    return emptyList<String>()
+}

@@ -5,6 +5,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.isFile
+import java.security.MessageDigest
 import kotlin.collections.ArrayList
 import kotlin.math.min
 
@@ -135,4 +136,9 @@ fun getAllFilesInRoot(root: VirtualFile, excludedDirectoryList: Set<String>? = n
         }
     }
     return files
+}
+
+fun String.sha256(): String {
+    val md = MessageDigest.getInstance("SHA-256")
+    return md.digest(toByteArray()).joinToString("") { "%02x".format(it) }
 }

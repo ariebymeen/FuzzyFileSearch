@@ -7,6 +7,8 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
 import com.intellij.openapi.startup.StartupActivity
 import com.quickfilesearch.actions.*
+import com.quickfilesearch.services.RecentFilesKeeper
+import com.quickfilesearch.services.FileChangeListener
 
 class ApplicationStartupSetup : ProjectActivity {
 
@@ -27,20 +29,6 @@ class ApplicationStartupSetup : ProjectActivity {
         println("Fzf available: $fzfAvailable")
 
         project.service<RecentFilesKeeper>() // Initialize project service
+        project.service<FileChangeListener>() // Initialize project service
     }
 }
-
-//@Service
-//class ProjectStartupSetup(val project: Project) {
-//    init {
-//        // TODO: Probably no longer needed
-//        println("Starting initial project setup")
-//        val globalSettings = GlobalSettings().getInstance()
-//        val projectSettings = ProjectSettings().getInstance()
-//
-//        registerQuickFileSearchActions(projectSettings.state.openRelativeFileActions, globalSettings.state)
-//        registerSearchRelativeFileActions(projectSettings.state.searchRelativeFileActions, globalSettings.state)
-//        registerSearchFileInPathActions(projectSettings.state.searchPathActions, globalSettings.state)
-//
-//    }
-//}
