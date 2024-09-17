@@ -46,7 +46,7 @@ class SearchRecentFilesAction(val action: Array<String>,
             }
         }
         val filteredFiles = recentFiles.filter { file -> extensions.isEmpty() || extensions.contains(file.extension) }
-        searchAction = SearchForFiles(filteredFiles, settings, project)
+        searchAction = SearchForFiles(filteredFiles, settings, project, null, extensions)
     }
 
     companion object {

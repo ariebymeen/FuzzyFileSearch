@@ -64,6 +64,8 @@ fun getParentSatisfyingRegex(project: Project,
 
 fun isFileInProject(project: Project, file: VirtualFile): Boolean {
     val projectRootManager = ProjectRootManager.getInstance(project)
+    project.isInitialized ?: return false
+
     // If file is in current project or otherwise check if the file is loaded in the file tree
     return projectRootManager.fileIndex.isInContent(file) || (projectRootManager.contentRoots.isEmpty() && file.path.find(project.basePath!!) != null)
 }

@@ -13,6 +13,11 @@ import com.quickfilesearch.settings.GlobalSettings
 import com.quickfilesearch.settings.PathDisplayType
 import com.quickfilesearch.showErrorNotification
 import kotlin.math.min
+import kotlinx.coroutines.*
+import org.apache.tools.ant.taskdefs.Execute.launch
+import org.jetbrains.concurrency.asDeferred
+import org.jetbrains.concurrency.asPromise
+import org.jetbrains.concurrency.await
 
 class SearchForFiles(val files: List<VirtualFile>,
                      val settings: GlobalSettings.SettingsState,
@@ -20,46 +25,51 @@ class SearchForFiles(val files: List<VirtualFile>,
                      val directory: String? = null,
                      extensions: List<String>? = null) {
     var fileNamesConcat: String? = null
-    var fileNames: List<String>
-    var popup: PopupInstance
+    var fileNames: List<String>? = null
+    var popup: PopupInstance? = null
     var hasHashFile: Boolean = false
     var hashFile: String? = null
+    val coroutineScope = CoroutineScope(Dispatchers.Main)
 
     init {
+        coroutineScope.launch {
+            val processFiles = async {
 
-//        if (files.size > 500) {
-//            showErrorNotification("Too many files to search", """
-//                Too many files ${files.size} found, so these cannot be searched. Consider excluding directory with too
-//                many files or specifying what extensions you are interested in """)
-//        }
-
-        if (settings.filePathDisplayType != PathDisplayType.FILENAME_ONLY) {
-            fileNames = files.map { file ->
-                if (isFileInProject(project, file)) {
-                    file.path.substring(project.basePath!!.length)
+                if (settings.filePathDisplayType != PathDisplayType.FILENAME_ONLY) {
+                    fileNames = files.map { file ->
+                        if (isFileInProject(project, file)) {
+                            file.path.substring(project.basePath!!.length)
+                        } else {
+                            file.path
+                        }
+                    }
                 } else {
-                    file.path
+                    fileNames = files.map { file -> file.name }
+                }
+
+                if (directory != null) {
+                    hashFile = project.service<FileChangeListener>().getHashFilePath(directory, extensions)
+                    println("Path: ${directory}, resulting hash: $hashFile")
+                    if (!project.service<FileChangeListener>().hasValidHash(directory, extensions)) {
+                        val start = System.currentTimeMillis()
+                        println("No valid hash file present, writing hash file!")
+                        fileNamesConcat = fileNames!!.joinToString("\n")
+                        writeLineToFile(hashFile!!, fileNamesConcat!!)
+                        val stop = System.currentTimeMillis()
+                        println("Writing to has file took ${stop - start} ms")
+                    }
+                    hasHashFile = true
+                } else {
+                    // TODO: This will never happen
+                    fileNamesConcat = fileNames!!.joinToString("\n")
                 }
             }
-        } else {
-            fileNames = files.map { file -> file.name }
+
+            popup = createPopupInstance(::getSortedFileList, ::openSelectedFile, settings, project.basePath!!, project, extensions)
+            processFiles.await()
+            updateListedItems(popup!!)
         }
 
-        if (directory != null) {
-            println("Path: ${directory}, resulting hash: ${directory.sha256()}")
-            hashFile = project.service<FileChangeListener>().getHashFilePath(directory)
-            if (!project.service<FileChangeListener>().hasValidHash(directory)) {
-                println("No valid hash file present, writing hash file!")
-                fileNamesConcat = fileNames.joinToString("\n")
-                writeLineToFile(hashFile!!, fileNamesConcat!!)
-            }
-            hasHashFile = true
-        } else {
-            // TODO: This will never happen
-            fileNamesConcat = fileNames.joinToString("\n")
-        }
-
-        popup = createPopupInstance(::getSortedFileList, ::openSelectedFile, settings, project.basePath!!, project, extensions)
     }
 
     fun getSortedFileList(query: String) : List<VirtualFile> {
@@ -73,11 +83,11 @@ class SearchForFiles(val files: List<VirtualFile>,
                     runFzf(fileNamesConcat!!, query, settings.numberOfFilesInSearchView)
                 }
             } else {
-                sortCandidatesBasedOnPattern(query, fileNames)
+                sortCandidatesBasedOnPattern(query, fileNames!!)
             }
 
             val visibleList = filteredFiles.subList(0, min(filteredFiles.size, settings.numberOfFilesInSearchView))
-            val visibleFiles = visibleList.map { file -> fileNames.indexOfFirst{ name  -> name == file } }
+            val visibleFiles = visibleList.map { file -> fileNames!!.indexOfFirst{ name  -> name == file } }
                 .map { index ->
                     if (index >= 0) {
                         files[index]

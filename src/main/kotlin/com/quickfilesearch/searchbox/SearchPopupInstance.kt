@@ -49,8 +49,8 @@ fun <T> debounce(delayMillis: Long = 300L, coroutineScope: CoroutineScope, actio
     return { param: T ->
         debounceJob?.cancel()
         debounceJob = coroutineScope.launch {
-            delay(delayMillis)
             action(param)
+            delay(delayMillis)
         }
     }
 }
@@ -179,8 +179,9 @@ fun createPopupInstance(
         instance.popup!!.showInCenterOf(ideFrame.component)
     }
 
-    SwingUtilities.invokeLater { instance.searchField.requestFocusInWindow() }
-    updateListedItems(instance);
+    SwingUtilities.invokeLater {
+        instance.searchField.requestFocusInWindow()
+    }
 
     return instance;
 }

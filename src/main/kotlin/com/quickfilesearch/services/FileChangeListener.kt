@@ -20,12 +20,25 @@ class FileChangeListener(private val project: Project) : VirtualFileListener {
         clearDirectoryContents(directory)
     }
 
-    fun hasValidHash(path: String): Boolean {
-        return directoryContainsFile(directory, ".${path.sha256()}")
+    fun hasValidHash(path: String, extensions: List<String>? = null): Boolean {
+        return directoryContainsFile(directory, createHashFileName(path, extensions))
     }
 
-    fun getHashFilePath(path: String): String {
-        return "$directory/.${path.sha256()}"
+    fun hasValidHashFile(fileName: String): Boolean {
+        return directoryContainsFile(directory, fileName)
+    }
+
+    fun getHashFilePath(path: String, extensions: List<String>? = null): String {
+        return "$directory/${createHashFileName(path, extensions)}"
+    }
+
+    private fun createHashFileName(path: String, extensions: List<String>? = null) : String {
+        if (extensions != null) {
+            val hash = "$path;${extensions.joinToString(";")}".sha256()
+            return ".$hash"
+        } else {
+            return ".${path.sha256()}"
+        }
     }
 
     fun invalidateHashes() {
