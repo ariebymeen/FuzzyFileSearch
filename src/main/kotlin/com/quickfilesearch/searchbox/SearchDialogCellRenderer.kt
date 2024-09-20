@@ -1,68 +1,149 @@
 package com.quickfilesearch.searchbox
 
-import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import com.quickfilesearch.services.isFileModified
 import com.quickfilesearch.settings.PathDisplayType
 import java.awt.Component
-import javax.swing.BorderFactory
-import javax.swing.DefaultListCellRenderer
-import javax.swing.JLabel
-import javax.swing.JList
+import java.awt.Font
+import javax.swing.*
 import javax.swing.border.Border
+import javax.swing.text.BadLocationException
+import javax.swing.text.StyleConstants
 
 class SearchDialogCellRenderer(val pathRenderType: PathDisplayType,
                                val basePath: String,
-                               val project: Project) : DefaultListCellRenderer() {
+                               val project: Project) : ListCellRenderer<PopupInstanceItem> {
     private val emptyBorder: Border = BorderFactory.createEmptyBorder(3, 3, 3, 3)
 
     override fun getListCellRendererComponent(
-        list: JList<*>,
-        value: Any,
+        list: JList<out PopupInstanceItem>,
+        value: PopupInstanceItem,
         index: Int,
         isSelected: Boolean,
         cellHasFocus: Boolean
     ): Component {
-        val vf = value as VirtualFile
+//        if (value.panel != null) {
+//            return value.panel!!
+//        }
 
-        val label = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus) as JLabel
-        label.border = emptyBorder // Padding
-        label.text = getLabelText(vf, pathRenderType, index, basePath, project)
+        value.panel = JTextPane()
 
-        return label
+        val start = System.nanoTime()
+//        val item = value as PopupInstanceItem
+//
+//        val label = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus) as JLabel
+//        label.border = emptyBorder // Padding
+//        label.text = "<html>This is a test</html>"
+//        if (item.html.isEmpty()) {
+//            item.html = getLabelHtml(item.vf, pathRenderType, project)
+//        }
+//        label.text = getLabelText(item, index)
+
+//
+//        return label
+        // Reset the document for each cell
+        value.panel!!.text = "" // Clear previous content
+        setText(value, index)
+
+        value.panel!!.background = if (isSelected) list.selectionBackground else list.background
+        value.panel!!.foreground = if (isSelected) list.selectionForeground else list.foreground
+
+        value.panel!!.isOpaque = true // Ensure the background color is painted
+
+        val stop = System.nanoTime()
+//        println("Rendering item took ${24 * (stop - start) / 1000} us")
+
+        value.rendered = true
+        return value.panel!!
     }
 
-    companion object {
-        fun getLabelText(value: VirtualFile, pathRenderType: PathDisplayType, index: Int, basePath: String, project: Project) : String {
-            val indicator = if (isFileModified(value)) "*" else ""
-            when (pathRenderType) {
-                PathDisplayType.FILENAME_ONLY -> {
-                    return "<html><b>$index: </b>   $indicator${value.name}</html>"
+    fun setText(item: PopupInstanceItem, index: Int) {
+        val italicStyle = item.panel!!.addStyle("Italic", null).apply {
+            StyleConstants.setItalic(this, true)
+        }
+        val boldStyle = item.panel!!.addStyle("Bold", null).apply {
+            StyleConstants.setBold(this, true)
+        }
+
+        val formattedNumber = String.format("%02d: - ", index)
+        val doc = item.panel!!.styledDocument
+        when (pathRenderType) {
+            PathDisplayType.FILENAME_ONLY -> {
+                doc.insertString(doc.length, "$formattedNumber${item.vf.name} ", boldStyle)
+            }
+
+            PathDisplayType.FILENAME_RELATIVE_PATH -> {
+                doc.insertString(doc.length, "$formattedNumber${item.vf.name} ", boldStyle)
+                val path = item.vf.parent!!.path
+                if (isFileInProject(project, item.vf)) {
+                    doc.insertString(doc.length, path.subSequence(basePath.length, path.length).toString(), italicStyle)
+                } else {
+                    doc.insertString(doc.length, path, italicStyle)
                 }
-                PathDisplayType.FILENAME_RELATIVE_PATH -> {
-                    val path = value.parent!!.path
-                    return if (isFileInProject(project, value)) {
-                        "<html><b>$index: </b>   <strong>$indicator${value.name}</strong>  <i>${path.subSequence(basePath.length, path.length)}</i></html>"
-                    } else {
-                        "<html><b>$index: </b>   <strong>$indicator${value.name}</strong>  <i>${path}</i></html>"
-                    }
+            }
+
+            PathDisplayType.FILENAME_FULL_PATH -> {
+                doc.insertString(doc.length, "$formattedNumber${item.vf.name} ", boldStyle)
+                doc.insertString(doc.length, item.vf.parent!!.path, italicStyle)
+            }
+
+            PathDisplayType.FULL_PATH_WITH_FILENAME -> {
+                doc.insertString(doc.length, item.vf.parent!!.path, italicStyle)
+                doc.insertString(doc.length, "$formattedNumber${item.vf.name} ", boldStyle)
+            }
+
+            PathDisplayType.RELATIVE_PATH_WITH_FILENAME -> {
+                doc.insertString(doc.length, formattedNumber, boldStyle)
+                val path = item.vf.parent!!.path
+                if (isFileInProject(project, item.vf)) {
+                    doc.insertString(doc.length, path.subSequence(basePath.length, path.length).toString(), italicStyle)
+                } else {
+                    doc.insertString(doc.length, path, italicStyle)
                 }
-                PathDisplayType.FILENAME_FULL_PATH -> {
-                    return "<html><b>$index: </b>   <strong>$indicator${value.name}</strong>  <i>${value.parent!!.path}</i></html>"
-                }
-                PathDisplayType.FULL_PATH_WITH_FILENAME -> {
-                    return "<html><b>$index: </b>   $indicator${value.parent!!.path}/<strong>${value.name}</strong></html>"
-                }
-                PathDisplayType.RELATIVE_PATH_WITH_FILENAME -> {
-                    val path = value.parent!!.path
-                    return if (isFileInProject(project, value)) {
-                        "<html><b>$index: </b>   $indicator<i>${path.subSequence(basePath.length, path.length)}/</i><strong>${value.name}</strong></html>"
-                    } else {
-                        "<html><b>$index: </b>   $indicator<i>${path}/</i><strong>${value.name}</strong></html>"
-                    }
-                }
+                doc.insertString(doc.length, "/", italicStyle)
+                doc.insertString(doc.length, item.vf.name, boldStyle)
             }
         }
     }
+
+    companion object {
+
+        fun getLabelText(value: PopupInstanceItem, index: Int) : String {
+            return "<html><b>$index:   </b> ${value.html}</html>"
+        }
+
+        fun getLabelHtml(file: VirtualFile, pathRenderType: PathDisplayType, project: Project) : String {
+//            println("getLabelHtml: ${file.path}")
+            val basePath = project.basePath ?: "";
+            when (pathRenderType) {
+                PathDisplayType.FILENAME_ONLY -> {
+                    return file.name
+                }
+                PathDisplayType.FILENAME_RELATIVE_PATH -> {
+                    val path = file.parent!!.path
+                    return if (isFileInProject(project, file)) {
+                        "<strong>${file.name}</strong>  <i>${path.subSequence(basePath.length, path.length)}</i>"
+                    } else {
+                        "<strong>${file.name}</strong>  <i>${path}</i>"
+                    }
+                }
+                PathDisplayType.FILENAME_FULL_PATH -> {
+                    return "<strong>${file.name}</strong>  <i>${file.parent!!.path}</i>"
+                }
+                PathDisplayType.FULL_PATH_WITH_FILENAME -> {
+                    return "${file.parent!!.path}/<strong>${file.name}</strong>"
+                }
+                PathDisplayType.RELATIVE_PATH_WITH_FILENAME -> {
+                    val path = file.parent!!.path
+                    return if (isFileInProject(project, file)) {
+                        "<i>${path.subSequence(basePath.length, path.length)}/</i><strong>${file.name}</strong>"
+                    } else {
+                        "<i>${path}/</i><strong>${file.name}</strong></html>"
+                    }
+                }
+            }
+
+        }
+    }
+
 }

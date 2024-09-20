@@ -8,6 +8,7 @@ import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.quickfilesearch.*
 import com.quickfilesearch.searchbox.PopupInstance
+import com.quickfilesearch.searchbox.PopupInstanceItem
 import com.quickfilesearch.searchbox.getAllFilesInRoot
 import kotlin.io.path.Path
 
@@ -18,7 +19,7 @@ class SearchFileInPathAction(val action: Array<String>,
     val location = action[1]
     val extensions: List<String>
 
-    var files: List<VirtualFile>? = null
+    var files: List<PopupInstanceItem>? = null
     var project: Project? = null
     var searchAction: SearchForFiles? = null
 

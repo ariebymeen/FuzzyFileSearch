@@ -6,6 +6,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.quickfilesearch.*
+import com.quickfilesearch.searchbox.PopupInstanceItem
 import com.quickfilesearch.searchbox.getAllFilesInRoot
 import com.quickfilesearch.searchbox.getParentSatisfyingRegex
 
@@ -14,7 +15,7 @@ class SearchRelativeFileAction(val action: Array<String>,
 {
     val regex = Regex(pattern = action[1], options = setOf(RegexOption.IGNORE_CASE))
     val name = getActionName(action)
-    var files: List<VirtualFile>? = null
+    var files: List<PopupInstanceItem>? = null
     var project: Project? = null
     var searchAction: SearchForFiles? = null
     val extensions: List<String> = extractExtensions(action[2])

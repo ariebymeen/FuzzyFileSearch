@@ -11,6 +11,8 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.messages.MessageBusConnection
 import com.quickfilesearch.*
+import com.quickfilesearch.searchbox.PopupInstanceItem
+import com.quickfilesearch.searchbox.SearchDialogCellRenderer
 import com.quickfilesearch.services.RecentFilesKeeper
 import kotlin.math.min
 
@@ -46,6 +48,8 @@ class SearchRecentFilesAction(val action: Array<String>,
             }
         }
         val filteredFiles = recentFiles.filter { file -> extensions.isEmpty() || extensions.contains(file.extension) }
+//                                       .map{ file -> PopupInstanceItem(file, SearchDialogCellRenderer.getLabelHtml(file, settings.filePathDisplayType, project)) }
+                                        .map{ file -> PopupInstanceItem(file, "") }
         searchAction = SearchForFiles(filteredFiles, settings, project, null, extensions)
     }
 

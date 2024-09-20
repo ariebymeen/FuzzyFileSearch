@@ -1,25 +1,19 @@
 package com.quickfilesearch.actions
 
 import com.intellij.openapi.components.service
-import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.quickfilesearch.searchbox.*
 import com.quickfilesearch.services.FileChangeListener
-import com.quickfilesearch.services.RecentFilesKeeper
 import com.quickfilesearch.services.writeLineToFile
 import com.quickfilesearch.settings.GlobalSettings
 import com.quickfilesearch.settings.PathDisplayType
 import com.quickfilesearch.showErrorNotification
 import kotlin.math.min
 import kotlinx.coroutines.*
-import org.apache.tools.ant.taskdefs.Execute.launch
-import org.jetbrains.concurrency.asDeferred
-import org.jetbrains.concurrency.asPromise
-import org.jetbrains.concurrency.await
 
-class SearchForFiles(val files: List<VirtualFile>,
+class SearchForFiles(val files: List<PopupInstanceItem>,
                      val settings: GlobalSettings.SettingsState,
                      var project: Project,
                      val directory: String? = null,
@@ -34,33 +28,21 @@ class SearchForFiles(val files: List<VirtualFile>,
     init {
         coroutineScope.launch {
             val processFiles = async {
-
                 if (settings.filePathDisplayType != PathDisplayType.FILENAME_ONLY) {
                     fileNames = files.map { file ->
-                        if (isFileInProject(project, file)) {
-                            file.path.substring(project.basePath!!.length)
+                        if (isFileInProject(project, file.vf)) {
+                            file.vf.path.substring(project.basePath!!.length)
                         } else {
-                            file.path
+                            file.vf.path
                         }
                     }
                 } else {
-                    fileNames = files.map { file -> file.name }
+                    fileNames = files.map { file -> file.vf.name }
                 }
 
                 if (directory != null) {
-                    hashFile = project.service<FileChangeListener>().getHashFilePath(directory, extensions)
-                    println("Path: ${directory}, resulting hash: $hashFile")
-                    if (!project.service<FileChangeListener>().hasValidHash(directory, extensions)) {
-                        val start = System.currentTimeMillis()
-                        println("No valid hash file present, writing hash file!")
-                        fileNamesConcat = fileNames!!.joinToString("\n")
-                        writeLineToFile(hashFile!!, fileNamesConcat!!)
-                        val stop = System.currentTimeMillis()
-                        println("Writing to has file took ${stop - start} ms")
-                    }
-                    hasHashFile = true
+                    writeFilesListToHashFiles(extensions)
                 } else {
-                    // TODO: This will never happen
                     fileNamesConcat = fileNames!!.joinToString("\n")
                 }
             }
@@ -72,7 +54,22 @@ class SearchForFiles(val files: List<VirtualFile>,
 
     }
 
-    fun getSortedFileList(query: String) : List<VirtualFile> {
+    private fun writeFilesListToHashFiles(extensions: List<String>?) {
+        val directory = directory ?: return
+        hashFile = project.service<FileChangeListener>().getHashFilePath(directory, extensions)
+        println("Path: ${directory}, resulting hash: $hashFile")
+        if (!project.service<FileChangeListener>().hasValidHash(directory, extensions)) {
+            val start = System.currentTimeMillis()
+            println("No valid hash file present, writing hash file!")
+            fileNamesConcat = fileNames!!.joinToString("\n")
+            writeLineToFile(hashFile!!, fileNamesConcat!!)
+            val stop = System.currentTimeMillis()
+            println("Writing to has file took ${stop - start} ms")
+        }
+        hasHashFile = true
+    }
+
+    fun getSortedFileList(query: String) : List<PopupInstanceItem> {
         val filteredFiles: List<String>
         if (query.isNotEmpty()) {
             filteredFiles = if (settings.useFzfForSearching) {
@@ -105,8 +102,8 @@ class SearchForFiles(val files: List<VirtualFile>,
         }
     }
 
-    fun openSelectedFile(selectedValue: VirtualFile) {
-        FileEditorManager.getInstance(project).openFile(selectedValue, true)
+    fun openSelectedFile(selectedValue: PopupInstanceItem) {
+        FileEditorManager.getInstance(project).openFile(selectedValue.vf, true)
     }
 
 }

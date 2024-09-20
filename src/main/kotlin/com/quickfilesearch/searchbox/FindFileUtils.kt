@@ -124,13 +124,13 @@ fun isFileInProject(project: Project, file: VirtualFile): Boolean {
 //    return getAllFilesInRootWithinDistance(maxRoot, referenceFile, maxDistance, excludedDirectoryList)
 //}
 
-fun getAllFilesInRoot(root: VirtualFile, excludedDirectoryList: Set<String>? = null, extensions: List<String>) : ArrayList<VirtualFile> {
-    val files: ArrayList<VirtualFile> = ArrayList()
-    if (!root.isDirectory) files.add(root)
+fun getAllFilesInRoot(root: VirtualFile, excludedDirectoryList: Set<String>? = null, extensions: List<String>) : ArrayList<PopupInstanceItem> {
+    val files: ArrayList<PopupInstanceItem> = ArrayList()
+    if (!root.isDirectory) files.add(PopupInstanceItem(root, ""))
 
     for (child in root.children!!) {
         if (child.isFile && (extensions.isEmpty() || extensions.contains(child.extension))) {
-            files.add(child)
+            files.add(PopupInstanceItem(child, ""))
         }
         if (child.isDirectory) {
             if (excludedDirectoryList != null && excludedDirectoryList.contains(child.name)) continue

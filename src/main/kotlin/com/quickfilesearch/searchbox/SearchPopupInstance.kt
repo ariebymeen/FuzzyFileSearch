@@ -10,18 +10,14 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
 import com.quickfilesearch.settings.GlobalSettings
 import kotlinx.coroutines.*
+import org.jdesktop.swingx.JXList
 import java.awt.*
-import java.awt.event.KeyAdapter
-import java.awt.event.KeyEvent
-import java.awt.event.MouseAdapter
-import java.awt.event.MouseEvent
-import javax.swing.DefaultListModel
-import javax.swing.JPanel
-import javax.swing.JTextField
-import javax.swing.SwingUtilities
+import java.awt.event.*
+import javax.swing.*
 import javax.swing.border.EmptyBorder
-import javax.swing.event.DocumentEvent
-import javax.swing.event.DocumentListener
+import javax.swing.event.*
+
+class PopupInstanceItem(val vf: VirtualFile, var html: String, var rendered: Boolean = false, var panel: JTextPane? = null)
 
 class TransparentTextField(private val opacity: Float) : JTextField() {
     override fun paintComponent(g: Graphics) {
@@ -34,44 +30,60 @@ class TransparentTextField(private val opacity: Float) : JTextField() {
 class PopupInstance {
     val searchField: JTextField = JTextField()
     val extensionField: JTextField = TransparentTextField(0.5F)
-    val listModel: DefaultListModel<VirtualFile> = DefaultListModel()
-    val resultsList = JBList(listModel)
-    var onItemSelected: ((VirtualFile) -> Unit)? = null
-    var onSearchBoxChanged: ((String) -> List<VirtualFile>)? = null
+    val listModel: DefaultListModel<PopupInstanceItem> = DefaultListModel()
+    val resultsList = JXList(listModel)
+    var onItemSelected: ((PopupInstanceItem) -> Unit)? = null
+    var onSearchBoxChanged: ((String) -> List<PopupInstanceItem>)? = null
     var popup: JBPopup? = null
     var maxNofItemsInPopup = 10
     val coroutineScope = CoroutineScope(Dispatchers.Main)
 }
 
 // Debounce function
-fun <T> debounce(delayMillis: Long = 300L, coroutineScope: CoroutineScope, action: (T) -> Unit): (T) -> Unit {
+fun <T> debounce(delayMillis: Long = 30L, coroutineScope: CoroutineScope, action: (T) -> Unit): (T) -> Unit {
     var debounceJob: Job? = null
     return { param: T ->
         debounceJob?.cancel()
         debounceJob = coroutineScope.launch {
-            action(param)
             delay(delayMillis)
+            action(param)
         }
     }
 }
 
 fun updateListedItems(instance: PopupInstance) {
+    val start = System.nanoTime()
     val items = instance.onSearchBoxChanged?.invoke(instance.searchField.text);
     items ?: return
 
     // TODO: Add indication that not all files are listed
-    if (items.size == instance.listModel.size) {
-        for (idx in items.indices) {
-            instance.listModel[idx] = items[idx]
-        }
-    } else {
-        instance.listModel.clear()
-        for (item in items) {
-            if (instance.listModel.size() >= instance.maxNofItemsInPopup) break
-            instance.listModel.addElement(item)
-        }
+//    if (items.size == instance.listModel.size) {
+//        for (idx in items.indices) {
+//            instance.listModel[idx] = items[idx]
+//        }
+//    } else {
+    instance.listModel.removeAllElements()
+    if (items.isNotEmpty()) {
+        instance.listModel.addAll(items.slice(IntRange(0, kotlin.math.min(items.size, instance.maxNofItemsInPopup) - 1)))
     }
+//        for (item in items) {
+//            if (instance.listModel.size() >= instance.maxNofItemsInPopup) break
+//            instance.listModel.addElement(item)
+//        }
+//    }
     instance.resultsList.selectedIndex = 0
+    val stop = System.nanoTime()
+    println("Time spent updating: ${(stop - start) / 1000} us")
+}
+
+fun keyTypedEvent(instance: PopupInstance, e: KeyEvent) {
+    if (Character.isDigit(e.keyChar) && instance.searchField.text.isEmpty()) {
+        e.consume() // Consume the event to prevent the character from being added
+        instance.resultsList.selectedIndex = e.keyChar.digitToInt()
+        instance.popup?.dispose()
+        instance.onItemSelected?.invoke(instance.resultsList.selectedValue as PopupInstanceItem)
+        return
+    }
 }
 
 fun keyReleasedEvent(instance: PopupInstance, e: KeyEvent) {
@@ -80,7 +92,7 @@ fun keyReleasedEvent(instance: PopupInstance, e: KeyEvent) {
         KeyEvent.VK_DOWN -> instance.resultsList.selectedIndex += 1
         KeyEvent.VK_TAB -> instance.resultsList.selectedIndex += 1
         KeyEvent.VK_ENTER -> {
-            instance.onItemSelected?.invoke(instance.resultsList.selectedValue)
+            instance.onItemSelected?.invoke(instance.resultsList.selectedValue as PopupInstanceItem)
             instance.popup?.dispose()
         }
     }
@@ -94,7 +106,7 @@ fun keyReleasedEvent(instance: PopupInstance, e: KeyEvent) {
 
 fun mouseClickedEvent(instance: PopupInstance) {
     instance.popup?.dispose()
-    instance.onItemSelected?.invoke(instance.resultsList.selectedValue)
+    instance.onItemSelected?.invoke(instance.resultsList.selectedValue as PopupInstanceItem)
 }
 
 // Create a PopupInstance, register two callbacks:
@@ -104,8 +116,8 @@ fun mouseClickedEvent(instance: PopupInstance) {
 // itemSelectedCallback   : Whenever one of the results is selected this function is called.
 //                          The function is called right after the popup is closed
 fun createPopupInstance(
-    getSearchResultCallback: ((String) -> List<VirtualFile>),
-    itemSelectedCallback: ((VirtualFile) -> Unit),
+    getSearchResultCallback: ((String) -> List<PopupInstanceItem>),
+    itemSelectedCallback: ((PopupInstanceItem) -> Unit),
     settings: GlobalSettings.SettingsState,
     basePath: String,
     project: Project,
@@ -137,6 +149,7 @@ fun createPopupInstance(
     instance.extensionField.isEditable = false
 
     instance.searchField.addKeyListener(object : KeyAdapter() {
+        override fun keyTyped(e: KeyEvent) { keyTypedEvent(instance, e) }
         override fun keyReleased(e: KeyEvent) { keyReleasedEvent(instance, e) }
     })
     val debouncedFunction = debounce<Unit>(50, instance.coroutineScope) { updateListedItems(instance) }
@@ -144,6 +157,16 @@ fun createPopupInstance(
         override fun insertUpdate(e: DocumentEvent?) { debouncedFunction(Unit) }
         override fun removeUpdate(e: DocumentEvent?) { debouncedFunction(Unit) }
         override fun changedUpdate(e: DocumentEvent?) { debouncedFunction(Unit) }
+    })
+    instance.resultsList.addListSelectionListener(object : ListSelectionListener {
+        override fun valueChanged(e: ListSelectionEvent?) {
+            if (e != null) {
+//                instance.listModel[instance.resultsList.selectedIndex].rendered = false
+                if (!e.valueIsAdjusting) {
+                    instance.resultsList.ensureIndexIsVisible(instance.resultsList.selectedIndex)
+                }
+            }
+        }
     })
 
     // Field with text header
@@ -159,6 +182,7 @@ fun createPopupInstance(
     })
     val scrollPanel = JBScrollPane(instance.resultsList);
     scrollPanel.border = null;
+    scrollPanel.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
     panel.add(scrollPanel, BorderLayout.CENTER)
 
     instance.popup = JBPopupFactory.getInstance()
