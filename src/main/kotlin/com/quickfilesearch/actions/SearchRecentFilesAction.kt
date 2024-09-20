@@ -49,7 +49,7 @@ class SearchRecentFilesAction(val action: Array<String>,
         }
         val filteredFiles = recentFiles.filter { file -> extensions.isEmpty() || extensions.contains(file.extension) }
 //                                       .map{ file -> PopupInstanceItem(file, SearchDialogCellRenderer.getLabelHtml(file, settings.filePathDisplayType, project)) }
-                                        .map{ file -> PopupInstanceItem(file, "") }
+                                        .map{ file -> PopupInstanceItem(file) }
         searchAction = SearchForFiles(filteredFiles, settings, project, null, extensions)
     }
 

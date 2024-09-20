@@ -17,7 +17,9 @@ import javax.swing.*
 import javax.swing.border.EmptyBorder
 import javax.swing.event.*
 
-class PopupInstanceItem(val vf: VirtualFile, var html: String, var rendered: Boolean = false, var panel: JTextPane? = null)
+class PopupInstanceItem(val vf: VirtualFile,
+                        var panel: JTextPane? = null
+)
 
 class TransparentTextField(private val opacity: Float) : JTextField() {
     override fun paintComponent(g: Graphics) {
@@ -52,32 +54,35 @@ fun <T> debounce(delayMillis: Long = 30L, coroutineScope: CoroutineScope, action
 }
 
 fun updateListedItems(instance: PopupInstance) {
-    val start = System.nanoTime()
-    val items = instance.onSearchBoxChanged?.invoke(instance.searchField.text);
-    items ?: return
-
     // TODO: Add indication that not all files are listed
-//    if (items.size == instance.listModel.size) {
-//        for (idx in items.indices) {
-//            instance.listModel[idx] = items[idx]
-//        }
-//    } else {
-    instance.listModel.removeAllElements()
-    if (items.isNotEmpty()) {
-        instance.listModel.addAll(items.slice(IntRange(0, kotlin.math.min(items.size, instance.maxNofItemsInPopup) - 1)))
+    SwingUtilities.invokeLater {
+        val items = instance.onSearchBoxChanged?.invoke(instance.searchField.text);
+        items ?: return@invokeLater
+
+//        val start = System.nanoTime()
+        val commonCount = kotlin.math.min(items.size, instance.listModel.size())
+        for (idx in 0 until commonCount - 1) {
+            instance.listModel[idx] = items[idx]
+        }
+
+        val itemsToAddCount = if (items.size > commonCount) items.size - commonCount else 0
+        if (itemsToAddCount > 0) {
+            instance.listModel.addAll(items.slice(commonCount until commonCount + itemsToAddCount))
+        }
+
+        val itemsToRemoveCount = if (items.size < instance.listModel.size) instance.listModel.size() - items.size else 0
+        if (itemsToRemoveCount > 0) {
+            instance.listModel.removeRange(items.size, items.size + itemsToRemoveCount - 1)
+        }
+
+//        val stop = System.nanoTime()
+//        println("Time spent updating: ${(stop - start) / 1000} us")
+        instance.resultsList.selectedIndex = 0
     }
-//        for (item in items) {
-//            if (instance.listModel.size() >= instance.maxNofItemsInPopup) break
-//            instance.listModel.addElement(item)
-//        }
-//    }
-    instance.resultsList.selectedIndex = 0
-    val stop = System.nanoTime()
-    println("Time spent updating: ${(stop - start) / 1000} us")
 }
 
 fun keyTypedEvent(instance: PopupInstance, e: KeyEvent) {
-    if (Character.isDigit(e.keyChar) && instance.searchField.text.isEmpty()) {
+    if (Character.isDigit(e.keyChar) && e.isControlDown) {
         e.consume() // Consume the event to prevent the character from being added
         instance.resultsList.selectedIndex = e.keyChar.digitToInt()
         instance.popup?.dispose()
@@ -190,6 +195,11 @@ fun createPopupInstance(
         .setRequestFocus(true)
         .setShowBorder(false)
         .createPopup()
+
+    val start = System.currentTimeMillis()
+    updateListedItems(instance)
+    val stop = System.currentTimeMillis()
+    println("Update listed items took ${stop - start} ms")
 
     val screenSize = Toolkit.getDefaultToolkit().screenSize
     val width = (screenSize.width * settings.searchPopupWidth).toInt()

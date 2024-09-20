@@ -37,6 +37,6 @@ class SearchOpenFilesAction(val action: Array<String>,
         val fileEditorManager = FileEditorManager.getInstance(project)
         return fileEditorManager.openFiles.toList().filter { file -> extensions.isEmpty() || extensions.contains(file.extension) }
 //            .map{ file -> PopupInstanceItem(file, SearchDialogCellRenderer.getLabelHtml(file, settings.filePathDisplayType, project)) }
-            .map{ file -> PopupInstanceItem(file, "") }
+            .map{ file -> PopupInstanceItem(file) }
     }
 }

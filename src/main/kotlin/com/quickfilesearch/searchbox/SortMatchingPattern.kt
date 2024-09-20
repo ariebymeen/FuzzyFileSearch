@@ -87,13 +87,17 @@ fun runFzf(customInput: String, query: String, readNofLines: Int) : List<String>
 
 fun runFzfCat(hashFile: String, query: String) : List<String> {
     try {
-        val process = ProcessBuilder("/bin/bash", "-c", "cat \"$hashFile\" | fzf -f \"${query}\"")
+        val process = ProcessBuilder("/bin/bash", "-c", "fzf -f \"${query}\" < $hashFile")
             .redirectErrorStream(true)
             .start()
 
+        val start = System.currentTimeMillis()
         val reader = BufferedReader(InputStreamReader(process.inputStream))
-        val output = reader.readLines() // TODO: Read only required lines
+        val output = reader.readLines()
+
         process.waitFor()
+        val stop = System.currentTimeMillis()
+        println("Fzf Cat took ${stop - start} ms")
 
         return output
     } catch (e: Exception) {

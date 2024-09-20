@@ -26,8 +26,9 @@ class SearchForFiles(val files: List<PopupInstanceItem>,
     val coroutineScope = CoroutineScope(Dispatchers.Main)
 
     init {
-        coroutineScope.launch {
-            val processFiles = async {
+//        coroutineScope.launch {
+//            val processFiles = async {
+        val start = System.currentTimeMillis()
                 if (settings.filePathDisplayType != PathDisplayType.FILENAME_ONLY) {
                     fileNames = files.map { file ->
                         if (isFileInProject(project, file.vf)) {
@@ -45,12 +46,19 @@ class SearchForFiles(val files: List<PopupInstanceItem>,
                 } else {
                     fileNamesConcat = fileNames!!.joinToString("\n")
                 }
-            }
+//            }
 
+        val stop = System.currentTimeMillis()
+        println("Concatting all filenames and writing hash file look ${stop - start} ms")
+
+        val startPopup = System.currentTimeMillis()
             popup = createPopupInstance(::getSortedFileList, ::openSelectedFile, settings, project.basePath!!, project, extensions)
-            processFiles.await()
-            updateListedItems(popup!!)
-        }
+        val stopPopup = System.currentTimeMillis()
+        println("Loading popup took ${stopPopup - startPopup} ms")
+//            processFiles.await()
+//            updateListedItems(popup!!)
+        println("End of action: ${System.currentTimeMillis()}")
+//        }
 
     }
 
@@ -64,7 +72,7 @@ class SearchForFiles(val files: List<PopupInstanceItem>,
             fileNamesConcat = fileNames!!.joinToString("\n")
             writeLineToFile(hashFile!!, fileNamesConcat!!)
             val stop = System.currentTimeMillis()
-            println("Writing to has file took ${stop - start} ms")
+            println("Writing to hash file took ${stop - start} ms")
         }
         hasHashFile = true
     }
@@ -76,7 +84,6 @@ class SearchForFiles(val files: List<PopupInstanceItem>,
                 if (hasHashFile) {
                     runFzfCat(hashFile!!, query)
                 } else {
-                    // TODO: Remove this method of searching
                     runFzf(fileNamesConcat!!, query, settings.numberOfFilesInSearchView)
                 }
             } else {
@@ -89,7 +96,7 @@ class SearchForFiles(val files: List<PopupInstanceItem>,
                     if (index >= 0) {
                         files[index]
                     } else {
-                        println("Error, unexpected index < 0. Filtered files size: ${filteredFiles.size}, file size: ${files.size}, index: $index")
+                        println("Error, unexpected index $index. Filtered files size: ${filteredFiles.size}, file size: ${files.size}")
                         showErrorNotification("Something went wrong searching", "$visibleList")
                         files[0]
                     }

@@ -126,11 +126,11 @@ fun isFileInProject(project: Project, file: VirtualFile): Boolean {
 
 fun getAllFilesInRoot(root: VirtualFile, excludedDirectoryList: Set<String>? = null, extensions: List<String>) : ArrayList<PopupInstanceItem> {
     val files: ArrayList<PopupInstanceItem> = ArrayList()
-    if (!root.isDirectory) files.add(PopupInstanceItem(root, ""))
+    if (!root.isDirectory) files.add(PopupInstanceItem(root))
 
     for (child in root.children!!) {
         if (child.isFile && (extensions.isEmpty() || extensions.contains(child.extension))) {
-            files.add(PopupInstanceItem(child, ""))
+            files.add(PopupInstanceItem(child))
         }
         if (child.isDirectory) {
             if (excludedDirectoryList != null && excludedDirectoryList.contains(child.name)) continue
