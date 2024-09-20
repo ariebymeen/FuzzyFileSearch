@@ -17,17 +17,17 @@ import javax.swing.*
 import javax.swing.border.EmptyBorder
 import javax.swing.event.*
 
-class PopupInstanceItem(val vf: VirtualFile,
-                        var panel: JTextPane? = null
-)
-
-class TransparentTextField(private val opacity: Float) : JTextField() {
-    override fun paintComponent(g: Graphics) {
-        val g2 = g as Graphics2D
-        g2.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, opacity)
-        super.paintComponent(g2)
-    }
-}
+//class PopupInstanceItem(val vf: VirtualFile,
+//                        var panel: JTextPane? = null
+//)
+//
+//class TransparentTextField(private val opacity: Float) : JTextField() {
+//    override fun paintComponent(g: Graphics) {
+//        val g2 = g as Graphics2D
+//        g2.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, opacity)
+//        super.paintComponent(g2)
+//    }
+//}
 
 class PopupInstance {
     val searchField: JTextField = JTextField()
@@ -42,16 +42,16 @@ class PopupInstance {
 }
 
 // Debounce function
-fun <T> debounce(delayMillis: Long = 30L, coroutineScope: CoroutineScope, action: (T) -> Unit): (T) -> Unit {
-    var debounceJob: Job? = null
-    return { param: T ->
-        debounceJob?.cancel()
-        debounceJob = coroutineScope.launch {
-            delay(delayMillis)
-            action(param)
-        }
-    }
-}
+//fun <T> debounce(delayMillis: Long = 30L, coroutineScope: CoroutineScope, action: (T) -> Unit): (T) -> Unit {
+//    var debounceJob: Job? = null
+//    return { param: T ->
+//        debounceJob?.cancel()
+//        debounceJob = coroutineScope.launch {
+//            delay(delayMillis)
+//            action(param)
+//        }
+//    }
+//}
 
 fun updateListedItems(instance: PopupInstance) {
     // TODO: Add indication that not all files are listed

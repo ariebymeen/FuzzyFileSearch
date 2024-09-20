@@ -20,7 +20,8 @@ class SearchForFiles(val files: List<PopupInstanceItem>,
                      extensions: List<String>? = null) {
     var fileNamesConcat: String? = null
     var fileNames: List<String>? = null
-    var popup: PopupInstance? = null
+//    var popup: PopupInstance? = null
+    var popup = SearchPopupInstance(::getSortedFileList, ::openSelectedFile, settings, project.basePath!!, project, extensions)
     var hasHashFile: Boolean = false
     var hashFile: String? = null
     val coroutineScope = CoroutineScope(Dispatchers.Main)
@@ -52,7 +53,8 @@ class SearchForFiles(val files: List<PopupInstanceItem>,
         println("Concatting all filenames and writing hash file look ${stop - start} ms")
 
         val startPopup = System.currentTimeMillis()
-            popup = createPopupInstance(::getSortedFileList, ::openSelectedFile, settings, project.basePath!!, project, extensions)
+//        popup = createPopupInstance(::getSortedFileList, ::openSelectedFile, settings, project.basePath!!, project, extensions)
+        popup.showPopupInstance()
         val stopPopup = System.currentTimeMillis()
         println("Loading popup took ${stopPopup - startPopup} ms")
 //            processFiles.await()
