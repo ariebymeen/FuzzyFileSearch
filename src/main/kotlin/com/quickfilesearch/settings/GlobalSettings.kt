@@ -22,7 +22,7 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
     class SettingsState {
         var searchPopupWidth = 0.4
         var searchPopupHeight = 0.3
-        var numberOfFilesInSearchView = 10
+        var numberOfFilesInSearchView = 20
         var useFzfForSearching = true
         var excludedDirs: Set<String> = setOf("build", ".gradle", ".idea", ".run")
         var filePathDisplayType: PathDisplayType = PathDisplayType.FILENAME_RELATIVE_PATH

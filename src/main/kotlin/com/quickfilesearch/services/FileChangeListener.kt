@@ -2,8 +2,10 @@ package com.quickfilesearch.services
 
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFileCopyEvent
 import com.intellij.openapi.vfs.VirtualFileEvent
 import com.intellij.openapi.vfs.VirtualFileListener
+import com.intellij.openapi.vfs.VirtualFileMoveEvent
 import com.quickfilesearch.searchbox.sha256
 
 @Service(Service.Level.PROJECT)
@@ -46,13 +48,28 @@ class FileChangeListener(private val project: Project) : VirtualFileListener {
     }
 
     override fun fileCreated(event: VirtualFileEvent) {
+        super.fileCreated(event)
         clearDirectoryContents(directory)
         println("File created: ${event.file.path}")
+        // TODO: This
     }
 
     override fun fileDeleted(event: VirtualFileEvent) {
+        super.fileDeleted(event)
         clearDirectoryContents(directory)
         println("File deleted: ${event.file.path}")
+    }
+
+    override fun fileMoved(event: VirtualFileMoveEvent) {
+        super.fileMoved(event)
+        clearDirectoryContents(directory)
+        println("File moved: ${event.file.path}")
+    }
+
+    override fun fileCopied(event: VirtualFileCopyEvent) {
+        super.fileCopied(event)
+        clearDirectoryContents(directory)
+        println("File copied: ${event.file.path}")
     }
 
     // Called when a file's content is changed

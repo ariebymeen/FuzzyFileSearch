@@ -9,6 +9,7 @@ import com.intellij.openapi.startup.StartupActivity
 import com.quickfilesearch.actions.*
 import com.quickfilesearch.services.RecentFilesKeeper
 import com.quickfilesearch.services.FileChangeListener
+import com.quickfilesearch.services.VcsChangeListener
 
 class ApplicationStartupSetup : ProjectActivity {
 
@@ -30,5 +31,6 @@ class ApplicationStartupSetup : ProjectActivity {
 
         project.service<RecentFilesKeeper>() // Initialize project service
         project.service<FileChangeListener>() // Initialize project service
+        project.service<VcsChangeListener>() // Initialize project service
     }
 }

@@ -45,11 +45,6 @@ fun sortCandidatesBasedOnPattern(pattern: String, candidates: List<String>): Lis
 
     val sortedMatchIndices = matchScores.indices.sortedByDescending { matchScores[it] }
     val sortedCandidates = sortedMatchIndices.map { candidates[it] }.toList()
-    val sortedScores = matchScores.sortedDescending()
-//    for (idx in 0.. sortedScores.size - 1) {
-//        println("$idx -> ${sortedCandidates[idx]} - ${sortedScores[idx]}")
-//    }
-
     return ArrayList(sortedCandidates)
 }
 
@@ -91,18 +86,18 @@ fun runFzfCat(hashFile: String, query: String) : List<String> {
             .redirectErrorStream(true)
             .start()
 
-        val start = System.currentTimeMillis()
+//        val start = System.currentTimeMillis()
         val reader = BufferedReader(InputStreamReader(process.inputStream))
         val output = reader.readLines()
 
         process.waitFor()
-        val stop = System.currentTimeMillis()
-        println("Fzf Cat took ${stop - start} ms")
+//        val stop = System.currentTimeMillis()
+//        println("Fzf Cat took ${stop - start} ms")
 
         return output
     } catch (e: Exception) {
         e.printStackTrace()
         showErrorNotification("Searching error", "Error running fzf: ${e.message}. Are you sure that fzf is installed?")
     }
-    return emptyList<String>()
+    return emptyList()
 }

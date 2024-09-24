@@ -7,7 +7,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.quickfilesearch.*
-import com.quickfilesearch.searchbox.PopupInstance
 import com.quickfilesearch.searchbox.PopupInstanceItem
 import com.quickfilesearch.searchbox.getAllFilesInRoot
 import kotlin.io.path.Path
@@ -30,8 +29,8 @@ class SearchFileInPathAction(val action: Array<String>,
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
 
-        val start = System.currentTimeMillis()
-        println("Start of action: ${System.currentTimeMillis()}")
+//        val start = System.currentTimeMillis()
+//        println("Start of action: ${System.currentTimeMillis()}")
         val searchPath: String
         if (location[0] == '/') { // Search from project root
             searchPath = project.basePath + location
@@ -51,9 +50,10 @@ class SearchFileInPathAction(val action: Array<String>,
         }
 
         files = getAllFilesInRoot(vfPath, settings.excludedDirs, extensions)
-        val stop = System.currentTimeMillis()
-        println("Finding all filenames ${stop - start} ms")
+//        val stop = System.currentTimeMillis()
+//        println("Finding all filenames ${stop - start} ms")
 
+        // TODO: Initialize only first time but then keep in memory to aid with performance (this also keeps the popup hot)
         searchAction = SearchForFiles(files!!, settings, project, searchPath, extensions)
     }
 
@@ -63,11 +63,11 @@ class SearchFileInPathAction(val action: Array<String>,
     }
 
     companion object {
-        fun getActionName(actionSettins: Array<String>) : String {
-            return actionSettins[0]
+        fun getActionName(actionSettings: Array<String>) : String {
+            return actionSettings[0]
         }
-        fun getActionShortcut(actionSettins: Array<String>) : String {
-            return actionSettins[3]
+        fun getActionShortcut(actionSettings: Array<String>) : String {
+            return actionSettings[3]
         }
     }
 }

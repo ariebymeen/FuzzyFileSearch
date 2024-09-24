@@ -20,15 +20,16 @@ class SearchDialogCellRenderer(val pathRenderType: PathDisplayType,
         if (value.panel == null) {
             value.panel = JTextPane()
 
-            value.panel!!.text = "" // Clear previous content
+            value.panel!!.text = ""
             setText(value, index)
-            value.panel!!.isOpaque = true // Ensure the background color is painted
+            value.panel!!.isOpaque = true
         } else {
             val formattedNumber = String.format("%02d  -  ", index)
             value.panel!!.styledDocument.remove(0, formattedNumber.length)
-            value.panel!!.styledDocument.insertString(0, formattedNumber, value.panel!!.getStyle("Bold"))
+            value.panel!!.styledDocument.insertString(0, formattedNumber, value.panel!!.getStyle("Tiny"))
         }
 
+        // TODO: Add cellHasFocus effect?
         value.panel!!.background = if (isSelected) list.selectionBackground else list.background
         value.panel!!.foreground = if (isSelected) list.selectionForeground else list.foreground
 
@@ -42,16 +43,21 @@ class SearchDialogCellRenderer(val pathRenderType: PathDisplayType,
         val boldStyle = item.panel!!.addStyle("Bold", null).apply {
             StyleConstants.setBold(this, true)
         }
+        val tinyStyle = item.panel!!.addStyle("Tiny", null).apply {
+            StyleConstants.setItalic(this, false)
+            StyleConstants.setFontSize(this, StyleConstants.getFontSize(boldStyle) - 1)
+        }
 
-        val formattedNumber = String.format("%02d  -  ", index)
         val doc = item.panel!!.styledDocument
+        val formattedNumber = String.format("%02d  -  ", index)
+        doc.insertString(doc.length, formattedNumber, tinyStyle)
         when (pathRenderType) {
             PathDisplayType.FILENAME_ONLY -> {
-                doc.insertString(doc.length, "$formattedNumber${item.vf.name} ", boldStyle)
+                doc.insertString(doc.length, "${item.vf.name} ", boldStyle)
             }
 
             PathDisplayType.FILENAME_RELATIVE_PATH -> {
-                doc.insertString(doc.length, "$formattedNumber${item.vf.name} ", boldStyle)
+                doc.insertString(doc.length, "${item.vf.name} ", boldStyle)
                 val path = item.vf.parent!!.path
                 if (isFileInProject(project, item.vf)) {
                     doc.insertString(doc.length, path.subSequence(basePath.length, path.length).toString(), italicStyle)
@@ -61,17 +67,16 @@ class SearchDialogCellRenderer(val pathRenderType: PathDisplayType,
             }
 
             PathDisplayType.FILENAME_FULL_PATH -> {
-                doc.insertString(doc.length, "$formattedNumber${item.vf.name} ", boldStyle)
+                doc.insertString(doc.length, "${item.vf.name} ", boldStyle)
                 doc.insertString(doc.length, item.vf.parent!!.path, italicStyle)
             }
 
             PathDisplayType.FULL_PATH_WITH_FILENAME -> {
-                doc.insertString(doc.length, item.vf.parent!!.path, italicStyle)
-                doc.insertString(doc.length, "$formattedNumber${item.vf.name} ", boldStyle)
+                doc.insertString(doc.length, "${item.vf.parent!!.path}/", italicStyle)
+                doc.insertString(doc.length, "${item.vf.name} ", boldStyle)
             }
 
             PathDisplayType.RELATIVE_PATH_WITH_FILENAME -> {
-                doc.insertString(doc.length, formattedNumber, boldStyle)
                 val path = item.vf.parent!!.path
                 if (isFileInProject(project, item.vf)) {
                     doc.insertString(doc.length, path.subSequence(basePath.length, path.length).toString(), italicStyle)
@@ -83,44 +88,4 @@ class SearchDialogCellRenderer(val pathRenderType: PathDisplayType,
             }
         }
     }
-
-//    companion object {
-//
-//        fun getLabelText(value: PopupInstanceItem, index: Int) : String {
-//            return "<html><b>$index:   </b> ${value.html}</html>"
-//        }
-//
-//        fun getLabelHtml(file: VirtualFile, pathRenderType: PathDisplayType, project: Project) : String {
-//            val basePath = project.basePath ?: "";
-//            when (pathRenderType) {
-//                PathDisplayType.FILENAME_ONLY -> {
-//                    return file.name
-//                }
-//                PathDisplayType.FILENAME_RELATIVE_PATH -> {
-//                    val path = file.parent!!.path
-//                    return if (isFileInProject(project, file)) {
-//                        "<strong>${file.name}</strong>  <i>${path.subSequence(basePath.length, path.length)}</i>"
-//                    } else {
-//                        "<strong>${file.name}</strong>  <i>${path}</i>"
-//                    }
-//                }
-//                PathDisplayType.FILENAME_FULL_PATH -> {
-//                    return "<strong>${file.name}</strong>  <i>${file.parent!!.path}</i>"
-//                }
-//                PathDisplayType.FULL_PATH_WITH_FILENAME -> {
-//                    return "${file.parent!!.path}/<strong>${file.name}</strong>"
-//                }
-//                PathDisplayType.RELATIVE_PATH_WITH_FILENAME -> {
-//                    val path = file.parent!!.path
-//                    return if (isFileInProject(project, file)) {
-//                        "<i>${path.subSequence(basePath.length, path.length)}/</i><strong>${file.name}</strong>"
-//                    } else {
-//                        "<i>${path}/</i><strong>${file.name}</strong></html>"
-//                    }
-//                }
-//            }
-//
-//        }
-//    }
-
 }

@@ -8,6 +8,7 @@ import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.FormBuilder
+import javax.swing.JButton
 import javax.swing.JPanel
 import javax.swing.JSpinner
 import javax.swing.SpinnerNumberModel
@@ -28,6 +29,7 @@ class GlobalSettingsComponent {
     var searchRelativeFileActionsTable = ActionsTable(arrayOf("Name", "Reference file", "Extension", "Shortcut"), arrayOf("MyActionName", "Regex", "h", "alt shift P"))
     var searchRecentFiles = StaticTable(arrayOf("Name", "History length", "Extension", "Shortcut"), arrayOf(arrayOf("SearchRecentFiles", "10", "", "alt shift R")))
     var searchOpenFiles = StaticTable(arrayOf("Name", "Extension", "Shortcut"), arrayOf(arrayOf("SearchOpenFiles", "", "alt shift O")))
+    var invalidateHashesButton = JButton("Restore hashes")
 
     init {
         panel = FormBuilder()
@@ -74,7 +76,7 @@ class GlobalSettingsComponent {
             )
             .addComponent(openRelativeFileActionsTable)
 
-            // Create Relative file opening actions
+            // Create relative search actions table
             .addSeparator()
             .addComponent(
                 createLabelWithDescription("Create action for searching files related to relative file", """
@@ -111,6 +113,7 @@ class GlobalSettingsComponent {
                 """.trimIndent())
             )
             .addComponent(searchOpenFiles)
+            .addComponent(invalidateHashesButton)
 
             .addComponentFillVertically(JPanel(), 0)
             .panel
@@ -130,23 +133,3 @@ fun createWarningLabel() : JBLabel {
     warningLabel.isVisible = false
     return warningLabel
 }
-
-//fun createStrongLabel(title: String) : JBLabel {
-//    val strongTitle = "<html><strong>$title</strong></html>"
-//    val label = JBLabel(strongTitle, JBLabel.LEFT)
-//    return label
-//}
-//
-//fun createLabel(title: String) : JPanel {
-//    val label = JBLabel(title, JBLabel.LEFT)
-//    label.setAllowAutoWrapping(true)
-//    val panel = JPanel(BorderLayout())
-//    panel.add(label, BorderLayout.CENTER)
-//    return panel
-//}
-//
-//fun createTextArea(text: String) : JBTextArea {
-//    val textArea = JBTextArea(text)
-//    textArea.lineWrap = true
-//    return textArea
-//}

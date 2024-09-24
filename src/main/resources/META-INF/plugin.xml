@@ -37,7 +37,7 @@
                 parentId="tools"
                 instance="com.quickfilesearch.settings.GlobalSettingsConfigurable"
                 id="com.quickfilesearch.settings.GlobalSettingsConfigurable"
-                displayName="QuickFileSearch GlobalSettings"/>
+                displayName="Quick File Search Settings"/>
                 displayName="QuickFileSearch Settings"/>
         <notificationGroup id="QuickFileSearchGroup"
                            displayType="BALLOON"

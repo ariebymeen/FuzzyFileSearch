@@ -38,6 +38,8 @@ class GlobalSettingsConfigurable : Configurable {
             component.useFzfCheckbox.isEnabled = true
         }
 
+        component.invalidateHashesButton.addActionListener { invalidateAllHashes() }
+
         return component.panel
     }
 
@@ -115,6 +117,13 @@ class GlobalSettingsConfigurable : Configurable {
         settings.state.searchPopupWidth = component.searchBoxWidth.value as Double
         settings.state.searchPopupHeight = component.searchBoxHeight.value as Double
 
+        invalidateAllHashes()
+    }
+
+    override fun getDisplayName(): String {
+        return "Global QuickFileSearch Settings"
+    }
+    private fun invalidateAllHashes() {
         println("Invalidate all hashes")
         ProjectManager.getInstance().openProjects.forEach { project ->
             // invalidate all hash files, as you do not know what settings have changed
@@ -122,7 +131,4 @@ class GlobalSettingsConfigurable : Configurable {
         }
     }
 
-    override fun getDisplayName(): String {
-        return "Global QuickFileSearch Settings"
-    }
 }

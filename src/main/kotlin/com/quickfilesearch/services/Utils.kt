@@ -23,6 +23,10 @@ fun clearDirectoryContents(path: String) {
 
 fun directoryContainsFile(path: String, fileName: String): Boolean {
     val directory = File(path)
+    if (!directory.exists()) {
+        createDirectory(path)
+    }
+
     if (directory.exists() && directory.isDirectory) {
         val files = directory.listFiles() ?: return false
         return files.any { it.name == fileName }

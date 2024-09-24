@@ -5,7 +5,6 @@ import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.WindowManager
-import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
 import com.quickfilesearch.settings.GlobalSettings
@@ -17,102 +16,189 @@ import javax.swing.*
 import javax.swing.border.EmptyBorder
 import javax.swing.event.*
 
-//class PopupInstanceItem(val vf: VirtualFile,
-//                        var panel: JTextPane? = null
-//)
-//
-//class TransparentTextField(private val opacity: Float) : JTextField() {
-//    override fun paintComponent(g: Graphics) {
-//        val g2 = g as Graphics2D
-//        g2.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, opacity)
-//        super.paintComponent(g2)
-//    }
-//}
+class PopupInstanceItem(val vf: VirtualFile,
+                        var panel: JTextPane? = null)
 
-class PopupInstance {
-    val searchField: JTextField = JTextField()
-    val extensionField: JTextField = TransparentTextField(0.5F)
-    val listModel: DefaultListModel<PopupInstanceItem> = DefaultListModel()
-    val resultsList = JXList(listModel)
-    var onItemSelected: ((PopupInstanceItem) -> Unit)? = null
-    var onSearchBoxChanged: ((String) -> List<PopupInstanceItem>)? = null
-    var popup: JBPopup? = null
-    var maxNofItemsInPopup = 10
-    val coroutineScope = CoroutineScope(Dispatchers.Main)
+class TransparentTextField(private val opacity: Float) : JTextField() {
+    override fun paintComponent(g: Graphics) {
+        val g2 = g as Graphics2D
+        g2.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, opacity)
+        super.paintComponent(g2)
+    }
 }
 
 // Debounce function
-//fun <T> debounce(delayMillis: Long = 30L, coroutineScope: CoroutineScope, action: (T) -> Unit): (T) -> Unit {
-//    var debounceJob: Job? = null
-//    return { param: T ->
-//        debounceJob?.cancel()
-//        debounceJob = coroutineScope.launch {
-//            delay(delayMillis)
-//            action(param)
-//        }
-//    }
-//}
-
-fun updateListedItems(instance: PopupInstance) {
-    // TODO: Add indication that not all files are listed
-    SwingUtilities.invokeLater {
-        val items = instance.onSearchBoxChanged?.invoke(instance.searchField.text);
-        items ?: return@invokeLater
-
-//        val start = System.nanoTime()
-        val commonCount = kotlin.math.min(items.size, instance.listModel.size())
-        for (idx in 0 until commonCount - 1) {
-            instance.listModel[idx] = items[idx]
+fun <T> debounce(delayMillis: Long = 30L, coroutineScope: CoroutineScope, action: (T) -> Unit): (T) -> Unit {
+    var debounceJob: Job? = null
+    return { param: T ->
+        debounceJob?.cancel()
+        debounceJob = coroutineScope.launch {
+            delay(delayMillis)
+            action(param)
         }
-
-        val itemsToAddCount = if (items.size > commonCount) items.size - commonCount else 0
-        if (itemsToAddCount > 0) {
-            instance.listModel.addAll(items.slice(commonCount until commonCount + itemsToAddCount))
-        }
-
-        val itemsToRemoveCount = if (items.size < instance.listModel.size) instance.listModel.size() - items.size else 0
-        if (itemsToRemoveCount > 0) {
-            instance.listModel.removeRange(items.size, items.size + itemsToRemoveCount - 1)
-        }
-
-//        val stop = System.nanoTime()
-//        println("Time spent updating: ${(stop - start) / 1000} us")
-        instance.resultsList.selectedIndex = 0
     }
 }
 
-fun keyTypedEvent(instance: PopupInstance, e: KeyEvent) {
-    if (Character.isDigit(e.keyChar) && e.isControlDown) {
-        e.consume() // Consume the event to prevent the character from being added
-        instance.resultsList.selectedIndex = e.keyChar.digitToInt()
-        instance.popup?.dispose()
-        instance.onItemSelected?.invoke(instance.resultsList.selectedValue as PopupInstanceItem)
-        return
-    }
-}
 
-fun keyReleasedEvent(instance: PopupInstance, e: KeyEvent) {
-    when (e.keyCode) {
-        KeyEvent.VK_UP -> instance.resultsList.selectedIndex -= 1
-        KeyEvent.VK_DOWN -> instance.resultsList.selectedIndex += 1
-        KeyEvent.VK_TAB -> instance.resultsList.selectedIndex += 1
-        KeyEvent.VK_ENTER -> {
-            instance.onItemSelected?.invoke(instance.resultsList.selectedValue as PopupInstanceItem)
-            instance.popup?.dispose()
+class SearchPopupInstance(
+    val getSearchResultCallback: ((String) -> List<PopupInstanceItem>),
+    val itemSelectedCallback: ((PopupInstanceItem) -> Unit),
+    val settings: GlobalSettings.SettingsState,
+    val basePath: String,
+    val project: Project,
+    val extensions: List<String>? = null
+) {
+    val searchField: JTextField = JTextField()
+    val extensionField: JTextField = TransparentTextField(0.5F) // TODO: Make this editable (grow with input) & allow user to specify this
+    val listModel: DefaultListModel<PopupInstanceItem> = DefaultListModel()
+    val resultsList = JXList(listModel)
+    var popup: JBPopup? = null
+    val headerHeight = 30
+    val coroutineScope = CoroutineScope(Dispatchers.Main)
+
+    init {
+        createPopupInstance()
+    }
+
+    fun showPopupInstance() {
+        val screenSize = Toolkit.getDefaultToolkit().screenSize
+        val width = (screenSize.width * settings.searchPopupWidth).toInt()
+        val height = (screenSize.height * settings.searchPopupHeight).toInt()
+
+        popup!!.size = Dimension(width, height)
+        val ideFrame = WindowManager.getInstance().getIdeFrame(project)
+        if (ideFrame == null) {
+            popup!!.showInFocusCenter()
+        } else {
+            popup!!.showInCenterOf(ideFrame.component)
+        }
+
+        updateListedItems()
+        SwingUtilities.invokeLater {
+            searchField.requestFocusInWindow()
         }
     }
-    if (e.isControlDown) {
+
+    private fun updateListedItems() {
+        // TODO: Add indication that not all files are listed
+        SwingUtilities.invokeLater {
+            val items = getSearchResultCallback.invoke(searchField.text);
+            items ?: return@invokeLater
+
+            val commonCount = kotlin.math.min(items.size, listModel.size())
+            for (idx in 0 until commonCount) {
+                listModel[idx] = items[idx]
+            }
+
+            val itemsToAddCount = if (items.size > commonCount) items.size - commonCount else 0
+            if (itemsToAddCount > 0) {
+                listModel.addAll(items.slice(commonCount until commonCount + itemsToAddCount))
+            }
+
+            val itemsToRemoveCount = if (items.size < listModel.size) listModel.size() - items.size else 0
+            if (itemsToRemoveCount > 0) {
+                listModel.removeRange(items.size, items.size + itemsToRemoveCount - 1)
+            }
+
+            resultsList.selectedIndex = 0
+        }
+    }
+
+    fun keyTypedEvent(e: KeyEvent) {
+        if (Character.isDigit(e.keyChar) && e.isControlDown) {
+            e.consume() // Consume the event to prevent the character from being added
+            resultsList.selectedIndex = e.keyChar.digitToInt()
+            popup?.dispose()
+            itemSelectedCallback.invoke(resultsList.selectedValue as PopupInstanceItem)
+            return
+        }
+    }
+
+    fun keyReleasedEvent(e: KeyEvent) {
         when (e.keyCode) {
-            KeyEvent.VK_K -> instance.resultsList.selectedIndex -= 1
-            KeyEvent.VK_J -> instance.resultsList.selectedIndex += 1
+            KeyEvent.VK_UP -> resultsList.selectedIndex -= 1
+            KeyEvent.VK_DOWN -> resultsList.selectedIndex += 1
+            KeyEvent.VK_TAB -> resultsList.selectedIndex += 1
+            KeyEvent.VK_ENTER -> {
+                itemSelectedCallback.invoke(resultsList.selectedValue as PopupInstanceItem)
+                popup?.dispose()
+            }
         }
+        if (e.isControlDown) {
+            when (e.keyCode) {
+                KeyEvent.VK_K -> resultsList.selectedIndex -= 1
+                KeyEvent.VK_J -> resultsList.selectedIndex += 1
+            }
+        }
+    }
+
+    fun mouseClickedEvent() {
+        popup?.dispose()
+        itemSelectedCallback.invoke(resultsList.selectedValue as PopupInstanceItem)
+    }
+
+    private fun createPopupInstance() {
+        val border: EmptyBorder = JBUI.Borders.empty(2, 5)
+        val panel = JPanel(BorderLayout())
+        searchField.preferredSize = Dimension(0, headerHeight)
+        searchField.border = border
+        searchField.toolTipText = "Type to search..."
+
+        extensionField.border = border
+        extensionField.toolTipText = ""
+        if (!extensions.isNullOrEmpty()) {
+            extensionField.text = extensions.map{ext -> ".$ext"}.joinToString(";")
+            val width = extensionField.getFontMetrics(extensionField.font).stringWidth(extensionField.text)
+            extensionField.preferredSize = Dimension(width + 30, headerHeight)
+        } else {
+            extensionField.preferredSize = Dimension(0, headerHeight)
+        }
+        extensionField.isEditable = false
+
+        searchField.addKeyListener(object : KeyAdapter() {
+            override fun keyTyped(e: KeyEvent) { keyTypedEvent(e) }
+            override fun keyReleased(e: KeyEvent) { keyReleasedEvent(e) }
+        })
+        val debouncedFunction = debounce<Unit>(50, coroutineScope) { updateListedItems() }
+        searchField.document.addDocumentListener(object : DocumentListener {
+            override fun insertUpdate(e: DocumentEvent?) { debouncedFunction(Unit) }
+            override fun removeUpdate(e: DocumentEvent?) { debouncedFunction(Unit) }
+            override fun changedUpdate(e: DocumentEvent?) { debouncedFunction(Unit) }
+        })
+        resultsList.addListSelectionListener(object : ListSelectionListener {
+            override fun valueChanged(e: ListSelectionEvent?) {
+                if (e != null && !e.valueIsAdjusting) {
+                    resultsList.ensureIndexIsVisible(resultsList.selectedIndex)
+                }
+            }
+        })
+
+        // Field with text header
+        val searchBar = JPanel(BorderLayout())
+        searchBar.add(searchField, BorderLayout.CENTER)
+        searchBar.add(extensionField, BorderLayout.EAST)
+        panel.add(searchBar, BorderLayout.NORTH)
+
+        resultsList.border = null
+        resultsList.cellRenderer = SearchDialogCellRenderer(settings.filePathDisplayType, basePath, project)
+        resultsList.addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent?) { mouseClickedEvent() }
+        })
+        val scrollPanel = JBScrollPane(resultsList);
+        scrollPanel.border = null;
+        scrollPanel.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+        panel.add(scrollPanel, BorderLayout.CENTER)
+
+        popup = JBPopupFactory.getInstance()
+            .createComponentPopupBuilder(panel, panel)
+            .setRequestFocus(true)
+            .setShowBorder(false)
+            .createPopup()
     }
 }
 
-fun mouseClickedEvent(instance: PopupInstance) {
-    instance.popup?.dispose()
-    instance.onItemSelected?.invoke(instance.resultsList.selectedValue as PopupInstanceItem)
-}
+
+
 
 // Create a PopupInstance, register two callbacks:
 // getSearchResultCallback: Whenever the search box input changes, this callback is called.
@@ -120,102 +206,36 @@ fun mouseClickedEvent(instance: PopupInstance) {
 //                          The selection box will be populated with these items
 // itemSelectedCallback   : Whenever one of the results is selected this function is called.
 //                          The function is called right after the popup is closed
-fun createPopupInstance(
-    getSearchResultCallback: ((String) -> List<PopupInstanceItem>),
-    itemSelectedCallback: ((PopupInstanceItem) -> Unit),
-    settings: GlobalSettings.SettingsState,
-    basePath: String,
-    project: Project,
-    extensions: List<String>? = null
-) : PopupInstance
-{
-    val headerHeight = 40;
-    val instance = PopupInstance();
-    instance.maxNofItemsInPopup = settings.numberOfFilesInSearchView
-    instance.onSearchBoxChanged = getSearchResultCallback
-    instance.onItemSelected = itemSelectedCallback
-
-    val border: EmptyBorder = JBUI.Borders.empty(2, 5)
-    val panel = JPanel(BorderLayout())
-    instance.searchField.preferredSize = Dimension(100, headerHeight)
-    instance.searchField.border = border
-    instance.searchField.toolTipText = "Type to search..."
-
-    instance.extensionField.border = border
-    instance.extensionField.toolTipText = ""
-    if (!extensions.isNullOrEmpty()) {
-        instance.extensionField.preferredSize = Dimension(100, headerHeight)
-        instance.extensionField.text = extensions.map{ext -> ".$ext"}.joinToString(";")
-        val width = instance.extensionField.getFontMetrics(instance.extensionField.font).stringWidth(instance.extensionField.text)
-        instance.extensionField.preferredSize = Dimension(width + 30, headerHeight)
-    } else {
-        instance.extensionField.preferredSize = Dimension(0, headerHeight)
-    }
-    instance.extensionField.isEditable = false
-
-    instance.searchField.addKeyListener(object : KeyAdapter() {
-        override fun keyTyped(e: KeyEvent) { keyTypedEvent(instance, e) }
-        override fun keyReleased(e: KeyEvent) { keyReleasedEvent(instance, e) }
-    })
-    val debouncedFunction = debounce<Unit>(50, instance.coroutineScope) { updateListedItems(instance) }
-    instance.searchField.document.addDocumentListener(object : DocumentListener {
-        override fun insertUpdate(e: DocumentEvent?) { debouncedFunction(Unit) }
-        override fun removeUpdate(e: DocumentEvent?) { debouncedFunction(Unit) }
-        override fun changedUpdate(e: DocumentEvent?) { debouncedFunction(Unit) }
-    })
-    instance.resultsList.addListSelectionListener(object : ListSelectionListener {
-        override fun valueChanged(e: ListSelectionEvent?) {
-            if (e != null) {
-//                instance.listModel[instance.resultsList.selectedIndex].rendered = false
-                if (!e.valueIsAdjusting) {
-                    instance.resultsList.ensureIndexIsVisible(instance.resultsList.selectedIndex)
-                }
-            }
-        }
-    })
-
-    // Field with text header
-    val searchBar = JPanel(BorderLayout())
-    searchBar.add(instance.searchField, BorderLayout.CENTER)
-    searchBar.add(instance.extensionField, BorderLayout.EAST)
-    panel.add(searchBar, BorderLayout.NORTH)
-
-    instance.resultsList.border = border;
-    instance.resultsList.cellRenderer = SearchDialogCellRenderer(settings.filePathDisplayType, basePath, project)
-    instance.resultsList.addMouseListener(object : MouseAdapter() {
-        override fun mouseClicked(e: MouseEvent?) { mouseClickedEvent(instance) }
-    })
-    val scrollPanel = JBScrollPane(instance.resultsList);
-    scrollPanel.border = null;
-    scrollPanel.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
-    panel.add(scrollPanel, BorderLayout.CENTER)
-
-    instance.popup = JBPopupFactory.getInstance()
-        .createComponentPopupBuilder(panel, panel)
-        .setRequestFocus(true)
-        .setShowBorder(false)
-        .createPopup()
-
-    val start = System.currentTimeMillis()
-    updateListedItems(instance)
-    val stop = System.currentTimeMillis()
-    println("Update listed items took ${stop - start} ms")
-
-    val screenSize = Toolkit.getDefaultToolkit().screenSize
-    val width = (screenSize.width * settings.searchPopupWidth).toInt()
-    val height = (screenSize.height * settings.searchPopupHeight).toInt()
-
-    instance.popup!!.size = Dimension(width, height)
-    val ideFrame = WindowManager.getInstance().getIdeFrame(project)
-    if (ideFrame == null) {
-        instance.popup!!.showInFocusCenter()
-    } else {
-        instance.popup!!.showInCenterOf(ideFrame.component)
-    }
-
-    SwingUtilities.invokeLater {
-        instance.searchField.requestFocusInWindow()
-    }
-
-    return instance;
-}
+//fun createPopupInstance(
+//    getSearchResultCallback: ((String) -> List<PopupInstanceItem>),
+//    itemSelectedCallback: ((PopupInstanceItem) -> Unit),
+//    settings: GlobalSettings.SettingsState,
+//    basePath: String,
+//    project: Project,
+//    extensions: List<String>? = null
+//) : PopupInstance
+//{
+//
+//    val start = System.currentTimeMillis()
+//    updateListedItems(instance)
+//    val stop = System.currentTimeMillis()
+//    println("Update listed items took ${stop - start} ms")
+//
+//    val screenSize = Toolkit.getDefaultToolkit().screenSize
+//    val width = (screenSize.width * settings.searchPopupWidth).toInt()
+//    val height = (screenSize.height * settings.searchPopupHeight).toInt()
+//
+//    instance.popup!!.size = Dimension(width, height)
+//    val ideFrame = WindowManager.getInstance().getIdeFrame(project)
+//    if (ideFrame == null) {
+//        instance.popup!!.showInFocusCenter()
+//    } else {
+//        instance.popup!!.showInCenterOf(ideFrame.component)
+//    }
+//
+//    SwingUtilities.invokeLater {
+//        instance.searchField.requestFocusInWindow()
+//    }
+//
+//    return instance;
+//}
