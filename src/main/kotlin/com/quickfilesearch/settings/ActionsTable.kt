@@ -7,25 +7,25 @@ import com.intellij.ui.util.preferredHeight
 import java.awt.BorderLayout
 import javax.swing.BoxLayout
 import javax.swing.JButton
-import javax.swing.JScrollPane
-import javax.swing.JTable
 import javax.swing.table.DefaultTableModel
 
 class ActionsTable(columnNames: Array<String>,
                    private val emptyItem: Array<String>) : JBPanel<ActionsTable>() {
 
-    private val tableModel = DefaultTableModel(columnNames, 0)
+    private val mTableModel = DefaultTableModel(columnNames, 0)
+    private val mTable = JBTable(mTableModel)
+    private val mTablePanel = JBPanel<JBPanel<*>>()
+    private val rowHeight = 30
 
     init {
         layout = BorderLayout()
 
         // Table panel
-        tableModel.isCellEditable(0, 0)
-        val table = JBTable(tableModel)
-        table.rowHeight = 30 // Set each row's height to 30 pixels
-        val tablePanel = JBPanel<JBPanel<*>>().apply {
+        mTableModel.isCellEditable(0, 0)
+        mTable.rowHeight = rowHeight
+        mTablePanel.apply {
             layout = BorderLayout()
-            val scrollTable = JBScrollPane(table)
+            val scrollTable = JBScrollPane(mTable)
             for (listener in scrollTable.mouseWheelListeners) {
                 // Remove existing MouseWheelListeners to ensure scrolling still works nicely
                 scrollTable.removeMouseWheelListener(listener)
@@ -33,30 +33,33 @@ class ActionsTable(columnNames: Array<String>,
 
             add(scrollTable, BorderLayout.CENTER)
         }
-        tablePanel.preferredHeight = 30 * 5
-        add(tablePanel, BorderLayout.CENTER)
+        mTablePanel.preferredHeight = rowHeight * 5
+        add(mTablePanel, BorderLayout.CENTER)
 
         val formPanel = JBPanel<JBPanel<*>>().apply {
             layout = BoxLayout(this, BoxLayout.X_AXIS)
             val addButton = JButton("Add new action").apply {
                 addActionListener {
-                    tableModel.addRow(emptyItem)
+                    mTableModel.addRow(emptyItem)
+                    resize()
                 }
             }
             add(addButton)
             val removeButton = JButton("Remove action").apply {
                 addActionListener {
-                    if (table.selectedRow >= 0) {
-                        tableModel.removeRow(table.selectedRow)
+                    if (mTable.selectedRow >= 0 && !mTable.isEditing) {
+                        mTableModel.removeRow(mTable.selectedRow)
+                        resize()
                     }
                 }
             }
             add(removeButton)
             val duplicateButton = JButton("Duplicate action").apply {
                 addActionListener {
-                    if (table.selectedRow >= 0) {
-                        val row = getRowEntry(table.selectedRow) ?: return@addActionListener
-                        tableModel.addRow(row)
+                    if (mTable.selectedRow >= 0) {
+                        val row = getRowEntry(mTable.selectedRow) ?: return@addActionListener
+                        mTableModel.addRow(row)
+                        resize()
                     }
                 }
             }
@@ -65,30 +68,37 @@ class ActionsTable(columnNames: Array<String>,
         add(formPanel, BorderLayout.SOUTH)
     }
 
+    fun resize() {
+        mTablePanel.preferredHeight = rowHeight * kotlin.math.max(5, kotlin.math.min(mTable.rowCount + 1, 10))
+        mTablePanel.revalidate()
+        mTablePanel.repaint()
+    }
+
     fun getRowEntry(rowIndex: Int) : Array<String>? {
-        if (rowIndex < 0 || rowIndex >= tableModel.rowCount) {
+        if (rowIndex < 0 || rowIndex >= mTableModel.rowCount) {
             return null
         }
 
         var row = emptyArray<String>()
-        for (i in 0..tableModel.columnCount - 1) {
-            row += tableModel.getValueAt(rowIndex, i) as String;
+        for (i in 0..mTableModel.columnCount - 1) {
+            row += mTableModel.getValueAt(rowIndex, i) as String;
         }
         return row
     }
 
     fun getData() : Array<Array<String>> {
         var data: Array<Array<String>> = emptyArray()
-        for (row in 0..tableModel.rowCount-1) {
+        for (row in 0..mTableModel.rowCount-1) {
             data += getRowEntry(row)!!
         }
         return data
     }
 
     fun setData(data: Array<Array<String>>) {
-        tableModel.rowCount = 0
+        mTableModel.rowCount = 0
         for (row in data) {
-            tableModel.addRow(row)
+            mTableModel.addRow(row)
         }
+        resize()
     }
 }

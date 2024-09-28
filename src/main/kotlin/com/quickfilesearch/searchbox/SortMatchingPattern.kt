@@ -86,13 +86,9 @@ fun runFzfCat(hashFile: String, query: String) : List<String> {
             .redirectErrorStream(true)
             .start()
 
-//        val start = System.currentTimeMillis()
         val reader = BufferedReader(InputStreamReader(process.inputStream))
         val output = reader.readLines()
-
         process.waitFor()
-//        val stop = System.currentTimeMillis()
-//        println("Fzf Cat took ${stop - start} ms")
 
         return output
     } catch (e: Exception) {

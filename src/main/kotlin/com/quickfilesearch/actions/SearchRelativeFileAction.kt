@@ -4,6 +4,7 @@ import com.quickfilesearch.settings.GlobalSettings
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vcs.changes.ChangeListManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.quickfilesearch.*
 import com.quickfilesearch.searchbox.PopupInstanceItem
@@ -17,7 +18,7 @@ class SearchRelativeFileAction(val action: Array<String>,
     val name = getActionName(action)
     var files: List<PopupInstanceItem>? = null
     var project: Project? = null
-    var searchAction: SearchForFiles? = null
+    var searchAction = SearchForFiles(settings)
     val extensions: List<String> = extractExtensions(action[2])
 
     override fun actionPerformed(e: AnActionEvent) {
@@ -29,10 +30,11 @@ class SearchRelativeFileAction(val action: Array<String>,
             return
         }
 
+        val changeListManager = if (settings.searchOnlyFilesInVersionControl) ChangeListManager.getInstance(project!!) else null
         var directory = currentFile.parent
         if (regex.pattern.isEmpty()) {
             // If pattern is empty, list all files from current directory down
-            files = getAllFilesInRoot(currentFile.parent, settings.excludedDirs, extensions)
+            files = getAllFilesInRoot(currentFile.parent, settings.excludedDirs, extensions, changeListManager)
         } else {
             // Else try finding a file matching pattern
             val matchingFile = getParentSatisfyingRegex(project!!, currentFile, regex, settings.excludedDirs)
@@ -41,10 +43,10 @@ class SearchRelativeFileAction(val action: Array<String>,
                 return
             }
             directory = matchingFile.parent
-            files = getAllFilesInRoot(matchingFile.parent, settings.excludedDirs, extensions)
+            files = getAllFilesInRoot(matchingFile.parent, settings.excludedDirs, extensions, changeListManager)
         }
         files ?: return
-        searchAction = SearchForFiles(files!!, settings, project!!, directory.path, extensions)
+        searchAction.doSearchForFiles(files!!, project!!, directory.path, extensions)
     }
 
     companion object {

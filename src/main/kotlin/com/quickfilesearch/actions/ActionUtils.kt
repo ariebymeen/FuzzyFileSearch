@@ -14,25 +14,29 @@ fun extractExtensions(extension: String): List<String> {
     return emptyList()
 }
 
+fun getActionName(name: String) : String {
+    return "com.quickfilesearch.$name"
+}
+
 fun registerAction(name: String, shortcut: String, action: AnAction) {
-    val alreadyRegistered = ActionManager.getInstance().getAction(name) != null
+    val alreadyRegistered = ActionManager.getInstance().getAction(getActionName(name)) != null
     if (!alreadyRegistered) {
-        println("Registering action: $name")
-        ActionManager.getInstance().registerAction(name, action)
+        println("Registering action: ${getActionName(name)}")
+        ActionManager.getInstance().registerAction(getActionName(name), action)
     }
 
     if (shortcut.isNotEmpty()) {
         val shortcut = KeyboardShortcut(KeyStroke.getKeyStroke(shortcut), null)
-        KeymapManager.getInstance().activeKeymap.addShortcut(name, shortcut);
+        KeymapManager.getInstance().activeKeymap.addShortcut(getActionName(name), shortcut);
     }
 }
 
 fun unregisterAction(name: String, shortcut: String) {
-    println("Unregistering action: $name")
-    ActionManager.getInstance().unregisterAction(name)
+    println("Unregistering action: ${getActionName(name)}")
+    ActionManager.getInstance().unregisterAction(getActionName(name))
     if (shortcut.isNotEmpty()) {
         val sc = KeyboardShortcut(KeyStroke.getKeyStroke(shortcut), null)
-        KeymapManager.getInstance().activeKeymap.removeShortcut(name, sc);
+        KeymapManager.getInstance().activeKeymap.removeShortcut(getActionName(name), sc);
     }
 }
 

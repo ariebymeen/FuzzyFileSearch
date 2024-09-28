@@ -43,9 +43,9 @@ class FileChangeListener(private val project: Project) : VirtualFileListener {
         }
     }
 
-    fun invalidateHashes() {
-        clearDirectoryContents(directory)
-    }
+//    fun invalidateHashes() {
+//        clearDirectoryContents(directory)
+//    }
 
     override fun fileCreated(event: VirtualFileEvent) {
         super.fileCreated(event)

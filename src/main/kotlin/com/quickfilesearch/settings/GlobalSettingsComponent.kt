@@ -21,7 +21,13 @@ class GlobalSettingsComponent {
     var nofVisibleFilesInSearchViewSelector = JBIntSpinner(10, 1, 100)
     val searchBoxWidth = JSpinner(SpinnerNumberModel(0.3.toDouble(), 0.1.toDouble(), 1.0.toDouble(), 0.05.toDouble()))
     val searchBoxHeight = JSpinner(SpinnerNumberModel(0.3.toDouble(), 0.1.toDouble(), 1.0.toDouble(), 0.05.toDouble()))
+    val searchBoxPosX = JSpinner(SpinnerNumberModel(0.5.toDouble(), 0.1.toDouble(), 1.0.toDouble(), 0.01.toDouble()))
+    val searchBoxPosY = JSpinner(SpinnerNumberModel(0.5.toDouble(), 0.1.toDouble(), 1.0.toDouble(), 0.01.toDouble()))
+    var searchBarHeight = JBIntSpinner(30, 10, 300)
+    var searchItemHeight = JBIntSpinner(30, 10, 100)
+    var shrinkSearchAreaWithResults = JBCheckBox()
     var useFzfCheckbox = JBCheckBox()
+    var searchOnlyFilesInVersionControlCheckbox = JBCheckBox()
     var pathDisplayDropdownBox = ComboBox(PathDisplayType.values());
     var warningText = createWarningLabel()
     var openRelativeFileActionsTable = ActionsTable(arrayOf("Name", "Reference file", "Open path", "Shortcut"), arrayOf("MyActionName", "Regex", "src/%name%Test.cc", "alt shift P"))
@@ -29,7 +35,7 @@ class GlobalSettingsComponent {
     var searchRelativeFileActionsTable = ActionsTable(arrayOf("Name", "Reference file", "Extension", "Shortcut"), arrayOf("MyActionName", "Regex", "h", "alt shift P"))
     var searchRecentFiles = StaticTable(arrayOf("Name", "History length", "Extension", "Shortcut"), arrayOf(arrayOf("SearchRecentFiles", "10", "", "alt shift R")))
     var searchOpenFiles = StaticTable(arrayOf("Name", "Extension", "Shortcut"), arrayOf(arrayOf("SearchOpenFiles", "", "alt shift O")))
-    var invalidateHashesButton = JButton("Restore hashes")
+//    var invalidateHashesButton = JButton("Restore hashes")
 
     init {
         panel = FormBuilder()
@@ -51,6 +57,11 @@ class GlobalSettingsComponent {
                     that you install fzf and enable this option
                 """.trimIndent()), useFzfCheckbox)
             .addLabeledComponent(
+                createLabelWithDescription("Search only files that are tracked by vcs", """
+                    If checked only files that are tracked by a version control system (vcs) are searched.
+                    Else all files are part of the search (except for directories explicitly excluded)
+                """.trimIndent()), searchOnlyFilesInVersionControlCheckbox)
+            .addLabeledComponent(
                 createLabelWithDescription("Path display type", """
                     Select how you want to display the files in the search menu.
                 """.trimIndent()), pathDisplayDropdownBox)
@@ -61,8 +72,28 @@ class GlobalSettingsComponent {
                 """.trimIndent()), searchBoxWidth)
             .addLabeledComponent(
                 createLabelWithDescription("Search view height fraction", """
-                    The height of the search popup as a fraction of the screen height 
+                    The height of the search popup as a fraction of the screen height. If shrinking is enabled, this is
+                    the maximum height of the view
                 """.trimIndent()), searchBoxHeight)
+            .addLabeledComponent(
+                createLabelWithDescription("X Position of search area on screen", """
+                    Relative X position on screen. 0 means all the way left, 1 means all the way right
+                """.trimIndent()), searchBoxPosX)
+            .addLabeledComponent(
+                createLabelWithDescription("Y Position of search area on screen", """
+                    Relative Y position on screen. 0 means all the way at the top, 1 means all the way down
+                """.trimIndent()), searchBoxPosY)
+            .addLabeledComponent(
+                createLabelWithDescription("Height of the search bar in pixels", """
+                """.trimIndent()), searchBarHeight)
+            .addLabeledComponent(
+                createLabelWithDescription("Height of the search items in pixels", """
+                """.trimIndent()), searchItemHeight)
+            .addLabeledComponent(
+                createLabelWithDescription("Shrink the search area to only the shown results", """
+                    If checked the search area will shrink to the number of results. Else the search area height
+                    will always be the configured height
+                """.trimIndent()), shrinkSearchAreaWithResults)
 
             // Create Relative file opening actions
             .addSeparator()
@@ -113,7 +144,7 @@ class GlobalSettingsComponent {
                 """.trimIndent())
             )
             .addComponent(searchOpenFiles)
-            .addComponent(invalidateHashesButton)
+//            .addComponent(invalidateHashesButton)
 
             .addComponentFillVertically(JPanel(), 0)
             .panel

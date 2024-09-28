@@ -15,12 +15,19 @@ class GlobalSettingsConfigurable : Configurable {
     override fun createComponent(): JComponent? {
         component = GlobalSettingsComponent()
 
+        // TODO: Make this naming consistent
         component.excludedDirs.text = settings.state.excludedDirs.joinToString("\n")
         component.nofVisibleFilesInSearchViewSelector.value = settings.state.numberOfFilesInSearchView
         component.useFzfCheckbox.isSelected = settings.state.useFzfForSearching
         component.pathDisplayDropdownBox.selectedItem = settings.state.filePathDisplayType
         component.searchBoxWidth.value = settings.state.searchPopupWidth
         component.searchBoxHeight.value = settings.state.searchPopupHeight
+        component.searchBoxPosX.value = settings.state.horizontalPositionOnScreen
+        component.searchBoxPosY.value = settings.state.verticalPositionOnScreen
+        component.searchBarHeight.value = settings.state.searchBarHeight
+        component.searchItemHeight.value = settings.state.searchItemHeight
+        component.shrinkSearchAreaWithResults.isSelected = settings.state.shrinkViewDynamically
+        component.searchOnlyFilesInVersionControlCheckbox.isSelected = settings.state.searchOnlyFilesInVersionControl
 
         component.openRelativeFileActionsTable.setData(settings.state.openRelativeFileActions)
         component.searchRelativeFileActionsTable.setData(settings.state.searchRelativeFileActions)
@@ -38,7 +45,7 @@ class GlobalSettingsConfigurable : Configurable {
             component.useFzfCheckbox.isEnabled = true
         }
 
-        component.invalidateHashesButton.addActionListener { invalidateAllHashes() }
+//        component.invalidateHashesButton.addActionListener { invalidateAllHashes() }
 
         return component.panel
     }
@@ -52,9 +59,15 @@ class GlobalSettingsConfigurable : Configurable {
         val modified = settings.state.excludedDirs != newSet
                 || settings.state.numberOfFilesInSearchView != component.nofVisibleFilesInSearchViewSelector.value
                 || settings.state.useFzfForSearching != component.useFzfCheckbox.isSelected
-                || settings.state.filePathDisplayType!= (component.pathDisplayDropdownBox.selectedItem as PathDisplayType)
+                || settings.state.searchOnlyFilesInVersionControl != component.searchOnlyFilesInVersionControlCheckbox.isSelected
+                || settings.state.filePathDisplayType != (component.pathDisplayDropdownBox.selectedItem as PathDisplayType)
                 || settings.state.searchPopupWidth != component.searchBoxWidth.value
                 || settings.state.searchPopupHeight != component.searchBoxHeight.value
+                || settings.state.horizontalPositionOnScreen != component.searchBoxPosX.value
+                || settings.state.verticalPositionOnScreen != component.searchBoxPosY.value
+                || settings.state.searchBarHeight != component.searchBarHeight.value
+                || settings.state.searchItemHeight != component.searchItemHeight.value
+                || settings.state.shrinkViewDynamically != component.shrinkSearchAreaWithResults.isSelected
                 || !isEqual(settings.state.openRelativeFileActions, component.openRelativeFileActionsTable.getData())
                 || !isEqual(settings.state.searchRelativeFileActions, component.searchRelativeFileActionsTable.getData())
                 || !isEqual(settings.state.searchPathActions, component.searchPathActionsTable.getData())
@@ -113,22 +126,28 @@ class GlobalSettingsConfigurable : Configurable {
         settings.state.excludedDirs = newSet
         settings.state.numberOfFilesInSearchView = component.nofVisibleFilesInSearchViewSelector.value as Int
         settings.state.useFzfForSearching = component.useFzfCheckbox.isSelected
+        settings.state.searchOnlyFilesInVersionControl = component.searchOnlyFilesInVersionControlCheckbox.isSelected
         settings.state.filePathDisplayType = component.pathDisplayDropdownBox.selectedItem as PathDisplayType
         settings.state.searchPopupWidth = component.searchBoxWidth.value as Double
         settings.state.searchPopupHeight = component.searchBoxHeight.value as Double
+        settings.state.horizontalPositionOnScreen = component.searchBoxPosX.value as Double
+        settings.state.verticalPositionOnScreen = component.searchBoxPosY.value as Double
+        settings.state.searchBarHeight = component.searchBarHeight.value as Int
+        settings.state.searchItemHeight = component.searchItemHeight.value as Int
+        settings.state.shrinkViewDynamically = component.shrinkSearchAreaWithResults.isSelected
 
-        invalidateAllHashes()
+//        invalidateAllHashes()
     }
 
     override fun getDisplayName(): String {
-        return "Global QuickFileSearch Settings"
+        return "Quick File Search Settings"
     }
-    private fun invalidateAllHashes() {
-        println("Invalidate all hashes")
-        ProjectManager.getInstance().openProjects.forEach { project ->
+//    private fun invalidateAllHashes() {
+//        println("Invalidate all hashes")
+//        ProjectManager.getInstance().openProjects.forEach { project ->
             // invalidate all hash files, as you do not know what settings have changed
-            project.service<FileChangeListener>().invalidateHashes()
-        }
-    }
+//            project.service<FileChangeListener>().invalidateHashes()
+//        }
+//    }
 
 }

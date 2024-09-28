@@ -1,7 +1,9 @@
 package com.quickfilesearch.services
 
 import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import com.quickfilesearch.searchbox.sha256
 import java.io.File
 
 fun createDirectory(path: String) : Boolean {
@@ -32,6 +34,23 @@ fun directoryContainsFile(path: String, fileName: String): Boolean {
         return files.any { it.name == fileName }
     }
     return false
+}
+
+fun getHashFilePath(project: Project, path: String, extensions: List<String>? = null): String {
+    val directory = "/tmp/.${project.basePath!!.sha256()}"
+    if (!File(directory).exists()) {
+        createDirectory(directory)
+    }
+    return "$directory/${createHashFileName(path, extensions)}"
+}
+
+fun createHashFileName(path: String, extensions: List<String>? = null) : String {
+    if (extensions != null) {
+        val hash = "$path;${extensions.joinToString(";")}".sha256()
+        return ".$hash"
+    } else {
+        return ".${path.sha256()}"
+    }
 }
 
 fun writeLineToFile(filePath: String, line: String) {

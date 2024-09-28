@@ -3,6 +3,9 @@ package com.quickfilesearch.searchbox
 import ai.grazie.text.find
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootManager
+import com.intellij.openapi.vcs.FileStatusManager
+import com.intellij.openapi.vcs.ProjectLevelVcsManager
+import com.intellij.openapi.vcs.changes.ChangeListManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.isFile
 import java.security.MessageDigest
@@ -64,10 +67,13 @@ fun getParentSatisfyingRegex(project: Project,
 
 fun isFileInProject(project: Project, file: VirtualFile): Boolean {
     val projectRootManager = ProjectRootManager.getInstance(project)
-    project.isInitialized ?: return false
+    if (!project.isInitialized) {
+        return file.path.find(project.basePath!!) != null
+    }
 
     // If file is in current project or otherwise check if the file is loaded in the file tree
-    return projectRootManager.fileIndex.isInContent(file) || (projectRootManager.contentRoots.isEmpty() && file.path.find(project.basePath!!) != null)
+    return projectRootManager.fileIndex.isInContent(file)
+            || (projectRootManager.contentRoots.isEmpty() && file.path.subSequence(0, project.basePath!!.length) == project.basePath!!)//file.path.find(project.basePath!!) != null)
 }
 
 //fun getRootAtMaxDistance(referenceFile: VirtualFile, maxDistance: Int, project: Project) : VirtualFile {
@@ -124,17 +130,19 @@ fun isFileInProject(project: Project, file: VirtualFile): Boolean {
 //    return getAllFilesInRootWithinDistance(maxRoot, referenceFile, maxDistance, excludedDirectoryList)
 //}
 
-fun getAllFilesInRoot(root: VirtualFile, excludedDirectoryList: Set<String>? = null, extensions: List<String>) : ArrayList<PopupInstanceItem> {
+fun getAllFilesInRoot(root: VirtualFile, excludedDirectoryList: Set<String>? = null, extensions: List<String>, vcsManager: ChangeListManager? = null) : ArrayList<PopupInstanceItem> {
     val files: ArrayList<PopupInstanceItem> = ArrayList()
     if (!root.isDirectory) files.add(PopupInstanceItem(root))
 
     for (child in root.children!!) {
+        if (vcsManager != null && vcsManager.isIgnoredFile(child)) continue
+
         if (child.isFile && (extensions.isEmpty() || extensions.contains(child.extension))) {
             files.add(PopupInstanceItem(child))
         }
         if (child.isDirectory) {
             if (excludedDirectoryList != null && excludedDirectoryList.contains(child.name)) continue
-            files.addAll(getAllFilesInRoot(child, excludedDirectoryList, extensions))
+            files.addAll(getAllFilesInRoot(child, excludedDirectoryList, extensions, vcsManager))
         }
     }
     return files

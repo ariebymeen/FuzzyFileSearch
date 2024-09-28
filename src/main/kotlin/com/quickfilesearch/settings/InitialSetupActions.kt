@@ -1,15 +1,11 @@
 package com.quickfilesearch.settings
 
-import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.quickfilesearch.searchbox.isFzfAvailable
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
-import com.intellij.openapi.startup.StartupActivity
 import com.quickfilesearch.actions.*
 import com.quickfilesearch.services.RecentFilesKeeper
-import com.quickfilesearch.services.FileChangeListener
-import com.quickfilesearch.services.VcsChangeListener
 
 class ApplicationStartupSetup : ProjectActivity {
 
@@ -30,7 +26,7 @@ class ApplicationStartupSetup : ProjectActivity {
         println("Fzf available: $fzfAvailable")
 
         project.service<RecentFilesKeeper>() // Initialize project service
-        project.service<FileChangeListener>() // Initialize project service
-        project.service<VcsChangeListener>() // Initialize project service
+//        project.service<FileChangeListener>() // Initialize project service
+//        project.service<VcsChangeListener>() // Initialize project service
     }
 }

@@ -6,6 +6,7 @@ import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.ui.util.width
 import com.intellij.util.ui.JBUI
 import com.quickfilesearch.settings.GlobalSettings
 import kotlinx.coroutines.*
@@ -15,9 +16,11 @@ import java.awt.event.*
 import javax.swing.*
 import javax.swing.border.EmptyBorder
 import javax.swing.event.*
+import kotlin.math.max
+import kotlin.math.min
 
 class PopupInstanceItem(val vf: VirtualFile,
-                        var panel: JTextPane? = null)
+                        var panel: VerticallyCenteredTextPane? = null)
 
 class TransparentTextField(private val opacity: Float) : JTextField() {
     override fun paintComponent(g: Graphics) {
@@ -41,201 +44,199 @@ fun <T> debounce(delayMillis: Long = 30L, coroutineScope: CoroutineScope, action
 
 
 class SearchPopupInstance(
-    val getSearchResultCallback: ((String) -> List<PopupInstanceItem>),
-    val itemSelectedCallback: ((PopupInstanceItem) -> Unit),
-    val settings: GlobalSettings.SettingsState,
-    val basePath: String,
-    val project: Project,
-    val extensions: List<String>? = null
+    val mGetSearchResultCallback: ((String) -> List<PopupInstanceItem>),
+    val mItemSelectedCallback: ((PopupInstanceItem) -> Unit),
+    val mSettings: GlobalSettings.SettingsState,
+    var mProject: Project,
+    var mExtensions: List<String>? = null
 ) {
-    val searchField: JTextField = JTextField()
-    val extensionField: JTextField = TransparentTextField(0.5F) // TODO: Make this editable (grow with input) & allow user to specify this
-    val listModel: DefaultListModel<PopupInstanceItem> = DefaultListModel()
-    val resultsList = JXList(listModel)
-    var popup: JBPopup? = null
-    val headerHeight = 30
-    val coroutineScope = CoroutineScope(Dispatchers.Main)
+    val mSearchField: JTextField = JTextField()
+    val mExtensionField: JTextField = TransparentTextField(0.5F) // TODO: Make this editable (grow with input) & allow user to specify this
+    val mListModel: DefaultListModel<PopupInstanceItem> = DefaultListModel()
+    val mResultsList = JXList(mListModel)
+    var mPopup: JBPopup? = null
+    var mMaxPopupHeight : Int? = null
+    val mCoroutineScope = CoroutineScope(Dispatchers.Main)
+    val mMainPanel: JPanel = JPanel(BorderLayout())
 
     init {
         createPopupInstance()
     }
+    
+    fun updatePopupInstance(project: Project, extensions: List<String>?) {
+        mProject = project
+        mExtensions = extensions
+
+        setSearchBarHeigth(mSettings)
+        setExtensionsField(extensions)
+        mResultsList.cellRenderer = SearchDialogCellRenderer(mProject, mSettings)
+        mSearchField.text = ""
+
+        mPopup = JBPopupFactory.getInstance()
+            .createComponentPopupBuilder(mMainPanel, mSearchField)
+            .setRequestFocus(true)
+            .setShowBorder(false)
+            .setAlpha(0.0F)
+            .setMinSize(Dimension(mSettings.searchBarHeight, 0))
+            .createPopup()
+    }
 
     fun showPopupInstance() {
         val screenSize = Toolkit.getDefaultToolkit().screenSize
-        val width = (screenSize.width * settings.searchPopupWidth).toInt()
-        val height = (screenSize.height * settings.searchPopupHeight).toInt()
+        // TODO: Should this be relative to screen size or IDE size?
+        val width = (screenSize.width * mSettings.searchPopupWidth).toInt()
+        val height = (screenSize.height * mSettings.searchPopupHeight).toInt()
+        mMaxPopupHeight = height
 
-        popup!!.size = Dimension(width, height)
-        val ideFrame = WindowManager.getInstance().getIdeFrame(project)
-        if (ideFrame == null) {
-            popup!!.showInFocusCenter()
+        mPopup!!.size = Dimension(width, height)
+        val ideFrame = WindowManager.getInstance().getIdeFrame(mProject)
+        val ideBounds = WindowManager.getInstance().getFrame(mProject)
+        if (ideFrame == null || ideBounds == null) {
+            mPopup!!.showInFocusCenter()
         } else {
-            popup!!.showInCenterOf(ideFrame.component)
+            val posY = ideBounds.y + ideBounds.height * mSettings.verticalPositionOnScreen - height / 2
+            val posX = ideBounds.x + ideBounds.width * mSettings.horizontalPositionOnScreen - width / 2
+            val posYInBounds = min(ideBounds.y + ideBounds.height - height, max(ideBounds.y, posY.toInt()))
+            val poxXInBounds = max(ideBounds.x, min(ideBounds.x + ideBounds.width - width, posX.toInt()))
+            mPopup!!.showInScreenCoordinates(ideFrame.component, Point(poxXInBounds, posYInBounds))
         }
 
         updateListedItems()
         SwingUtilities.invokeLater {
-            searchField.requestFocusInWindow()
+            mSearchField.requestFocusInWindow()
         }
     }
 
     private fun updateListedItems() {
         // TODO: Add indication that not all files are listed
         SwingUtilities.invokeLater {
-            val items = getSearchResultCallback.invoke(searchField.text);
+            val items = mGetSearchResultCallback.invoke(mSearchField.text);
             items ?: return@invokeLater
 
-            val commonCount = kotlin.math.min(items.size, listModel.size())
+            // update list items. This is optimized for performance as clearing the list model gives problems
+            val commonCount = kotlin.math.min(items.size, mListModel.size())
             for (idx in 0 until commonCount) {
-                listModel[idx] = items[idx]
+                mListModel[idx] = items[idx]
             }
 
             val itemsToAddCount = if (items.size > commonCount) items.size - commonCount else 0
             if (itemsToAddCount > 0) {
-                listModel.addAll(items.slice(commonCount until commonCount + itemsToAddCount))
+                mListModel.addAll(items.slice(commonCount until commonCount + itemsToAddCount))
             }
 
-            val itemsToRemoveCount = if (items.size < listModel.size) listModel.size() - items.size else 0
+            val itemsToRemoveCount = if (items.size < mListModel.size) mListModel.size() - items.size else 0
             if (itemsToRemoveCount > 0) {
-                listModel.removeRange(items.size, items.size + itemsToRemoveCount - 1)
+                mListModel.removeRange(items.size, items.size + itemsToRemoveCount - 1)
             }
 
-            resultsList.selectedIndex = 0
+            mResultsList.selectedIndex = 0
+            mResultsList.ensureIndexIsVisible(0)
+
+            if (mSettings.shrinkViewDynamically) {
+                mPopup!!.size = Dimension(mPopup!!.width, min(mMaxPopupHeight!!, mSettings.searchBarHeight + mListModel.size() * mSettings.searchItemHeight))
+                mResultsList.revalidate()
+                mResultsList.repaint()
+            }
         }
     }
 
     fun keyTypedEvent(e: KeyEvent) {
         if (Character.isDigit(e.keyChar) && e.isControlDown) {
             e.consume() // Consume the event to prevent the character from being added
-            resultsList.selectedIndex = e.keyChar.digitToInt()
-            popup?.dispose()
-            itemSelectedCallback.invoke(resultsList.selectedValue as PopupInstanceItem)
+            mResultsList.selectedIndex = e.keyChar.digitToInt()
+            mPopup?.dispose()
+            mItemSelectedCallback.invoke(mResultsList.selectedValue as PopupInstanceItem)
             return
         }
     }
 
     fun keyReleasedEvent(e: KeyEvent) {
         when (e.keyCode) {
-            KeyEvent.VK_UP -> resultsList.selectedIndex -= 1
-            KeyEvent.VK_DOWN -> resultsList.selectedIndex += 1
-            KeyEvent.VK_TAB -> resultsList.selectedIndex += 1
+            KeyEvent.VK_UP -> mResultsList.selectedIndex -= 1
+            KeyEvent.VK_DOWN -> mResultsList.selectedIndex += 1
+            KeyEvent.VK_TAB -> mResultsList.selectedIndex += 1
             KeyEvent.VK_ENTER -> {
-                itemSelectedCallback.invoke(resultsList.selectedValue as PopupInstanceItem)
-                popup?.dispose()
+                mItemSelectedCallback.invoke(mResultsList.selectedValue as PopupInstanceItem)
+                mPopup?.dispose()
             }
         }
         if (e.isControlDown) {
             when (e.keyCode) {
-                KeyEvent.VK_K -> resultsList.selectedIndex -= 1
-                KeyEvent.VK_J -> resultsList.selectedIndex += 1
+                KeyEvent.VK_K -> mResultsList.selectedIndex -= 1
+                KeyEvent.VK_J -> mResultsList.selectedIndex += 1
             }
         }
     }
 
     fun mouseClickedEvent() {
-        popup?.dispose()
-        itemSelectedCallback.invoke(resultsList.selectedValue as PopupInstanceItem)
+        mPopup?.dispose()
+        mItemSelectedCallback.invoke(mResultsList.selectedValue as PopupInstanceItem)
+    }
+    
+    private fun setExtensionsField(extList: List<String>? = null) {
+        if (!extList.isNullOrEmpty()) {
+            mExtensionField.text = extList.map{ ext -> ".$ext"}.joinToString(";")
+            val width = mExtensionField.getFontMetrics(mExtensionField.font).stringWidth(mExtensionField.text)
+            mExtensionField.preferredSize = Dimension(width + 30, mSettings.searchBarHeight)
+        }
+    }
+
+    private fun setSearchBarHeigth(settings: GlobalSettings.SettingsState) {
+        mSearchField.preferredSize = Dimension(0, settings.searchBarHeight)
+        mExtensionField.preferredSize = Dimension(0, settings.searchBarHeight)
     }
 
     private fun createPopupInstance() {
         val border: EmptyBorder = JBUI.Borders.empty(2, 5)
-        val panel = JPanel(BorderLayout())
-        searchField.preferredSize = Dimension(0, headerHeight)
-        searchField.border = border
-        searchField.toolTipText = "Type to search..."
+        mSearchField.border = border
+        mSearchField.toolTipText = "Type to search..."
 
-        extensionField.border = border
-        extensionField.toolTipText = ""
-        if (!extensions.isNullOrEmpty()) {
-            extensionField.text = extensions.map{ext -> ".$ext"}.joinToString(";")
-            val width = extensionField.getFontMetrics(extensionField.font).stringWidth(extensionField.text)
-            extensionField.preferredSize = Dimension(width + 30, headerHeight)
-        } else {
-            extensionField.preferredSize = Dimension(0, headerHeight)
-        }
-        extensionField.isEditable = false
+        mExtensionField.border = border
+        mExtensionField.toolTipText = ""
+        mExtensionField.isEditable = false
+        setExtensionsField(mExtensions)
+        setSearchBarHeigth(mSettings)
 
-        searchField.addKeyListener(object : KeyAdapter() {
+        mSearchField.addKeyListener(object : KeyAdapter() {
             override fun keyTyped(e: KeyEvent) { keyTypedEvent(e) }
             override fun keyReleased(e: KeyEvent) { keyReleasedEvent(e) }
         })
-        val debouncedFunction = debounce<Unit>(50, coroutineScope) { updateListedItems() }
-        searchField.document.addDocumentListener(object : DocumentListener {
+        val debouncedFunction = debounce<Unit>(30, mCoroutineScope) { updateListedItems() }
+        mSearchField.document.addDocumentListener(object : DocumentListener {
             override fun insertUpdate(e: DocumentEvent?) { debouncedFunction(Unit) }
             override fun removeUpdate(e: DocumentEvent?) { debouncedFunction(Unit) }
             override fun changedUpdate(e: DocumentEvent?) { debouncedFunction(Unit) }
         })
-        resultsList.addListSelectionListener(object : ListSelectionListener {
+        mResultsList.addListSelectionListener(object : ListSelectionListener {
             override fun valueChanged(e: ListSelectionEvent?) {
                 if (e != null && !e.valueIsAdjusting) {
-                    resultsList.ensureIndexIsVisible(resultsList.selectedIndex)
+                    mResultsList.ensureIndexIsVisible(mResultsList.selectedIndex)
                 }
             }
         })
 
         // Field with text header
         val searchBar = JPanel(BorderLayout())
-        searchBar.add(searchField, BorderLayout.CENTER)
-        searchBar.add(extensionField, BorderLayout.EAST)
-        panel.add(searchBar, BorderLayout.NORTH)
+        searchBar.add(mSearchField, BorderLayout.CENTER)
+        searchBar.add(mExtensionField, BorderLayout.EAST)
+        mMainPanel.add(searchBar, BorderLayout.NORTH)
 
-        resultsList.border = null
-        resultsList.cellRenderer = SearchDialogCellRenderer(settings.filePathDisplayType, basePath, project)
-        resultsList.addMouseListener(object : MouseAdapter() {
+        mResultsList.cellRenderer = SearchDialogCellRenderer(mProject, mSettings)
+        mResultsList.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent?) { mouseClickedEvent() }
         })
-        val scrollPanel = JBScrollPane(resultsList);
+        val scrollPanel = JBScrollPane(mResultsList);
         scrollPanel.border = null;
         scrollPanel.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
-        panel.add(scrollPanel, BorderLayout.CENTER)
+        scrollPanel.verticalScrollBar.preferredSize = Dimension(6, 0)
+        mMainPanel.add(scrollPanel, BorderLayout.CENTER)
 
-        popup = JBPopupFactory.getInstance()
-            .createComponentPopupBuilder(panel, panel)
+        mPopup = JBPopupFactory.getInstance()
+            .createComponentPopupBuilder(mMainPanel, mSearchField)
             .setRequestFocus(true)
             .setShowBorder(false)
+            .setMinSize(Dimension(mSettings.searchBarHeight, 0))
             .createPopup()
     }
+
 }
-
-
-
-
-// Create a PopupInstance, register two callbacks:
-// getSearchResultCallback: Whenever the search box input changes, this callback is called.
-//                          Implement the action you want to do and return a list with items
-//                          The selection box will be populated with these items
-// itemSelectedCallback   : Whenever one of the results is selected this function is called.
-//                          The function is called right after the popup is closed
-//fun createPopupInstance(
-//    getSearchResultCallback: ((String) -> List<PopupInstanceItem>),
-//    itemSelectedCallback: ((PopupInstanceItem) -> Unit),
-//    settings: GlobalSettings.SettingsState,
-//    basePath: String,
-//    project: Project,
-//    extensions: List<String>? = null
-//) : PopupInstance
-//{
-//
-//    val start = System.currentTimeMillis()
-//    updateListedItems(instance)
-//    val stop = System.currentTimeMillis()
-//    println("Update listed items took ${stop - start} ms")
-//
-//    val screenSize = Toolkit.getDefaultToolkit().screenSize
-//    val width = (screenSize.width * settings.searchPopupWidth).toInt()
-//    val height = (screenSize.height * settings.searchPopupHeight).toInt()
-//
-//    instance.popup!!.size = Dimension(width, height)
-//    val ideFrame = WindowManager.getInstance().getIdeFrame(project)
-//    if (ideFrame == null) {
-//        instance.popup!!.showInFocusCenter()
-//    } else {
-//        instance.popup!!.showInCenterOf(ideFrame.component)
-//    }
-//
-//    SwingUtilities.invokeLater {
-//        instance.searchField.requestFocusInWindow()
-//    }
-//
-//    return instance;
-//}

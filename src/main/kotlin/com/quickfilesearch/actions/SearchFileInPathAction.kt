@@ -4,6 +4,7 @@ import com.quickfilesearch.settings.GlobalSettings
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vcs.changes.ChangeListManager
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.quickfilesearch.*
@@ -20,7 +21,7 @@ class SearchFileInPathAction(val action: Array<String>,
 
     var files: List<PopupInstanceItem>? = null
     var project: Project? = null
-    var searchAction: SearchForFiles? = null
+    var searchAction = SearchForFiles(settings)
 
     init {
         extensions = extractExtensions(action[2])
@@ -49,12 +50,13 @@ class SearchFileInPathAction(val action: Array<String>,
             return
         }
 
-        files = getAllFilesInRoot(vfPath, settings.excludedDirs, extensions)
+        val changeListManager = if (settings.searchOnlyFilesInVersionControl) ChangeListManager.getInstance(project) else null
+        files = getAllFilesInRoot(vfPath, settings.excludedDirs, extensions, changeListManager)
 //        val stop = System.currentTimeMillis()
 //        println("Finding all filenames ${stop - start} ms")
 
-        // TODO: Initialize only first time but then keep in memory to aid with performance (this also keeps the popup hot)
-        searchAction = SearchForFiles(files!!, settings, project, searchPath, extensions)
+        searchAction.doSearchForFiles(files!!, project, searchPath, extensions)
+
     }
 
     fun getVirtualFileFromPath(filePath: String): VirtualFile? {

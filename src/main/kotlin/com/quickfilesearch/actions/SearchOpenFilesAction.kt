@@ -16,12 +16,12 @@ class SearchOpenFilesAction(val action: Array<String>,
     val name = action[0]
     private val extensions: List<String> = extractExtensions(action[1])
     lateinit var files: List<PopupInstanceItem>
-    private var searchAction: SearchForFiles? = null
+    private var searchAction = SearchForFiles(settings)
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
         files = getAllOpenFiles(project)
-        searchAction = SearchForFiles(files, settings, project);
+        searchAction.doSearchForFiles(files, project, null, null)
     }
 
     companion object {
@@ -36,7 +36,6 @@ class SearchOpenFilesAction(val action: Array<String>,
     private fun getAllOpenFiles(project: Project): List<PopupInstanceItem> {
         val fileEditorManager = FileEditorManager.getInstance(project)
         return fileEditorManager.openFiles.toList().filter { file -> extensions.isEmpty() || extensions.contains(file.extension) }
-//            .map{ file -> PopupInstanceItem(file, SearchDialogCellRenderer.getLabelHtml(file, settings.filePathDisplayType, project)) }
             .map{ file -> PopupInstanceItem(file) }
     }
 }

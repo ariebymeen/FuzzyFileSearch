@@ -6,7 +6,6 @@ import com.quickfilesearch.actions.SearchOpenFilesAction
 import com.quickfilesearch.actions.SearchRelativeFileAction
 
 // Check if settings are correct. If not, return a string with the error message
-// TODO: Currently checks only one of the settings, should always check all settings
 fun checkSettings(globalSettings: GlobalSettingsComponent): String? {
     val actionNameError = checkActionNames(globalSettings);
     if (actionNameError != null) {
@@ -23,14 +22,12 @@ fun checkSettings(globalSettings: GlobalSettingsComponent): String? {
 
 fun checkActionNames(globalSettings: GlobalSettingsComponent) : String? {
     val actionSet = mutableSetOf<String>()
-    var names = emptyList<String>()
-    if (globalSettings != null) {
-        names = globalSettings.openRelativeFileActionsTable.getData().map{ action -> QuickFileSearchAction.getActionName(action) }
-        names += globalSettings.searchRelativeFileActionsTable.getData().map{ action -> SearchRelativeFileAction.getActionName(action) }
-        names += globalSettings.searchPathActionsTable.getData().map{ action -> SearchFileInPathAction.getActionName(action) }
-        names += globalSettings.searchRecentFiles.getData().map{ action -> SearchFileInPathAction.getActionName(action) } // TODO
-        names += globalSettings.searchOpenFiles.getData().map{ action -> SearchOpenFilesAction.getActionName(action) }
-    }
+    val names = mutableListOf<String>()
+    names += globalSettings.openRelativeFileActionsTable.getData().map{ action -> QuickFileSearchAction.getActionName(action) }
+    names += globalSettings.searchRelativeFileActionsTable.getData().map{ action -> SearchRelativeFileAction.getActionName(action) }
+    names += globalSettings.searchPathActionsTable.getData().map{ action -> SearchFileInPathAction.getActionName(action) }
+    names += globalSettings.searchRecentFiles.getData().map{ action -> SearchFileInPathAction.getActionName(action) }
+    names += globalSettings.searchOpenFiles.getData().map{ action -> SearchOpenFilesAction.getActionName(action) }
 
     for (name in names) {
         if (actionSet.contains(name)) {
@@ -47,14 +44,12 @@ fun checkActionNames(globalSettings: GlobalSettingsComponent) : String? {
 
 fun checkShortcuts(globalSettings: GlobalSettingsComponent) : String? {
     val actionSet = mutableSetOf<String>()
-    var shortcuts = emptyList<String>()
-    if (globalSettings != null) {
-        shortcuts = globalSettings.openRelativeFileActionsTable.getData().map{ action -> QuickFileSearchAction.getActionShortcut(action) }
-        shortcuts += globalSettings.searchRelativeFileActionsTable.getData().map{ action -> SearchRelativeFileAction.getActionShortcut(action) }
-        shortcuts += globalSettings.searchPathActionsTable.getData().map{ action -> SearchFileInPathAction.getActionShortcut(action) }
-        shortcuts += globalSettings.searchRecentFiles.getData().map{ action -> SearchFileInPathAction.getActionShortcut(action) } // TODO
-        shortcuts += globalSettings.searchOpenFiles.getData().map{ action -> SearchOpenFilesAction.getActionShortcut(action) }
-    }
+    val shortcuts = mutableListOf<String>()
+    shortcuts += globalSettings.openRelativeFileActionsTable.getData().map{ action -> QuickFileSearchAction.getActionShortcut(action) }
+    shortcuts += globalSettings.searchRelativeFileActionsTable.getData().map{ action -> SearchRelativeFileAction.getActionShortcut(action) }
+    shortcuts += globalSettings.searchPathActionsTable.getData().map{ action -> SearchFileInPathAction.getActionShortcut(action) }
+    shortcuts += globalSettings.searchRecentFiles.getData().map{ action -> SearchFileInPathAction.getActionShortcut(action) }
+    shortcuts += globalSettings.searchOpenFiles.getData().map{ action -> SearchOpenFilesAction.getActionShortcut(action) }
 
     for (shortcut in shortcuts) {
         if (shortcut.isNotEmpty() && actionSet.contains(shortcut)) {

@@ -3,20 +3,13 @@ package com.quickfilesearch.actions
 import com.quickfilesearch.settings.GlobalSettings
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.fileEditor.FileEditorManagerListener
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.util.messages.MessageBusConnection
 import com.quickfilesearch.*
 import com.quickfilesearch.searchbox.PopupInstanceItem
-import com.quickfilesearch.searchbox.SearchDialogCellRenderer
 import com.quickfilesearch.services.RecentFilesKeeper
-import kotlin.math.min
-
-
 
 class SearchRecentFilesAction(val action: Array<String>,
                               val settings: GlobalSettings.SettingsState) : AnAction(getActionName(action))
@@ -24,7 +17,7 @@ class SearchRecentFilesAction(val action: Array<String>,
     val name = action[0]
     var history: Int
     val extensions: List<String>
-    var searchAction: SearchForFiles? = null
+    var searchAction = SearchForFiles(settings)
 
     init {
         try {
@@ -48,9 +41,8 @@ class SearchRecentFilesAction(val action: Array<String>,
             }
         }
         val filteredFiles = recentFiles.filter { file -> extensions.isEmpty() || extensions.contains(file.extension) }
-//                                       .map{ file -> PopupInstanceItem(file, SearchDialogCellRenderer.getLabelHtml(file, settings.filePathDisplayType, project)) }
                                         .map{ file -> PopupInstanceItem(file) }
-        searchAction = SearchForFiles(filteredFiles, settings, project, null, extensions)
+        searchAction.doSearchForFiles(filteredFiles, project, null, extensions)
     }
 
     companion object {
