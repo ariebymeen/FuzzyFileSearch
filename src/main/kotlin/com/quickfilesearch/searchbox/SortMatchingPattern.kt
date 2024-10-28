@@ -97,3 +97,43 @@ fun runFzfCat(hashFile: String, query: String) : List<String> {
     }
     return emptyList()
 }
+
+fun runFzfNative(files: List<String>, query: String) : List<String> {
+    val start = System.currentTimeMillis()
+
+//    val query = "mai"
+
+//    val file = "/git/InsertSnippet/src/main/kotlin/com/insertsnippet/settings/SettingsController.kt"
+//    val file = "/git/Result/main.cpp"
+//    val query = "settingsc"
+//    val result = FuzzyMatchV2(false, true, true, file.toCharArray(), query.toCharArray(), false)
+//    println("Evaluating file $file, score: ${result.first.score}")
+//    return emptyList()
+
+    val results = mutableListOf<String>()
+    val scores = mutableListOf<Int>()
+    val queryChars = query.toCharArray()
+    for (file in files) {
+        val fileq = file.toCharArray()
+         results.add(fileq.toString())
+//        val result = FuzzyMatchV2(false, true, true, file.toCharArray(), query.toCharArray(), false)
+//        if (result.first.score > 0) {
+//            results.add(file)
+//            scores.add(result.first.score)
+//        }
+//        val result = fuzzyMatchV1(false, true, true, file.toCharArray(), queryChars, false)
+//        if (result.score > 0) {
+//            results.add(file)
+//            scores.add(result.score)
+//        }
+//        println("Evaluating file $file, score: ${result.first.score}")
+    }
+
+    val stop = System.currentTimeMillis()
+    println("Finding result took ${stop - start} ms for ${files.size} files. Number of files in search result: ${results.size}")
+
+    val sortedMatchIndices = scores.indices.sortedByDescending { scores[it] }
+    val sortedCandidates = sortedMatchIndices.map { results[it] }.toList()
+
+    return sortedCandidates
+}

@@ -12,34 +12,12 @@ import java.awt.Insets
 import java.awt.event.ComponentAdapter
 import java.awt.event.ComponentEvent
 import javax.swing.*
-import javax.swing.text.SimpleAttributeSet
 import javax.swing.text.StyleConstants
 
 class VerticallyCenteredTextPane : JTextPane() {
     var alignedText = false
 
-
     override fun paintComponent(g: Graphics) {
-        // TODO: TEST
-        //         val g2d = g as Graphics2D
-        //
-        //        // Enable anti-aliasing for smooth edges
-        //        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-        //
-        //        // Draw the rounded background
-        //        g2d.color = Color(200, 220, 240) // Light blue background color
-        //        g2d.fillRoundRect(0, 0, width, height, 30, 30) // Adjust arc width and height for rounded corners
-        //
-        //        // Draw the border (optional)
-        //        g2d.color = Color(100, 100, 150) // Border color
-        //        g2d.stroke = BasicStroke(3f) // Border thickness
-        //        g2d.drawRoundRect(0, 0, width - 1, height - 1, 30, 30) // Border with same rounded corner dimensions
-        //
-        //        // Call super to paint the text after the background
-        //        super.paintComponent(g)
-        //
-        //        // Adjust vertical centering
-        //        adjustVerticalCentering()
         if (!alignedText) {
             adjustVerticalCentering()
             alignedText = true

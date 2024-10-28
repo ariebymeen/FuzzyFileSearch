@@ -24,6 +24,7 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         var searchPopupHeight = 0.3
         var numberOfFilesInSearchView = 20
         var useFzfForSearching = true
+        var searchCaseSensitivity = false
         var verticalPositionOnScreen = 0.5
         var horizontalPositionOnScreen = 0.5
         var shrinkViewDynamically = false

@@ -26,7 +26,7 @@ class GlobalSettingsComponent {
     var searchBarHeight = JBIntSpinner(30, 10, 300)
     var searchItemHeight = JBIntSpinner(30, 10, 100)
     var shrinkSearchAreaWithResults = JBCheckBox()
-    var useFzfCheckbox = JBCheckBox()
+    var searchCaseSensitiviyCheckbox = JBCheckBox()
     var searchOnlyFilesInVersionControlCheckbox = JBCheckBox()
     var pathDisplayDropdownBox = ComboBox(PathDisplayType.values());
     var warningText = createWarningLabel()
@@ -35,7 +35,6 @@ class GlobalSettingsComponent {
     var searchRelativeFileActionsTable = ActionsTable(arrayOf("Name", "Reference file", "Extension", "Shortcut"), arrayOf("MyActionName", "Regex", "h", "alt shift P"))
     var searchRecentFiles = StaticTable(arrayOf("Name", "History length", "Extension", "Shortcut"), arrayOf(arrayOf("SearchRecentFiles", "10", "", "alt shift R")))
     var searchOpenFiles = StaticTable(arrayOf("Name", "Extension", "Shortcut"), arrayOf(arrayOf("SearchOpenFiles", "", "alt shift O")))
-//    var invalidateHashesButton = JButton("Restore hashes")
 
     init {
         panel = FormBuilder()
@@ -51,11 +50,9 @@ class GlobalSettingsComponent {
                     the number of files visible, all other files are still used in searching
                 """.trimIndent()), nofVisibleFilesInSearchViewSelector)
             .addLabeledComponent(
-                createLabelWithDescription("Use fzf for search", """
-                    If checked the searching is done by fzf. Can only be selected if fzf is installed and available in your path. 
-                    Will only work on linux. It not checked, searching is done using a custom (naive) implementation. It is recommended
-                    that you install fzf and enable this option
-                """.trimIndent()), useFzfCheckbox)
+                createLabelWithDescription("Search case sensitive", """
+                    If checked the searching algorithm is case sensitive.
+                """.trimIndent()), searchCaseSensitiviyCheckbox)
             .addLabeledComponent(
                 createLabelWithDescription("Search only files that are tracked by vcs", """
                     If checked only files that are tracked by a version control system (vcs) are searched.
@@ -144,7 +141,6 @@ class GlobalSettingsComponent {
                 """.trimIndent())
             )
             .addComponent(searchOpenFiles)
-//            .addComponent(invalidateHashesButton)
 
             .addComponentFillVertically(JPanel(), 0)
             .panel
