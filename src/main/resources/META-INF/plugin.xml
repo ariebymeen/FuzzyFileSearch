@@ -1,19 +1,27 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
     <!-- Unique identifier of the plugin. It should be FQN. It cannot be changed between the plugin versions. -->
-    <id>com.QuickFileSearch</id>
+    <id>com.FuzzyFileSearch</id>
 
     <!-- Public plugin name should be written in Title Case.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-name -->
-    <name>QuickFileSearch</name>
+    <name>FuzzyFileSearch</name>
 
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-    <vendor email="" url=""></vendor>
+    <vendor email="fuzzyfilesearch@outlook.com" url=""></vendor>
 
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
     <description><![CDATA[
+    Quickly find files using a fuzzy search algorithm. Integrates the algorithm from fzf to find files more quickly.
+    <ul>
+    <li> Assign shortcuts to search in different directories to more quickly find your files. </li>
+    <li> Assign shortcuts to search for files with certain extensions </li>
+    <li> Search in closest directory containing marker file (like CMakeList or .toml) </li>
+
+
+
     Integration with fzf for quickly finding files. Create shortcuts to search in specific directories or extensions
     to speed up finding the file you want! Can be integrated with ideavim by using ide actions.
   ]]></description>
@@ -25,20 +33,19 @@
     <!-- Extension points defined by the plugin.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
-        <postStartupActivity implementation="com.quickfilesearch.settings.ApplicationStartupSetup"/>
+        <postStartupActivity implementation="com.fuzzyfilesearch.settings.ApplicationStartupSetup"/>
 <!--        <applicationStartupActivity implementation="com.example.MyApplicationStartupActivity"/>-->
         <projectService
-                serviceInterface="com.quickfilesearch.services.RecentFilesKeeper"
-                serviceImplementation="com.quickfilesearch.services.RecentFilesKeeper"/>
+                serviceInterface="com.fuzzyfilesearch.services.RecentFilesKeeper"
+                serviceImplementation="com.fuzzyfilesearch.services.RecentFilesKeeper"/>
 <!--        <projectService-->
-<!--                serviceInterface="com.quickfilesearch.services.FileChangeListener"-->
-<!--                serviceImplementation="com.quickfilesearch.services.FileChangeListener"/>-->
+<!--                serviceInterface="com.fuzzyfilesearch.services.FileChangeListener"-->
+<!--                serviceImplementation="com.fuzzyfilesearch.services.FileChangeListener"/>-->
         <applicationConfigurable
                 parentId="tools"
-                instance="com.quickfilesearch.settings.GlobalSettingsConfigurable"
-                id="com.quickfilesearch.settings.GlobalSettingsConfigurable"
-                displayName="Quick File Search Settings"/>
-                displayName="QuickFileSearch Settings"/>
+                instance="com.fuzzyfilesearch.settings.GlobalSettingsConfigurable"
+                id="com.fuzzyfilesearch.settings.GlobalSettingsConfigurable"
+                displayName="FuzzyFileSearch Settings"/>
         <notificationGroup id="QuickFileSearchGroup"
                            displayType="BALLOON"
                            toolWindowId="Event Log"
