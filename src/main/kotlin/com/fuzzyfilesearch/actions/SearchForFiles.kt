@@ -3,9 +3,6 @@ package com.fuzzyfilesearch.actions
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.fuzzyfilesearch.searchbox.*
-import com.fuzzyfilesearch.services.createHashFileName
-import com.fuzzyfilesearch.services.getHashFilePath
-import com.fuzzyfilesearch.services.writeLineToFile
 import com.fuzzyfilesearch.settings.GlobalSettings
 import com.fuzzyfilesearch.settings.PathDisplayType
 import com.fuzzyfilesearch.showErrorNotification
@@ -23,6 +20,13 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
                          project: Project,
                          directory: String?,
                          extensions: List<String>?) {
+        if (files.size > 40000) {
+            showErrorNotification("Too many files", "Found ${files.size} files fir searching, " +
+                    "please limit the number of files by searching for files" +
+                    "with a extension, change the position you search or exclude directories from your search")
+            return
+        }
+
         mFiles = files
         mProject = project
         if (settings.filePathDisplayType != PathDisplayType.FILENAME_ONLY) {
@@ -37,11 +41,11 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
             mFileNames = mFiles.map { file -> file.vf.name }
         }
 
-        if (mPopup == null) {
+//        if (mPopup == null || !mPopup!!.isDisplayable()) {
             mPopup = SearchPopupInstance(::getSortedFileList, ::openSelectedFile, settings,  project, extensions)
-        } else {
-            mPopup?.updatePopupInstance(project, extensions)
-        }
+//        } else {
+//            mPopup?.updatePopupInstance(project, extensions)
+//        }
 
         mPopup!!.showPopupInstance()
         fzfSearchAction = FzfSearchAction(mFileNames!!, settings.searchCaseSensitivity)

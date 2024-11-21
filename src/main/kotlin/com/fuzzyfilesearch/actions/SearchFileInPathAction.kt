@@ -30,8 +30,6 @@ class SearchFileInPathAction(val action: Array<String>,
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
 
-//        val start = System.currentTimeMillis()
-//        println("Start of action: ${System.currentTimeMillis()}")
         val searchPath: String
         if (location[0] == '/') { // Search from project root
             searchPath = project.basePath + location
@@ -52,11 +50,7 @@ class SearchFileInPathAction(val action: Array<String>,
 
         val changeListManager = if (settings.searchOnlyFilesInVersionControl) ChangeListManager.getInstance(project) else null
         files = getAllFilesInRoot(vfPath, settings.excludedDirs, extensions, changeListManager)
-//        val stop = System.currentTimeMillis()
-//        println("Finding all filenames ${stop - start} ms")
-
         searchAction.doSearchForFiles(files!!, project, searchPath, extensions)
-
     }
 
     fun getVirtualFileFromPath(filePath: String): VirtualFile? {

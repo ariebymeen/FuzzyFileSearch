@@ -14,7 +14,7 @@ import com.fuzzyfilesearch.searchbox.getParentSatisfyingRegex
 class SearchRelativeFileAction(val action: Array<String>,
                                val settings: GlobalSettings.SettingsState) : AnAction(getActionName(action))
 {
-    val regex = Regex(pattern = action[1], options = setOf(RegexOption.IGNORE_CASE))
+    val regex = Regex(pattern = action[1], options = setOf(RegexOption.IGNORE_CASE, RegexOption.LITERAL, RegexOption.DOT_MATCHES_ALL))
     val name = getActionName(action)
     var files: List<PopupInstanceItem>? = null
     var project: Project? = null

@@ -167,25 +167,31 @@ fun calculateScore(
 
     var prevClass = initialCharClass
     if (sidx > 0) {
-        prevClass = charClassOf(text.get(sidx - 1))
+        if (!caseSensitive) {
+            prevClass = charClassOf(text.get(sidx - 1).lowercaseChar())
+        } else {
+            prevClass = charClassOf(text.get(sidx - 1))
+        }
     }
 
     for (idx in sidx until eidx) {
         var char = text.get(idx)
+        var pChar = pattern[pidx]
 
         // Handle case sensitivity
         if (!caseSensitive) {
             char = char.lowercaseChar()
+            pChar = char.lowercaseChar()
         }
 
-        var classType = charClassOf(char)
+        val classType = charClassOf(char)
 
         // Normalize character if required
         if (normalize) {
             char = normalizeRune(char)
         }
 
-        if (char == pattern[pidx]) {
+        if (char == pChar) {
             if (withPos) {
                 pos?.set(pidx, idx) // Store the position
             }
@@ -212,6 +218,9 @@ fun calculateScore(
             inGap = false
             consecutive++
             pidx++
+            if (pidx == pattern.size) {
+                break
+            }
         } else {
             score += if (inGap) {
                 scoreGapExtension
@@ -344,12 +353,10 @@ fun FuzzyMatchV2(
     pattern: CharArray,
     withPos: Boolean,
 ): Result {
-//    println("PAttern: ${pattern.`}")
 //    var pattern = pattern
 //    if (!caseSensitive) {
 //        pattern = pattern.toString().lowercase().toCharArray()
 //    }
-//    println("PAttern: ${pattern.toString()}")
 
     // Assume that pattern is given in lowercase if case-insensitive.
     val M = pattern.size
@@ -616,7 +623,6 @@ fun FuzzyMatchV1(
             char = normalizeRune(char)
         }
 
-        // TODO: pchar does not seem to be normalized even when not case sensitive. This breaks search when using uppercase letters
         var pchar = pattern[indexAt(pidx, lenPattern, forward)]
         if (!caseSensitive) {
             pchar = pchar.lowercaseChar()
@@ -632,7 +638,6 @@ fun FuzzyMatchV1(
         }
     }
 
-    println("test: $sidx, $eidx")
     if (sidx >= 0 && eidx >= 0) {
         pidx--
         for (index in eidx - 1 downTo sidx) {
@@ -667,10 +672,8 @@ fun FuzzyMatchV1(
         }
 
         val (score, _) = calculateScore(caseSensitive, normalize, text, pattern, sidx, eidx, withPos)
-        println("Score: $score")
         return Result(sidx, eidx, score)
     }
 
-    println("Ret")
     return Result(-1, -1, 0)
 }

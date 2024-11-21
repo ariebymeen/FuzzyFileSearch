@@ -46,6 +46,7 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         var showEditorPreview = true
         var editorPreviewLocation = EditorLocation.EDITOR_RIGHT
         var editorSizeRatio = 0.5
+        var openWithSingleClick = true
     }
 
     fun getInstance() : GlobalSettings {

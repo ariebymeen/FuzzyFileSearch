@@ -5,4 +5,4 @@ pluginManagement {
     }
 }
 
-rootProject.name = "QuickFileSearch"
+rootProject.name = "FuzzyFileSearch"

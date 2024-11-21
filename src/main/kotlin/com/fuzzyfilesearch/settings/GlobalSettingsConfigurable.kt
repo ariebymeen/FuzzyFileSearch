@@ -24,6 +24,7 @@ class GlobalSettingsConfigurable : Configurable {
         component.searchItemHeight.value = settings.state.searchItemHeight
         component.shrinkSearchAreaWithResults.isSelected = settings.state.shrinkViewDynamically
         component.searchOnlyFilesInVersionControlCheckbox.isSelected = settings.state.searchOnlyFilesInVersionControl
+        component.openFilesSingleClick.isSelected = settings.state.openWithSingleClick
 
         component.showEditorPreviewCheckbox.isSelected  = settings.state.showEditorPreview
         component.editorPreviewLocation.selectedItem = settings.state.editorPreviewLocation
@@ -61,6 +62,7 @@ class GlobalSettingsConfigurable : Configurable {
                 || settings.state.searchBarHeight != component.searchBarHeight.value
                 || settings.state.searchItemHeight != component.searchItemHeight.value
                 || settings.state.shrinkViewDynamically != component.shrinkSearchAreaWithResults.isSelected
+                || settings.state.openWithSingleClick != component.openFilesSingleClick.isSelected
                 || settings.state.showEditorPreview != component.showEditorPreviewCheckbox.isSelected
                 || settings.state.editorPreviewLocation != component.editorPreviewLocation.selectedItem
                 || settings.state.editorSizeRatio != component.editorSizeRatio.value
@@ -131,6 +133,7 @@ class GlobalSettingsConfigurable : Configurable {
         settings.state.searchBarHeight = component.searchBarHeight.value as Int
         settings.state.searchItemHeight = component.searchItemHeight.value as Int
         settings.state.shrinkViewDynamically = component.shrinkSearchAreaWithResults.isSelected
+        settings.state.openWithSingleClick = component.openFilesSingleClick.isSelected
         settings.state.showEditorPreview = component.showEditorPreviewCheckbox.isSelected
         settings.state.editorPreviewLocation = component.editorPreviewLocation.selectedItem as EditorLocation
         settings.state.editorSizeRatio = component.editorSizeRatio.value as Double

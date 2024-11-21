@@ -36,34 +36,4 @@ fun directoryContainsFile(path: String, fileName: String): Boolean {
     return false
 }
 
-fun getHashFilePath(project: Project, path: String, extensions: List<String>? = null): String {
-    val directory = "/tmp/.${project.basePath!!.sha256()}"
-    if (!File(directory).exists()) {
-        createDirectory(directory)
-    }
-    return "$directory/${createHashFileName(path, extensions)}"
-}
 
-fun createHashFileName(path: String, extensions: List<String>? = null) : String {
-    if (extensions != null) {
-        val hash = "$path;${extensions.joinToString(";")}".sha256()
-        return ".$hash"
-    } else {
-        return ".${path.sha256()}"
-    }
-}
-
-fun writeLineToFile(filePath: String, line: String) {
-    val file = File(filePath)
-    file.writeText(line)
-}
-
-fun writeLinesToFile(filePath: String, lines: List<String>) {
-    val file = File(filePath)
-    file.writeText(lines.joinToString(separator = "\n"))
-}
-
-fun isFileModified(virtualFile: VirtualFile): Boolean {
-    val document = FileDocumentManager.getInstance().getDocument(virtualFile)
-    return document != null && FileDocumentManager.getInstance().isDocumentUnsaved(document)
-}

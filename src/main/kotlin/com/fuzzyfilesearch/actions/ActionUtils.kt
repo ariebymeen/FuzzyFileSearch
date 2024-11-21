@@ -5,11 +5,12 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.KeyboardShortcut
 import com.intellij.openapi.keymap.KeymapManager
 import com.fuzzyfilesearch.settings.*
+import com.fuzzyfilesearch.showErrorNotification
 import javax.swing.KeyStroke
 
 fun extractExtensions(extension: String): List<String> {
     if (extension.isNotEmpty()) {
-        return extension.split('|').map { ext -> ext.replace('.', ' ').trim().lowercase() }
+        return extension.split('|', ',', ';', ':').map { ext -> ext.replace('.', ' ').trim().lowercase() }
     }
     return emptyList()
 }
@@ -26,8 +27,13 @@ fun registerAction(name: String, shortcut: String, action: AnAction) {
     }
 
     if (shortcut.isNotEmpty()) {
-        val shortcut = KeyboardShortcut(KeyStroke.getKeyStroke(shortcut), null)
-        KeymapManager.getInstance().activeKeymap.addShortcut(getActionName(name), shortcut);
+        val keyStroke = KeyStroke.getKeyStroke(shortcut.trim())
+        if (keyStroke == null) {
+            showErrorNotification("Invalid shortcut" , "Shortcut $shortcut is not valid")
+            return
+        }
+        val sc = KeyboardShortcut(keyStroke, null)
+        KeymapManager.getInstance().activeKeymap.addShortcut(getActionName(name), sc);
     }
 }
 
@@ -35,7 +41,8 @@ fun unregisterAction(name: String, shortcut: String) {
     println("Unregistering action: ${getActionName(name)}")
     ActionManager.getInstance().unregisterAction(getActionName(name))
     if (shortcut.isNotEmpty()) {
-        val sc = KeyboardShortcut(KeyStroke.getKeyStroke(shortcut), null)
+        val keyStroke = KeyStroke.getKeyStroke(shortcut.trim()) ?: return
+        val sc = KeyboardShortcut(keyStroke, null)
         KeymapManager.getInstance().activeKeymap.removeShortcut(getActionName(name), sc);
     }
 }

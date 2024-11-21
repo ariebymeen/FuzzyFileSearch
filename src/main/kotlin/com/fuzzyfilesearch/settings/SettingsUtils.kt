@@ -4,6 +4,8 @@ import com.fuzzyfilesearch.actions.QuickFileSearchAction
 import com.fuzzyfilesearch.actions.SearchFileInPathAction
 import com.fuzzyfilesearch.actions.SearchOpenFilesAction
 import com.fuzzyfilesearch.actions.SearchRelativeFileAction
+import com.fuzzyfilesearch.showErrorNotification
+import javax.swing.KeyStroke
 
 // Check if settings are correct. If not, return a string with the error message
 fun checkSettings(globalSettings: GlobalSettingsComponent): String? {
@@ -52,10 +54,17 @@ fun checkShortcuts(globalSettings: GlobalSettingsComponent) : String? {
     shortcuts += globalSettings.searchOpenFiles.getData().map{ action -> SearchOpenFilesAction.getActionShortcut(action) }
 
     for (shortcut in shortcuts) {
-        if (shortcut.isNotEmpty() && actionSet.contains(shortcut)) {
+        if (shortcut.trim().isNotEmpty() && actionSet.contains(shortcut)) {
             return "Shortcut $shortcut used multiple times. Action names must be unique"
         } else {
             actionSet += shortcut
+        }
+
+        if (shortcut.trim().isNotEmpty()) {
+            val keyStroke = KeyStroke.getKeyStroke(shortcut.trim())
+            if (keyStroke == null) {
+                return "Shortcut ${shortcut} is not valid"
+            }
         }
     }
 

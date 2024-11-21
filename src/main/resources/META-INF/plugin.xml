@@ -19,11 +19,12 @@
     <li> Assign shortcuts to search in different directories to more quickly find your files. </li>
     <li> Assign shortcuts to search for files with certain extensions </li>
     <li> Search in closest directory containing marker file (like CMakeList or .toml) </li>
-
-
+    <ul>
 
     Integration with fzf for quickly finding files. Create shortcuts to search in specific directories or extensions
     to speed up finding the file you want! Can be integrated with ideavim by using ide actions.
+
+    // TODO: See settings->Tools->FuzzyFileSearch Settings for configuring your plugin
   ]]></description>
 
     <!-- Product and plugin compatibility requirements.
@@ -38,9 +39,6 @@
         <projectService
                 serviceInterface="com.fuzzyfilesearch.services.RecentFilesKeeper"
                 serviceImplementation="com.fuzzyfilesearch.services.RecentFilesKeeper"/>
-<!--        <projectService-->
-<!--                serviceInterface="com.fuzzyfilesearch.services.FileChangeListener"-->
-<!--                serviceImplementation="com.fuzzyfilesearch.services.FileChangeListener"/>-->
         <applicationConfigurable
                 parentId="tools"
                 instance="com.fuzzyfilesearch.settings.GlobalSettingsConfigurable"

@@ -22,6 +22,9 @@ fun getParentSatisfyingRegex(project: Project,
     for (child in directory.children!!) {
         if (child.isFile) {
             if (regex.matches(child.name) || regex.pattern == child.name) return child
+            else {
+                println("Does not match: ${regex.pattern}, child: ${child.name}")
+            }
         }
     }
 
@@ -73,7 +76,9 @@ fun isFileInProject(project: Project, file: VirtualFile): Boolean {
 
     // If file is in current project or otherwise check if the file is loaded in the file tree
     return projectRootManager.fileIndex.isInContent(file)
-            || (projectRootManager.contentRoots.isEmpty() && file.path.subSequence(0, project.basePath!!.length) == project.basePath!!)//file.path.find(project.basePath!!) != null)
+            || (projectRootManager.contentRoots.isEmpty()
+                        && file.path.length >= project.basePath!!.length
+                        && file.path.subSequence(0, project.basePath!!.length) == project.basePath!!)
 }
 
 //fun getRootAtMaxDistance(referenceFile: VirtualFile, maxDistance: Int, project: Project) : VirtualFile {

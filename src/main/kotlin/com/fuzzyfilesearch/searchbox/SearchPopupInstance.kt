@@ -52,7 +52,7 @@ class SearchPopupInstance(
     var mExtensions: List<String>? = null
 ) {
     val mSearchField: JTextField = JTextField()
-    val mExtensionField: JTextField = TransparentTextField(0.5F) // TODO: Make this editable (grow with input) & allow user to specify this
+    val mExtensionField: JTextField = TransparentTextField(1.0F)
     val mListModel: DefaultListModel<PopupInstanceItem> = DefaultListModel()
     val mResultsList = JXList(mListModel)
     var mPopup: JBPopup? = null
@@ -62,11 +62,19 @@ class SearchPopupInstance(
     val mEditorView = SearchBoxEditor(mProject)
     val mMainPanel: JPanel = JPanel(BorderLayout())
     val mCellRenderer = SearchDialogCellRenderer(mProject, mSettings)
+    var mNofTimesClicked = 0;
+    var mLastClickedIndex: Int = -1
 
     init {
         createPopupInstance()
     }
-    
+
+//    fun isDisplayable() : Boolean {
+//        return mEditorView.isDisplayable && mMainPanel.isDisplayable
+//                && mSearchField.isDisplayable && mExtensionField.isDisplayable
+//                && mResultsList.isDisplayable
+//    }
+//
     fun updatePopupInstance(project: Project, extensions: List<String>?) {
         mProject = project
         mExtensions = extensions
@@ -86,7 +94,7 @@ class SearchPopupInstance(
         val width = (screenSize.width * mSettings.searchPopupWidth).toInt()
         val height = (screenSize.height * mSettings.searchPopupHeight).toInt()
         mMaxPopupHeight = height
-        mCellRenderer.maxWidth = width - 20
+        mCellRenderer.maxWidth = width - 24
 
         val splitPaneSizeAttr = if (mSettings.editorPreviewLocation == EditorLocation.EDITOR_BELOW) height else width
         if (mSettings.showEditorPreview) {
@@ -106,16 +114,18 @@ class SearchPopupInstance(
             .setMinSize(Dimension(mSettings.searchBarHeight, 0))
             .createPopup()
 
-        mPopup!!.size = Dimension(width, height)
         val ideFrame = WindowManager.getInstance().getIdeFrame(mProject)
         val ideBounds = WindowManager.getInstance().getFrame(mProject)
         if (ideFrame == null || ideBounds == null) {
             mPopup!!.showInFocusCenter()
+            mPopup!!.size = Dimension(width, height)
         } else {
             val posY = ideBounds.y + ideBounds.height * mSettings.verticalPositionOnScreen - height / 2
             val posX = ideBounds.x + ideBounds.width * mSettings.horizontalPositionOnScreen - width / 2
             val posYInBounds = min(ideBounds.y + ideBounds.height - height, max(ideBounds.y, posY.toInt()))
             val poxXInBounds = max(ideBounds.x, min(ideBounds.x + ideBounds.width - width, posX.toInt()))
+
+            mPopup!!.size = Dimension(width, height)
             mPopup!!.showInScreenCoordinates(ideFrame.component, Point(poxXInBounds, posYInBounds))
         }
 
@@ -128,11 +138,12 @@ class SearchPopupInstance(
     private fun updateListedItems() {
         // TODO: Add indication that not all files are listed
         SwingUtilities.invokeLater {
+            mNofTimesClicked = 0 // Reset nof times clicked counter
             val items = mGetSearchResultCallback.invoke(mSearchField.text);
             items ?: return@invokeLater
 
             // update list items. This is optimized for performance as clearing the list model gives problems
-            val commonCount = kotlin.math.min(items.size, mListModel.size())
+            val commonCount = min(items.size, mListModel.size())
             for (idx in 0 until commonCount) {
                 mListModel[idx] = items[idx]
             }
@@ -155,7 +166,7 @@ class SearchPopupInstance(
             }
 
             if (mSettings.shrinkViewDynamically) {
-                mPopup!!.size = Dimension(mPopup!!.width, min(mMaxPopupHeight!!, mSettings.searchBarHeight + mListModel.size() * mSettings.searchItemHeight + 4))
+                mPopup!!.size = Dimension(mPopup!!.width, min(mMaxPopupHeight!!, mSettings.searchBarHeight + mListModel.size() * mSettings.searchItemHeight + 6))
                 mResultsList.revalidate()
                 mResultsList.repaint()
             }
@@ -178,7 +189,6 @@ class SearchPopupInstance(
             KeyEvent.VK_DOWN -> mResultsList.selectedIndex += 1
             KeyEvent.VK_TAB -> mResultsList.selectedIndex += 1
             KeyEvent.VK_ENTER -> {
-                println("Pressed enter!")
                 if (mResultsList.selectedIndex >= 0) {
                     mItemSelectedCallback.invoke(mResultsList.selectedValue as PopupInstanceItem)
                     mPopup?.dispose()
@@ -194,8 +204,15 @@ class SearchPopupInstance(
     }
 
     fun mouseClickedEvent() {
-        mPopup?.dispose()
-        mItemSelectedCallback.invoke(mResultsList.selectedValue as PopupInstanceItem)
+        val selectedItem = mResultsList.selectedValue as PopupInstanceItem
+        if ((mResultsList.selectedIndex == mLastClickedIndex && mNofTimesClicked >= 1) ||
+            mSettings.openWithSingleClick)
+        {
+            mPopup?.dispose()
+            mItemSelectedCallback.invoke(selectedItem)
+        }
+        mNofTimesClicked = 1
+        mLastClickedIndex = mResultsList.selectedIndex
     }
     
     private fun setExtensionsField(extList: List<String>? = null) {
@@ -219,8 +236,8 @@ class SearchPopupInstance(
         mExtensionField.border = border
         mExtensionField.toolTipText = ""
         mExtensionField.isEditable = false
-        setExtensionsField(mExtensions)
         setSearchBarHeigth(mSettings)
+        setExtensionsField(mExtensions)
 
         mSearchField.addKeyListener(object : KeyAdapter() {
             override fun keyTyped(e: KeyEvent) { keyTypedEvent(e) }

@@ -7,7 +7,9 @@ import com.intellij.ui.JBIntSpinner
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextArea
+import com.intellij.ui.util.preferredWidth
 import com.intellij.util.ui.FormBuilder
+import java.awt.BorderLayout
 import javax.swing.JButton
 import javax.swing.JPanel
 import javax.swing.JSpinner
@@ -28,18 +30,20 @@ class GlobalSettingsComponent {
     var shrinkSearchAreaWithResults = JBCheckBox()
     var searchCaseSensitiviyCheckbox = JBCheckBox()
     var showEditorPreviewCheckbox = JBCheckBox()
+    var openFilesSingleClick = JBCheckBox()
     var editorPreviewLocation = ComboBox(EditorLocation.values());
     val editorSizeRatio = JSpinner(SpinnerNumberModel(0.5.toDouble(), 0.1.toDouble(), 1.0.toDouble(), 0.01.toDouble()))
     var searchOnlyFilesInVersionControlCheckbox = JBCheckBox()
     var pathDisplayDropdownBox = ComboBox(PathDisplayType.values());
     var warningText = createWarningLabel()
     var openRelativeFileActionsTable = ActionsTable(arrayOf("Name", "Reference file", "Open path", "Shortcut"), arrayOf("MyActionName", "Regex", "src/%name%Test.cc", "alt shift P"))
-    var searchPathActionsTable = ActionsTable(arrayOf("Name", "Path", "Extension", "Shortcut"), arrayOf("ActionName", "/files", "txt", "alt shift H"))
-    var searchRelativeFileActionsTable = ActionsTable(arrayOf("Name", "Reference file", "Extension", "Shortcut"), arrayOf("MyActionName", "Regex", "h", "alt shift P"))
-    var searchRecentFiles = StaticTable(arrayOf("Name", "History length", "Extension", "Shortcut"), arrayOf(arrayOf("SearchRecentFiles", "10", "", "alt shift R")))
-    var searchOpenFiles = StaticTable(arrayOf("Name", "Extension", "Shortcut"), arrayOf(arrayOf("SearchOpenFiles", "", "alt shift O")))
+    var searchPathActionsTable = ActionsTable(arrayOf("Name", "Path", "Extensions", "Shortcut"), arrayOf("ActionName", "/", ".txt, .md", "alt shift H"))
+    var searchRelativeFileActionsTable = ActionsTable(arrayOf("Name", "Reference file", "Extensions", "Shortcut"), arrayOf("MyActionName", "Regex", "h", "alt shift P"))
+    var searchRecentFiles = StaticTable(arrayOf("Name", "History length", "Extensions", "Shortcut"), arrayOf(arrayOf("SearchRecentFiles", "10", ".txt,.md", "alt shift R")))
+    var searchOpenFiles = StaticTable(arrayOf("Name", "Extensions", "Shortcut"), arrayOf(arrayOf("SearchOpenFiles", ".txt,.md", "alt shift O")))
 
     init {
+
         panel = FormBuilder()
             .addComponent(JBLabel("<html><strong>Settings for QuickFileSearch</strong></html>"))
             .addSeparator()
@@ -94,6 +98,11 @@ class GlobalSettingsComponent {
                     If checked the search area will shrink to the number of results. Else the search area height
                     will always be the configured height
                 """.trimIndent()), shrinkSearchAreaWithResults)
+            .addLabeledComponent(
+                createLabelWithDescription("Open file with a single click", """
+                    If checked, open the file in a single click. Opening the file in the preview is then only possible 
+                    using the keyboard. If not clicked, the item must be double clicked to open the file.
+                """.trimIndent()), openFilesSingleClick)
 
             // Editor preview settings
             .addLabeledComponent(
@@ -115,6 +124,20 @@ class GlobalSettingsComponent {
             // Create Relative file opening actions
             .addSeparator()
             .addComponent(warningText)
+            .addComponent(createLabelWithDescription("More information", """
+                The tables below can be edited to create your custom search and open actions.
+                The "Name" field if the action refers to the action name in the intelij editor and must be unique.
+                You can find and test this action using 'Help->Find Action' and searching for the name. The action is registered under the name
+                com.fuzzyfilesearch.%ACTION_NAME%. This can be uses for ideavim integration, where these actions can be triggered by referencing this name.
+                The "Reference File" field expects a valid regex that is uses to search for a file with a specific name. Note that it only matches the filename, not the path.
+                E.g. if you enter [A-Za-z]+\.txt it will match any .txt file. The directory will be found that contains a file that matches this pattern in 
+                the directories above the current file, the directory tree will not be traversed down to search for the file.
+                The "Extensions" field is an optional field, if filled, only the files with these extensions are used in the search.
+                To enter multiple extension, separate these with a ',' or a '|'. The '.' in front of the extension is optional. Valid examples: ".txt,.md" and "txt | md"
+                The "Shortcut" field is an optional field that assigns a shortcut to the action. If this field is empty, no shortcut is set. 
+                If the shortcut does not seem to work, validate that the action is registered (search in "Help->Find Action"). If the action is registered correctly, the shortcut might
+                already be in use for something else. Remove the shortcut for the other action in the settings, and try again. 
+                """.trimIndent()))
             .addComponent(
                 createLabelWithDescription("Create action for opening relative file", """
                 Open a file that is related to the currently open file. If no regex is entered, %name% is set to the name of the current file (without extension).
@@ -142,7 +165,7 @@ class GlobalSettingsComponent {
                 createLabelWithDescription("Search in path", """
                     Search in a path. Use / as first character searches in the folder that is open in the editor. 
                     Start with . to create a relative path (./ searches in directory of currently open file ../ in its parent etc.)
-                    Specify the extension you want to search for, if empty all are included.
+                    Specify the extensions you want to search for, if empty all are included.
                 """.trimIndent())
             )
             .addComponent(searchPathActionsTable)
