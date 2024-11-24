@@ -18,6 +18,10 @@ class GlobalSettingsConfigurable : Configurable {
         component.pathDisplayDropdownBox.selectedItem = settings.state.filePathDisplayType
         component.searchBoxWidth.value = settings.state.searchPopupWidth
         component.searchBoxHeight.value = settings.state.searchPopupHeight
+        component.searchBoxWidthPx.value = settings.state.searchPopupWidthPx
+        component.searchBoxHeightPx.value = settings.state.searchPopupHeightPx
+        component.minSizeEditorPx.value = settings.state.minSizeEditorPx
+        component.scalePopupSizeWithIde.isSelected = settings.state.scaleWithIdeBounds
         component.searchBoxPosX.value = settings.state.horizontalPositionOnScreen
         component.searchBoxPosY.value = settings.state.verticalPositionOnScreen
         component.searchBarHeight.value = settings.state.searchBarHeight
@@ -41,6 +45,7 @@ class GlobalSettingsConfigurable : Configurable {
             component.searchOpenFiles.setData(settings.state.searchOpenFilesActions)
         }
 
+        component.setEditorScalingFields()
         return component.panel
     }
 
@@ -57,6 +62,10 @@ class GlobalSettingsConfigurable : Configurable {
                 || settings.state.filePathDisplayType != (component.pathDisplayDropdownBox.selectedItem as PathDisplayType)
                 || settings.state.searchPopupWidth != component.searchBoxWidth.value
                 || settings.state.searchPopupHeight != component.searchBoxHeight.value
+                || settings.state.searchPopupWidthPx != component.searchBoxWidthPx.value
+                || settings.state.searchPopupHeightPx != component.searchBoxHeightPx.value
+                || settings.state.minSizeEditorPx != component.minSizeEditorPx.value
+                || settings.state.scaleWithIdeBounds != component.scalePopupSizeWithIde.isSelected
                 || settings.state.horizontalPositionOnScreen != component.searchBoxPosX.value
                 || settings.state.verticalPositionOnScreen != component.searchBoxPosY.value
                 || settings.state.searchBarHeight != component.searchBarHeight.value
@@ -81,6 +90,7 @@ class GlobalSettingsConfigurable : Configurable {
                 return false
             }
             component.warningText.isVisible = false
+            component.setEditorScalingFields()
         }
         return modified
     }
@@ -128,6 +138,10 @@ class GlobalSettingsConfigurable : Configurable {
         settings.state.filePathDisplayType = component.pathDisplayDropdownBox.selectedItem as PathDisplayType
         settings.state.searchPopupWidth = component.searchBoxWidth.value as Double
         settings.state.searchPopupHeight = component.searchBoxHeight.value as Double
+        settings.state.searchPopupWidthPx = component.searchBoxWidthPx.value as Int
+        settings.state.searchPopupHeightPx = component.searchBoxHeightPx.value as Int
+        settings.state.minSizeEditorPx = component.minSizeEditorPx.value as Int
+        settings.state.scaleWithIdeBounds = component.scalePopupSizeWithIde.isSelected
         settings.state.horizontalPositionOnScreen = component.searchBoxPosX.value as Double
         settings.state.verticalPositionOnScreen = component.searchBoxPosY.value as Double
         settings.state.searchBarHeight = component.searchBarHeight.value as Int

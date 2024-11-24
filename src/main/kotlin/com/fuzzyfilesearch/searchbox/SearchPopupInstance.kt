@@ -10,6 +10,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.util.width
 import com.intellij.util.ui.JBUI
 import com.fuzzyfilesearch.settings.GlobalSettings
+import com.intellij.openapi.wm.IdeFrame
 import kotlinx.coroutines.*
 import org.jdesktop.swingx.JXList
 import java.awt.*
@@ -69,12 +70,6 @@ class SearchPopupInstance(
         createPopupInstance()
     }
 
-//    fun isDisplayable() : Boolean {
-//        return mEditorView.isDisplayable && mMainPanel.isDisplayable
-//                && mSearchField.isDisplayable && mExtensionField.isDisplayable
-//                && mResultsList.isDisplayable
-//    }
-//
     fun updatePopupInstance(project: Project, extensions: List<String>?) {
         mProject = project
         mExtensions = extensions
@@ -89,14 +84,25 @@ class SearchPopupInstance(
     }
 
     fun showPopupInstance() {
-        val screenSize = Toolkit.getDefaultToolkit().screenSize
-        // TODO: Should this be relative to screen size or IDE size?
-        val width = (screenSize.width * mSettings.searchPopupWidth).toInt()
-        val height = (screenSize.height * mSettings.searchPopupHeight).toInt()
-        mMaxPopupHeight = height
-        mCellRenderer.maxWidth = width - 24
+        val ideFrame = WindowManager.getInstance().getIdeFrame(mProject)
+        val ideBounds = WindowManager.getInstance().getFrame(mProject)
+        println("Screen bounds using graphics configurations: ${ideBounds?.graphicsConfiguration?.bounds}")
 
-        val splitPaneSizeAttr = if (mSettings.editorPreviewLocation == EditorLocation.EDITOR_BELOW) height else width
+        val popupWidth: Int
+        val popupHeight: Int
+        if (mSettings.scaleWithIdeBounds || ideBounds == null) {
+            popupWidth = mSettings.searchPopupWidthPx
+            popupHeight = mSettings.searchPopupHeightPx
+        } else {
+            popupWidth = (ideBounds.width * mSettings.searchPopupWidth).toInt()
+            popupHeight = (ideBounds.height * mSettings.searchPopupHeight).toInt()
+        }
+
+        mMaxPopupHeight = popupHeight
+        mCellRenderer.maxWidth = popupWidth - 24
+
+        // Set the position of the splitter between the search results list and the editor view
+        val splitPaneSizeAttr = if (mSettings.editorPreviewLocation == EditorLocation.EDITOR_BELOW) popupHeight else popupWidth
         if (mSettings.showEditorPreview) {
             mSplitPane.dividerLocation = (splitPaneSizeAttr * (1.0 - mSettings.editorSizeRatio)).toInt()
             if (mSettings.editorPreviewLocation == EditorLocation.EDITOR_RIGHT) {
@@ -105,6 +111,9 @@ class SearchPopupInstance(
         } else {
             mSplitPane.dividerLocation = splitPaneSizeAttr
         }
+        println("Split pane location: ${mSplitPane.dividerLocation}")
+
+
         mResultsList.cellRenderer = mCellRenderer
 
         mPopup = JBPopupFactory.getInstance()
@@ -114,24 +123,20 @@ class SearchPopupInstance(
             .setMinSize(Dimension(mSettings.searchBarHeight, 0))
             .createPopup()
 
-        val ideFrame = WindowManager.getInstance().getIdeFrame(mProject)
-        val ideBounds = WindowManager.getInstance().getFrame(mProject)
+        updateListedItems()
+
+        // Ensure that the popup is within the bounds of the ide
         if (ideFrame == null || ideBounds == null) {
             mPopup!!.showInFocusCenter()
-            mPopup!!.size = Dimension(width, height)
+            mPopup!!.size = Dimension(popupWidth, popupHeight)
         } else {
-            val posY = ideBounds.y + ideBounds.height * mSettings.verticalPositionOnScreen - height / 2
-            val posX = ideBounds.x + ideBounds.width * mSettings.horizontalPositionOnScreen - width / 2
-            val posYInBounds = min(ideBounds.y + ideBounds.height - height, max(ideBounds.y, posY.toInt()))
-            val poxXInBounds = max(ideBounds.x, min(ideBounds.x + ideBounds.width - width, posX.toInt()))
+            val posY = ideBounds.y + ideBounds.height * mSettings.verticalPositionOnScreen - popupHeight / 2
+            val posX = ideBounds.x + ideBounds.width * mSettings.horizontalPositionOnScreen - popupWidth / 2
+            val posYInBounds = min(ideBounds.y + ideBounds.height - popupHeight, max(ideBounds.y, posY.toInt()))
+            val poxXInBounds = max(ideBounds.x, min(ideBounds.x + ideBounds.width - popupWidth, posX.toInt()))
 
-            mPopup!!.size = Dimension(width, height)
+            mPopup!!.size = Dimension(popupWidth, popupHeight)
             mPopup!!.showInScreenCoordinates(ideFrame.component, Point(poxXInBounds, posYInBounds))
-        }
-
-        updateListedItems()
-        SwingUtilities.invokeLater {
-            mSearchField.requestFocusInWindow()
         }
     }
 
@@ -140,7 +145,7 @@ class SearchPopupInstance(
         SwingUtilities.invokeLater {
             mNofTimesClicked = 0 // Reset nof times clicked counter
             val items = mGetSearchResultCallback.invoke(mSearchField.text);
-            items ?: return@invokeLater
+//            items ?: return@invokeLater
 
             // update list items. This is optimized for performance as clearing the list model gives problems
             val commonCount = min(items.size, mListModel.size())
@@ -214,7 +219,7 @@ class SearchPopupInstance(
         mNofTimesClicked = 1
         mLastClickedIndex = mResultsList.selectedIndex
     }
-    
+
     private fun setExtensionsField(extList: List<String>? = null) {
         if (!extList.isNullOrEmpty()) {
             mExtensionField.text = extList.map{ ext -> ".$ext"}.joinToString(";")

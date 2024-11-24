@@ -22,9 +22,6 @@ fun getParentSatisfyingRegex(project: Project,
     for (child in directory.children!!) {
         if (child.isFile) {
             if (regex.matches(child.name) || regex.pattern == child.name) return child
-            else {
-                println("Does not match: ${regex.pattern}, child: ${child.name}")
-            }
         }
     }
 

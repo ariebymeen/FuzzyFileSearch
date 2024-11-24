@@ -21,10 +21,14 @@ class GlobalSettingsComponent {
 
     var excludedDirs = JBTextArea()
     var nofVisibleFilesInSearchViewSelector = JBIntSpinner(10, 1, 100)
+    var scalePopupSizeWithIde = JBCheckBox()
     val searchBoxWidth = JSpinner(SpinnerNumberModel(0.3.toDouble(), 0.1.toDouble(), 1.0.toDouble(), 0.05.toDouble()))
     val searchBoxHeight = JSpinner(SpinnerNumberModel(0.3.toDouble(), 0.1.toDouble(), 1.0.toDouble(), 0.05.toDouble()))
     val searchBoxPosX = JSpinner(SpinnerNumberModel(0.5.toDouble(), 0.1.toDouble(), 1.0.toDouble(), 0.01.toDouble()))
     val searchBoxPosY = JSpinner(SpinnerNumberModel(0.5.toDouble(), 0.1.toDouble(), 1.0.toDouble(), 0.01.toDouble()))
+    var searchBoxWidthPx = JBIntSpinner(700, 50, 10000, 5)
+    var searchBoxHeightPx = JBIntSpinner(500, 50, 10000, 5)
+    var minSizeEditorPx = JBIntSpinner(200, 50, 5000, 5)
     var searchBarHeight = JBIntSpinner(30, 10, 300)
     var searchItemHeight = JBIntSpinner(30, 10, 100)
     var shrinkSearchAreaWithResults = JBCheckBox()
@@ -41,6 +45,7 @@ class GlobalSettingsComponent {
     var searchRelativeFileActionsTable = ActionsTable(arrayOf("Name", "Reference file", "Extensions", "Shortcut"), arrayOf("MyActionName", "Regex", "h", "alt shift P"))
     var searchRecentFiles = StaticTable(arrayOf("Name", "History length", "Extensions", "Shortcut"), arrayOf(arrayOf("SearchRecentFiles", "10", ".txt,.md", "alt shift R")))
     var searchOpenFiles = StaticTable(arrayOf("Name", "Extensions", "Shortcut"), arrayOf(arrayOf("SearchOpenFiles", ".txt,.md", "alt shift O")))
+    val regexTestComponent = RegexTestComponent()
 
     init {
 
@@ -71,6 +76,12 @@ class GlobalSettingsComponent {
                 """.trimIndent()), pathDisplayDropdownBox)
             // height and width of search box
             .addLabeledComponent(
+                createLabelWithDescription("Scale the popup with the ide bounds", """
+                    If checked, the popup will scale with the ide size. You can configure the ratio of the ide size as the 
+                    size of the popup. If not checked, the popup will have a fixed size that does not change when working on a 
+                    different screen or when the ide changes size. Then you can configure the popup size in pixels.
+                """.trimIndent()), scalePopupSizeWithIde)
+            .addLabeledComponent(
                 createLabelWithDescription("Search view width fraction", """
                     The width of the search popup as a fraction of the screen width
                 """.trimIndent()), searchBoxWidth)
@@ -79,6 +90,14 @@ class GlobalSettingsComponent {
                     The height of the search popup as a fraction of the screen height. If shrinking is enabled, this is
                     the maximum height of the view
                 """.trimIndent()), searchBoxHeight)
+            .addLabeledComponent(
+                createLabelWithDescription("Fixed width of popup in pixels", """
+                    Use a fixed size popup. This sets the width of the popup in pixels irrespective of the screen or ide size
+                """.trimIndent()), searchBoxWidthPx)
+            .addLabeledComponent(
+                createLabelWithDescription("Fixed height of popup in pixels", """
+                    Use a fixed size popup. This sets the height of the popup in pixels irrespective of the screen or ide size
+                """.trimIndent()), searchBoxHeightPx)
             .addLabeledComponent(
                 createLabelWithDescription("X Position of search area on screen", """
                     Relative X position on screen. 0 means all the way left, 1 means all the way right
@@ -120,6 +139,11 @@ class GlobalSettingsComponent {
                     If the preview editor is shown below the search area, the fraction of the total height will be selected.
                     If the preview editor is shown to the right of the search area, the fraction of the total width will be selected.
                 """.trimIndent()), editorSizeRatio)
+            .addLabeledComponent(
+                createLabelWithDescription("Min size of the editor view in pixels", """
+                    Minimum size of the editor in pixels. If the popup size is scaled with the size of the editor and the editor
+                    size is below this value, the editor is hidden.
+                """.trimIndent()), minSizeEditorPx)
 
             // Create Relative file opening actions
             .addSeparator()
@@ -130,7 +154,7 @@ class GlobalSettingsComponent {
                 You can find and test this action using 'Help->Find Action' and searching for the name. The action is registered under the name
                 com.fuzzyfilesearch.%ACTION_NAME%. This can be uses for ideavim integration, where these actions can be triggered by referencing this name.
                 The "Reference File" field expects a valid regex that is uses to search for a file with a specific name. Note that it only matches the filename, not the path.
-                E.g. if you enter [A-Za-z]+\.txt it will match any .txt file. The directory will be found that contains a file that matches this pattern in 
+                E.g. if you enter [A-Za-z]+.txt it will match any .txt file. The directory will be found that contains a file that matches this pattern in 
                 the directories above the current file, the directory tree will not be traversed down to search for the file.
                 The "Extensions" field is an optional field, if filled, only the files with these extensions are used in the search.
                 To enter multiple extension, separate these with a ',' or a '|'. The '.' in front of the extension is optional. Valid examples: ".txt,.md" and "txt | md"
@@ -185,8 +209,24 @@ class GlobalSettingsComponent {
             )
             .addComponent(searchOpenFiles)
 
+            .addSeparator()
+            .addComponent(JBLabel("Test your regex below"))
+            .addComponent(regexTestComponent)
+
             .addComponentFillVertically(JPanel(), 0)
             .panel
+        
+            // TODO: Add REGEX test view
+            // TODO: Add button to show more explaination
+    }
+
+    fun setEditorScalingFields() {
+        val staticSizeEnabled = scalePopupSizeWithIde.isSelected
+        searchBoxWidthPx.isEnabled = staticSizeEnabled
+        searchBoxHeightPx.isEnabled = staticSizeEnabled
+        searchBoxWidth.isEnabled = !staticSizeEnabled
+        searchBoxHeight.isEnabled = !staticSizeEnabled
+        minSizeEditorPx.isEnabled = !staticSizeEnabled
     }
 }
 
