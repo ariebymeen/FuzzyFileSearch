@@ -40,7 +40,7 @@ class GlobalSettingsComponent {
     var searchOnlyFilesInVersionControlCheckbox = JBCheckBox()
     var pathDisplayDropdownBox = ComboBox(PathDisplayType.values());
     var warningText = createWarningLabel()
-    var openRelativeFileActionsTable = ActionsTable(arrayOf("Name", "Reference file", "Open path", "Shortcut"), arrayOf("MyActionName", "Regex", "src/%name%Test.cc", "alt shift P"))
+    var openRelativeFileActionsTable = ActionsTable(arrayOf("Name", "Reference file", "Open path", "Shortcut"), arrayOf("MyActionName", "Regex", "src/%rname%Test.cc", "alt shift P"))
     var searchPathActionsTable = ActionsTable(arrayOf("Name", "Path", "Extensions", "Shortcut"), arrayOf("ActionName", "/", ".txt, .md", "alt shift H"))
     var searchRelativeFileActionsTable = ActionsTable(arrayOf("Name", "Reference file", "Extensions", "Shortcut"), arrayOf("MyActionName", "Regex", "h", "alt shift P"))
     var searchRecentFiles = StaticTable(arrayOf("Name", "History length", "Extensions", "Shortcut"), arrayOf(arrayOf("SearchRecentFiles", "10", ".txt,.md", "alt shift R")))
@@ -165,8 +165,13 @@ class GlobalSettingsComponent {
             .addComponent(
                 createLabelWithDescription("Create action for opening relative file", """
                 Open a file that is related to the currently open file. If no regex is entered, %name% is set to the name of the current file (without extension).
-                If not empty, %name% is set to the name of the file that matches the regex that is closest to the currently open file (without extension).
-                The action to open the file starts from the reference file directory, so enter a relative path.
+                If not empty, %rname% is set to the name of the file that matches the regex that is closest to the currently open file (without extension).
+                The action to open the file starts from the reference file directory, so enter a relative path. 
+                The %fname% variable is set to the name of the currently open file. This name is compared with the files in the open path.
+                If a file in the directory matches partly, it is considered to be the same 
+                (if the current filename is MyFileTest it will open the file MyFile unless MyFileTest also exists in the open path).
+                Note that %rname% and %fname% cannot be used at the same time. If you want to have multiple options use the | to split them. The options
+                are evaluated in order.
                  """.trimIndent())
             )
             .addComponent(openRelativeFileActionsTable)
@@ -216,7 +221,6 @@ class GlobalSettingsComponent {
             .addComponentFillVertically(JPanel(), 0)
             .panel
         
-            // TODO: Add REGEX test view
             // TODO: Add button to show more explaination
     }
 
@@ -226,7 +230,6 @@ class GlobalSettingsComponent {
         searchBoxHeightPx.isEnabled = staticSizeEnabled
         searchBoxWidth.isEnabled = !staticSizeEnabled
         searchBoxHeight.isEnabled = !staticSizeEnabled
-        minSizeEditorPx.isEnabled = !staticSizeEnabled
     }
 }
 

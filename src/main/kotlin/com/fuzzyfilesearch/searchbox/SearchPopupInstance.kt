@@ -111,7 +111,9 @@ class SearchPopupInstance(
         } else {
             mSplitPane.dividerLocation = splitPaneSizeAttr
         }
-        println("Split pane location: ${mSplitPane.dividerLocation}")
+        if (splitPaneSizeAttr * mSettings.editorSizeRatio < mSettings.minSizeEditorPx) {
+            mSplitPane.dividerLocation = splitPaneSizeAttr
+        }
 
 
         mResultsList.cellRenderer = mCellRenderer
