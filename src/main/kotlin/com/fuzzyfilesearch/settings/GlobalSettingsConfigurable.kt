@@ -21,7 +21,7 @@ class GlobalSettingsConfigurable : Configurable {
         component.searchBoxWidthPx.value = settings.state.searchPopupWidthPx
         component.searchBoxHeightPx.value = settings.state.searchPopupHeightPx
         component.minSizeEditorPx.value = settings.state.minSizeEditorPx
-        component.scalePopupSizeWithIde.isSelected = settings.state.scaleWithIdeBounds
+        component.popupSizePolicySelector.selectedItem = settings.state.popupSizePolicy
         component.searchBoxPosX.value = settings.state.horizontalPositionOnScreen
         component.searchBoxPosY.value = settings.state.verticalPositionOnScreen
         component.searchBarHeight.value = settings.state.searchBarHeight
@@ -35,6 +35,7 @@ class GlobalSettingsConfigurable : Configurable {
         component.editorSizeRatio.value = settings.state.editorSizeRatio
 
         component.openRelativeFileActionsTable.setData(settings.state.openRelativeFileActions)
+        component.searchFileMatchingPatternActionsTable.setData(settings.state.searchFilesMatchingPatterActions)
         component.searchRelativeFileActionsTable.setData(settings.state.searchRelativeFileActions)
         component.searchPathActionsTable.setData(settings.state.searchPathActions)
 
@@ -65,7 +66,7 @@ class GlobalSettingsConfigurable : Configurable {
                 || settings.state.searchPopupWidthPx != component.searchBoxWidthPx.value
                 || settings.state.searchPopupHeightPx != component.searchBoxHeightPx.value
                 || settings.state.minSizeEditorPx != component.minSizeEditorPx.value
-                || settings.state.scaleWithIdeBounds != component.scalePopupSizeWithIde.isSelected
+                || settings.state.popupSizePolicy != (component.popupSizePolicySelector.selectedItem as PopupSizePolicy)
                 || settings.state.horizontalPositionOnScreen != component.searchBoxPosX.value
                 || settings.state.verticalPositionOnScreen != component.searchBoxPosY.value
                 || settings.state.searchBarHeight != component.searchBarHeight.value
@@ -77,6 +78,8 @@ class GlobalSettingsConfigurable : Configurable {
                 || settings.state.editorSizeRatio != component.editorSizeRatio.value
                 || !isEqual(settings.state.openRelativeFileActions, component.openRelativeFileActionsTable.getData())
                 || !isEqual(settings.state.searchRelativeFileActions, component.searchRelativeFileActionsTable.getData())
+//                || !isEqual(settings.state.openRelatedFileAction, component.open.getData())
+                || !isEqual(settings.state.searchFilesMatchingPatterActions, component.searchFileMatchingPatternActionsTable.getData())
                 || !isEqual(settings.state.searchPathActions, component.searchPathActionsTable.getData())
                 || !isEqual(settings.state.searchRecentFilesActions, component.searchRecentFiles.getData())
                 || !isEqual(settings.state.searchOpenFilesActions, component.searchOpenFiles.getData())
@@ -88,16 +91,17 @@ class GlobalSettingsConfigurable : Configurable {
                 component.warningText.text = error
                 component.warningText.isVisible = true
                 return false
+            } else {
+                component.warningText.isVisible = false
+                component.setEditorScalingFields()
             }
-            component.warningText.isVisible = false
-            component.setEditorScalingFields()
         }
         return modified
     }
 
     override fun apply() {
         if (!isEqual(settings.state.openRelativeFileActions, component.openRelativeFileActionsTable.getData())) {
-            unregisterActions(settings.state.openRelativeFileActions, QuickFileSearchAction::getActionName, QuickFileSearchAction::getActionShortcut)
+            unregisterActions(settings.state.openRelativeFileActions, OpenRelativeFileAction::getActionName, OpenRelativeFileAction::getActionShortcut)
             settings.state.openRelativeFileActions = component.openRelativeFileActionsTable.getData()
             registerQuickFileSearchActions(settings.state.openRelativeFileActions, settings.state)
         }
@@ -126,6 +130,14 @@ class GlobalSettingsConfigurable : Configurable {
             registerSearchOpenFiles(settings.state.searchOpenFilesActions, settings.state)
         }
 
+        if (!isEqual(settings.state.searchFilesMatchingPatterActions, component.searchFileMatchingPatternActionsTable.getData())) {
+            unregisterActions(settings.state.searchFilesMatchingPatterActions,
+                              SearchFilesWithPatternAction::getActionName,
+                              SearchFilesWithPatternAction::getActionShortcut)
+            settings.state.searchFilesMatchingPatterActions = component.searchFileMatchingPatternActionsTable.getData()
+            registerSearchFileMatchingPatternActions(settings.state.searchFilesMatchingPatterActions, settings.state)
+        }
+
         val newSet = component.excludedDirs.text
             .split("\n")
             .filter { it.isNotBlank() }
@@ -141,7 +153,7 @@ class GlobalSettingsConfigurable : Configurable {
         settings.state.searchPopupWidthPx = component.searchBoxWidthPx.value as Int
         settings.state.searchPopupHeightPx = component.searchBoxHeightPx.value as Int
         settings.state.minSizeEditorPx = component.minSizeEditorPx.value as Int
-        settings.state.scaleWithIdeBounds = component.scalePopupSizeWithIde.isSelected
+        settings.state.popupSizePolicy = component.popupSizePolicySelector.selectedItem as PopupSizePolicy
         settings.state.horizontalPositionOnScreen = component.searchBoxPosX.value as Double
         settings.state.verticalPositionOnScreen = component.searchBoxPosY.value as Double
         settings.state.searchBarHeight = component.searchBarHeight.value as Int

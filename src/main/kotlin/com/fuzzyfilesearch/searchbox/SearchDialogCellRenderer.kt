@@ -5,19 +5,19 @@ import com.intellij.ui.util.preferredHeight
 import com.intellij.util.ui.JBUI
 import com.fuzzyfilesearch.settings.GlobalSettings
 import com.fuzzyfilesearch.settings.PathDisplayType
-import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.util.maximumHeight
 import java.awt.*
-import java.awt.event.ComponentAdapter
-import java.awt.event.ComponentEvent
 import javax.swing.*
 import javax.swing.text.AttributeSet
 import javax.swing.text.StyleConstants
-import javax.swing.text.html.HTMLEditorKit
 
-fun getStyledTextWidth(textPane: JTextPane): Pair<Int, Double> {
+data class ClippedWidthInfo(val styledTextWidth: Int, val averageCharWidth: Double, val nofCharsToRemove: Int)
+
+fun getStyledTextWidth(textPane: JTextPane, maxWidth: Int): ClippedWidthInfo {
     val doc = textPane.styledDocument
+
     var totalWidth = 0
+    var charsToRemove = 0
 
     var elementIndex = 0
     val nofChars = doc.length
@@ -26,14 +26,31 @@ fun getStyledTextWidth(textPane: JTextPane): Pair<Int, Double> {
         val elem = doc.getCharacterElement(elementIndex)
         val fontStyle = getFontFromAttributes(elem.attributes, textPane.font)
         val fontMetrics: FontMetrics = textPane.getFontMetrics(fontStyle)
-        val segmentText = doc.getText(elem.startOffset, elem.endOffset - elem.startOffset)
+        var segmentText = doc.getText(elem.startOffset, elem.endOffset - elem.startOffset)
         val segmentWidth = fontMetrics.stringWidth(segmentText)
+        if (totalWidth > maxWidth) {
+            charsToRemove += segmentText.length
+            break;
+        }
+        if (totalWidth + segmentWidth > maxWidth) {
+            // Compute the nof chars to remove. Start with initial guess from mean char width
+            var nofRemovedChars: Int = (segmentWidth + totalWidth - maxWidth) / segmentText.length
+            segmentText = doc.getText(elem.startOffset, elem.endOffset - elem.startOffset - nofRemovedChars)
+            var clippedWidth = fontMetrics.stringWidth(segmentText)
+            while (totalWidth + clippedWidth > maxWidth && nofRemovedChars < segmentText.length) {
+                segmentText = doc.getText(elem.startOffset, elem.endOffset - elem.startOffset - nofRemovedChars)
+                clippedWidth = fontMetrics.stringWidth(segmentText)
+                nofRemovedChars++
+            }
+            charsToRemove += nofRemovedChars
+        }
+
         totalWidth += segmentWidth
         elementIndex = elem.endOffset + 1
         averageCharWidth = segmentWidth / (elem.endOffset - elem.startOffset).toDouble()
     }
 
-    return Pair(totalWidth, averageCharWidth)
+    return ClippedWidthInfo(totalWidth, averageCharWidth, charsToRemove)
 }
 
 // Helper function to get a Font object based on style attributes
@@ -158,11 +175,10 @@ class SearchDialogCellRenderer(val mProject: Project,
         }
 
         // If text is too wide for the view, remove and place ... at the end
-        val (width, charW) = getStyledTextWidth(item.panel!!)
+        val (width, charW, nofCharsToRemove) = getStyledTextWidth(item.panel!!, maxWidth)
         if (maxWidth > 0 && width > maxWidth) {
             // Cutoff text. Compute the number of chars to remove + 3, which will be replaced by ...
-            val nofCharsToRemove = Math.ceil((width - maxWidth) / charW).toInt() + 3
-            doc.remove(doc.length - nofCharsToRemove, nofCharsToRemove)
+            doc.remove(doc.length - nofCharsToRemove - 3, nofCharsToRemove + 3)
             val elem = doc.getCharacterElement(doc.length - 1)
             // insert ... with the same style as the last text
             doc.insertString(doc.length, "...", elem.attributes)

@@ -10,7 +10,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.util.width
 import com.intellij.util.ui.JBUI
 import com.fuzzyfilesearch.settings.GlobalSettings
-import com.intellij.openapi.wm.IdeFrame
+import com.fuzzyfilesearch.settings.PopupSizePolicy
 import kotlinx.coroutines.*
 import org.jdesktop.swingx.JXList
 import java.awt.*
@@ -86,20 +86,27 @@ class SearchPopupInstance(
     fun showPopupInstance() {
         val ideFrame = WindowManager.getInstance().getIdeFrame(mProject)
         val ideBounds = WindowManager.getInstance().getFrame(mProject)
-        println("Screen bounds using graphics configurations: ${ideBounds?.graphicsConfiguration?.bounds}")
 
         val popupWidth: Int
         val popupHeight: Int
-        if (mSettings.scaleWithIdeBounds || ideBounds == null) {
-            popupWidth = mSettings.searchPopupWidthPx
-            popupHeight = mSettings.searchPopupHeightPx
-        } else {
-            popupWidth = (ideBounds.width * mSettings.searchPopupWidth).toInt()
-            popupHeight = (ideBounds.height * mSettings.searchPopupHeight).toInt()
+        when (mSettings.popupSizePolicy) {
+            PopupSizePolicy.FIXED_SIZE -> {
+                popupWidth = mSettings.searchPopupWidthPx
+                popupHeight = mSettings.searchPopupHeightPx
+            }
+            PopupSizePolicy.SCALE_WITH_IDE -> {
+                popupWidth = (ideBounds!!.width * mSettings.searchPopupWidth).toInt()
+                popupHeight = (ideBounds.height * mSettings.searchPopupHeight).toInt()
+            }
+            PopupSizePolicy.SCALE_WITH_SCREEN -> {
+                val screenSize = Toolkit.getDefaultToolkit().screenSize
+                popupWidth = (screenSize.width * mSettings.searchPopupWidth).toInt()
+                popupHeight = (screenSize.height * mSettings.searchPopupHeight).toInt()
+            }
         }
 
         mMaxPopupHeight = popupHeight
-        mCellRenderer.maxWidth = popupWidth - 24
+        mCellRenderer.maxWidth = popupWidth - 20
 
         // Set the position of the splitter between the search results list and the editor view
         val splitPaneSizeAttr = if (mSettings.editorPreviewLocation == EditorLocation.EDITOR_BELOW) popupHeight else popupWidth

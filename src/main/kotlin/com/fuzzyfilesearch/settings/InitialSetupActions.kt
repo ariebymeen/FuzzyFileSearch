@@ -18,6 +18,7 @@ class ApplicationStartupSetup : ProjectActivity {
         registerSearchFileInPathActions(globalSettings.state.searchPathActions, globalSettings.state)
         registerSearchRecentFiles(globalSettings.state.searchRecentFilesActions, globalSettings.state)
         registerSearchOpenFiles(globalSettings.state.searchOpenFilesActions, globalSettings.state)
+        registerSearchFileMatchingPatternActions(globalSettings.state.searchFilesMatchingPatterActions, globalSettings.state)
 
         project.service<RecentFilesKeeper>() // Initialize project service
         initFzf()

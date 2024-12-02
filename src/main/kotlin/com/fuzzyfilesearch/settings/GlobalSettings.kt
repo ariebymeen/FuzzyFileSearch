@@ -3,6 +3,12 @@ package com.fuzzyfilesearch.settings
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.*
 
+enum class PopupSizePolicy{
+    FIXED_SIZE,
+    SCALE_WITH_IDE,
+    SCALE_WITH_SCREEN
+}
+
 enum class PathDisplayType {
     FILENAME_RELATIVE_PATH,
     FILENAME_ONLY,
@@ -25,7 +31,7 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
     private var interalState = SettingsState()
 
     class SettingsState {
-        var scaleWithIdeBounds = false
+        var popupSizePolicy = PopupSizePolicy.SCALE_WITH_IDE
         var searchPopupWidth = 0.4
         var searchPopupHeight = 0.3
         var searchPopupWidthPx = 700
@@ -42,8 +48,10 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         var excludedDirs: Set<String> = setOf("build", ".gradle", ".idea", ".run")
         var filePathDisplayType: PathDisplayType = PathDisplayType.FILENAME_RELATIVE_PATH
         var openRelativeFileActions: Array<Array<String>> = emptyArray()
+        var openRelatedFileAction: Array<Array<String>> = emptyArray() // TODO
         var searchRelativeFileActions: Array<Array<String>> = emptyArray()
         var searchPathActions: Array<Array<String>> = emptyArray()
+        var searchFilesMatchingPatterActions: Array<Array<String>> = emptyArray()
         var searchRecentFilesActions: Array<Array<String>> = arrayOf(arrayOf("SearchRecentFiles", "10", "", "alt shift R"))
         var searchOpenFilesActions: Array<Array<String>> = arrayOf(arrayOf("SearchOpenFiles", "", "alt shift O"))
         var showEditorPreview = true

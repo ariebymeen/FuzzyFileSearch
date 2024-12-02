@@ -10,7 +10,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.isFile
 import kotlin.math.min
 
-class QuickFileSearchAction(var action: Array<String>,
+class OpenRelativeFileAction(var action: Array<String>,
                              var excludedDirs: Set<String>) : AnAction(getActionName(action))
 {
     val regex = Regex(pattern = action[1], options = setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
@@ -49,7 +49,7 @@ class QuickFileSearchAction(var action: Array<String>,
 
                 val directory = LocalFileSystem.getInstance().findFileByPath(matchingPath)
                 if (directory != null) {
-                    virtualFile = getMatchingFnameFile(directory, currentFile, matchingPattern)
+                    virtualFile = getMatchingCnameFile(directory, currentFile, matchingPattern)
                 }
             }
 
@@ -70,7 +70,7 @@ class QuickFileSearchAction(var action: Array<String>,
         return LocalFileSystem.getInstance().findFileByPath(matchingFile.parent.path + '/' + fileName)
     }
 
-    fun getMatchingFnameFile(searchDirectory: VirtualFile, currentFile: VirtualFile, pattern: String) : VirtualFile? {
+    fun getMatchingCnameFile(searchDirectory: VirtualFile, currentFile: VirtualFile, pattern: String) : VirtualFile? {
         val currentFileName = currentFile.nameWithoutExtension
 
         // Evaluate all files in directory, if there is a match with the pattern, return this one
@@ -78,14 +78,14 @@ class QuickFileSearchAction(var action: Array<String>,
             .filter { vf -> vf.isFile }
             .forEach { vf ->
                 val strLen = min(vf.nameWithoutExtension.length, currentFileName.length)
-                val patternMatch = pattern.replace("%fname%", vf.nameWithoutExtension.substring(0, strLen))
+                val patternMatch = pattern.replace("%cname%", vf.nameWithoutExtension.substring(0, strLen))
                 if (vf.name.contains(patternMatch)) {
                     return vf
                 }
             }
 
         for (child in searchDirectory.children!!.filter { vf -> vf.isDirectory }) {
-            val file = getMatchingFnameFile(child, currentFile, pattern)
+            val file = getMatchingCnameFile(child, currentFile, pattern)
             if (file != null) {
                 return file
             }

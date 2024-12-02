@@ -1,19 +1,18 @@
 package com.fuzzyfilesearch.settings
 
 import com.intellij.icons.AllIcons
+import com.intellij.ide.DataManager
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.Presentation
+import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.ui.JBColor
 import com.intellij.ui.JBIntSpinner
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextArea
-import com.intellij.ui.util.preferredWidth
 import com.intellij.util.ui.FormBuilder
-import java.awt.BorderLayout
-import javax.swing.JButton
-import javax.swing.JPanel
-import javax.swing.JSpinner
-import javax.swing.SpinnerNumberModel
+import javax.swing.*
 
 
 class GlobalSettingsComponent {
@@ -21,7 +20,7 @@ class GlobalSettingsComponent {
 
     var excludedDirs = JBTextArea()
     var nofVisibleFilesInSearchViewSelector = JBIntSpinner(10, 1, 100)
-    var scalePopupSizeWithIde = JBCheckBox()
+    var popupSizePolicySelector = ComboBox(PopupSizePolicy.values());
     val searchBoxWidth = JSpinner(SpinnerNumberModel(0.3.toDouble(), 0.1.toDouble(), 1.0.toDouble(), 0.05.toDouble()))
     val searchBoxHeight = JSpinner(SpinnerNumberModel(0.3.toDouble(), 0.1.toDouble(), 1.0.toDouble(), 0.05.toDouble()))
     val searchBoxPosX = JSpinner(SpinnerNumberModel(0.5.toDouble(), 0.1.toDouble(), 1.0.toDouble(), 0.01.toDouble()))
@@ -43,9 +42,11 @@ class GlobalSettingsComponent {
     var openRelativeFileActionsTable = ActionsTable(arrayOf("Name", "Reference file", "Open path", "Shortcut"), arrayOf("MyActionName", "Regex", "src/%rname%Test.cc", "alt shift P"))
     var searchPathActionsTable = ActionsTable(arrayOf("Name", "Path", "Extensions", "Shortcut"), arrayOf("ActionName", "/", ".txt, .md", "alt shift H"))
     var searchRelativeFileActionsTable = ActionsTable(arrayOf("Name", "Reference file", "Extensions", "Shortcut"), arrayOf("MyActionName", "Regex", "h", "alt shift P"))
+    var searchFileMatchingPatternActionsTable = ActionsTable(arrayOf("Name", "Path", "Pattern (Regex)", "Shortcut"), arrayOf("MyActionName", "/", "Regex", "alt shift P"))
     var searchRecentFiles = StaticTable(arrayOf("Name", "History length", "Extensions", "Shortcut"), arrayOf(arrayOf("SearchRecentFiles", "10", ".txt,.md", "alt shift R")))
     var searchOpenFiles = StaticTable(arrayOf("Name", "Extensions", "Shortcut"), arrayOf(arrayOf("SearchOpenFiles", ".txt,.md", "alt shift O")))
     val regexTestComponent = RegexTestComponent()
+    val showHelpButton = JButton("Show help")
 
     init {
 
@@ -76,11 +77,12 @@ class GlobalSettingsComponent {
                 """.trimIndent()), pathDisplayDropdownBox)
             // height and width of search box
             .addLabeledComponent(
-                createLabelWithDescription("Scale the popup with the ide bounds", """
-                    If checked, the popup will scale with the ide size. You can configure the ratio of the ide size as the 
-                    size of the popup. If not checked, the popup will have a fixed size that does not change when working on a 
-                    different screen or when the ide changes size. Then you can configure the popup size in pixels.
-                """.trimIndent()), scalePopupSizeWithIde)
+                createLabelWithDescription("", """
+                    Select how the popup resizes. Fixed size will allow you to specify the size in pixels. Resize with
+                    ide bounds: specify the size of the popup as a fraction of the ide size. Resize with screen size: 
+                    specify the size of the popup as a fraction of the screen size. 
+                    This may give unexpected behaviour on multi-monitor setups.
+                """.trimIndent()), popupSizePolicySelector)
             .addLabeledComponent(
                 createLabelWithDescription("Search view width fraction", """
                     The width of the search popup as a fraction of the screen width
@@ -148,29 +150,15 @@ class GlobalSettingsComponent {
             // Create Relative file opening actions
             .addSeparator()
             .addComponent(warningText)
-            .addComponent(createLabelWithDescription("More information", """
-                The tables below can be edited to create your custom search and open actions.
-                The "Name" field if the action refers to the action name in the intelij editor and must be unique.
-                You can find and test this action using 'Help->Find Action' and searching for the name. The action is registered under the name
-                com.fuzzyfilesearch.%ACTION_NAME%. This can be uses for ideavim integration, where these actions can be triggered by referencing this name.
-                The "Reference File" field expects a valid regex that is uses to search for a file with a specific name. Note that it only matches the filename, not the path.
-                E.g. if you enter [A-Za-z]+.txt it will match any .txt file. The directory will be found that contains a file that matches this pattern in 
-                the directories above the current file, the directory tree will not be traversed down to search for the file.
-                The "Extensions" field is an optional field, if filled, only the files with these extensions are used in the search.
-                To enter multiple extension, separate these with a ',' or a '|'. The '.' in front of the extension is optional. Valid examples: ".txt,.md" and "txt | md"
-                The "Shortcut" field is an optional field that assigns a shortcut to the action. If this field is empty, no shortcut is set. 
-                If the shortcut does not seem to work, validate that the action is registered (search in "Help->Find Action"). If the action is registered correctly, the shortcut might
-                already be in use for something else. Remove the shortcut for the other action in the settings, and try again. 
-                """.trimIndent()))
             .addComponent(
                 createLabelWithDescription("Create action for opening relative file", """
                 Open a file that is related to the currently open file. If no regex is entered, %name% is set to the name of the current file (without extension).
                 If not empty, %rname% is set to the name of the file that matches the regex that is closest to the currently open file (without extension).
                 The action to open the file starts from the reference file directory, so enter a relative path. 
-                The %fname% variable is set to the name of the currently open file. This name is compared with the files in the open path.
+                The %cname% variable is set to the name of the currently open file. This name is compared with the files in the open path.
                 If a file in the directory matches partly, it is considered to be the same 
                 (if the current filename is MyFileTest it will open the file MyFile unless MyFileTest also exists in the open path).
-                Note that %rname% and %fname% cannot be used at the same time. If you want to have multiple options use the | to split them. The options
+                Note that %rname% and %cname% cannot be used at the same time. If you want to have multiple options use the | to split them. The options
                 are evaluated in order.
                  """.trimIndent())
             )
@@ -179,7 +167,7 @@ class GlobalSettingsComponent {
             // Create relative search actions table
             .addSeparator()
             .addComponent(
-                createLabelWithDescription("Create action for searching files related to relative file", """
+                createLabelWithDescription("Create action for searching files related to relative path", """
                 Search in all files next to or below the file satisfying regex closest to the open file. If no regex is entered, the location of the
                 open file is used. For example: Use CmakeList.txt as reference, search action will search all files in the same and lower directories of the 
                 folder containing this file. Note that 'closest' means closest up the file tree, it does not look down. If no file satisfying the regex is found, 
@@ -187,6 +175,15 @@ class GlobalSettingsComponent {
                 """.trimIndent())
             )
             .addComponent(searchRelativeFileActionsTable)
+
+            // Create search files matching pattern actions table
+            .addSeparator()
+            .addComponent(
+                createLabelWithDescription("Search for files matching pattern", """
+                    Search through all files where the filename matches a regex
+                """.trimIndent())
+            )
+            .addComponent(searchFileMatchingPatternActionsTable)
 
             // Create file in path search actions
             .addSeparator()
@@ -217,15 +214,24 @@ class GlobalSettingsComponent {
             .addSeparator()
             .addComponent(JBLabel("Test your regex below"))
             .addComponent(regexTestComponent)
+            .addComponent(showHelpButton)
 
             .addComponentFillVertically(JPanel(), 0)
             .panel
-        
-            // TODO: Add button to show more explaination
+
+        showHelpButton.addActionListener {
+            println("Button pressed")
+            // Trigger ShowHelpDialog action
+            val action = ActionManager.getInstance().getAction("com.fuzzyfilesearch.actions.ShowHelpDialog")
+            val event = AnActionEvent(null,
+                DataManager.getInstance().dataContext,
+                "", Presentation(), ActionManager.getInstance(), 0)
+            action.actionPerformed(event)
+        }
     }
 
     fun setEditorScalingFields() {
-        val staticSizeEnabled = scalePopupSizeWithIde.isSelected
+        val staticSizeEnabled = (popupSizePolicySelector.selectedItem as PopupSizePolicy) == PopupSizePolicy.FIXED_SIZE
         searchBoxWidthPx.isEnabled = staticSizeEnabled
         searchBoxHeightPx.isEnabled = staticSizeEnabled
         searchBoxWidth.isEnabled = !staticSizeEnabled

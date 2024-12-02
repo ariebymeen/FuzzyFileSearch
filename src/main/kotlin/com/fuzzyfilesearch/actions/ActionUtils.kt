@@ -51,9 +51,9 @@ fun registerQuickFileSearchActions(actions: Array<Array<String>>, settings: Glob
     actions.forEach { action ->
         run {
             registerAction(
-                QuickFileSearchAction.getActionName(action),
-                QuickFileSearchAction.getActionShortcut(action),
-                QuickFileSearchAction(action, settings.excludedDirs)
+                OpenRelativeFileAction.getActionName(action),
+                OpenRelativeFileAction.getActionShortcut(action),
+                OpenRelativeFileAction(action, settings.excludedDirs)
             )
         }
     }
@@ -103,6 +103,18 @@ fun registerSearchOpenFiles(actions: Array<Array<String>>, settings: GlobalSetti
                 SearchOpenFilesAction.getActionName(action),
                 SearchOpenFilesAction.getActionShortcut(action),
                 SearchOpenFilesAction(action, settings)
+            )
+        }
+    }
+}
+
+fun registerSearchFileMatchingPatternActions(actions: Array<Array<String>>, settings: GlobalSettings.SettingsState) {
+    actions.forEach { action ->
+        run {
+            registerAction(
+                SearchFilesWithPatternAction.getActionName(action),
+                SearchFilesWithPatternAction.getActionShortcut(action),
+                SearchFilesWithPatternAction(action, settings)
             )
         }
     }

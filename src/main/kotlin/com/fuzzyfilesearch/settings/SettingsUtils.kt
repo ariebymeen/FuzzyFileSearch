@@ -1,10 +1,6 @@
 package com.fuzzyfilesearch.settings
 
-import com.fuzzyfilesearch.actions.QuickFileSearchAction
-import com.fuzzyfilesearch.actions.SearchFileInPathAction
-import com.fuzzyfilesearch.actions.SearchOpenFilesAction
-import com.fuzzyfilesearch.actions.SearchRelativeFileAction
-import com.fuzzyfilesearch.showErrorNotification
+import com.fuzzyfilesearch.actions.*
 import javax.swing.KeyStroke
 
 // Check if settings are correct. If not, return a string with the error message
@@ -25,11 +21,12 @@ fun checkSettings(globalSettings: GlobalSettingsComponent): String? {
 fun checkActionNames(globalSettings: GlobalSettingsComponent) : String? {
     val actionSet = mutableSetOf<String>()
     val names = mutableListOf<String>()
-    names += globalSettings.openRelativeFileActionsTable.getData().map{ action -> QuickFileSearchAction.getActionName(action) }
+    names += globalSettings.openRelativeFileActionsTable.getData().map{ action -> OpenRelativeFileAction.getActionName(action) }
     names += globalSettings.searchRelativeFileActionsTable.getData().map{ action -> SearchRelativeFileAction.getActionName(action) }
     names += globalSettings.searchPathActionsTable.getData().map{ action -> SearchFileInPathAction.getActionName(action) }
     names += globalSettings.searchRecentFiles.getData().map{ action -> SearchFileInPathAction.getActionName(action) }
     names += globalSettings.searchOpenFiles.getData().map{ action -> SearchOpenFilesAction.getActionName(action) }
+    names += globalSettings.searchFileMatchingPatternActionsTable.getData().map{ action -> SearchFilesWithPatternAction.getActionName(action) }
 
     for (name in names) {
         if (actionSet.contains(name)) {
@@ -47,11 +44,12 @@ fun checkActionNames(globalSettings: GlobalSettingsComponent) : String? {
 fun checkShortcuts(globalSettings: GlobalSettingsComponent) : String? {
     val actionSet = mutableSetOf<String>()
     val shortcuts = mutableListOf<String>()
-    shortcuts += globalSettings.openRelativeFileActionsTable.getData().map{ action -> QuickFileSearchAction.getActionShortcut(action) }
+    shortcuts += globalSettings.openRelativeFileActionsTable.getData().map{ action -> OpenRelativeFileAction.getActionShortcut(action) }
     shortcuts += globalSettings.searchRelativeFileActionsTable.getData().map{ action -> SearchRelativeFileAction.getActionShortcut(action) }
     shortcuts += globalSettings.searchPathActionsTable.getData().map{ action -> SearchFileInPathAction.getActionShortcut(action) }
     shortcuts += globalSettings.searchRecentFiles.getData().map{ action -> SearchFileInPathAction.getActionShortcut(action) }
     shortcuts += globalSettings.searchOpenFiles.getData().map{ action -> SearchOpenFilesAction.getActionShortcut(action) }
+    shortcuts += globalSettings.searchFileMatchingPatternActionsTable.getData().map{ action -> SearchFilesWithPatternAction.getActionShortcut(action) }
 
     for (shortcut in shortcuts) {
         if (shortcut.trim().isNotEmpty() && actionSet.contains(shortcut)) {

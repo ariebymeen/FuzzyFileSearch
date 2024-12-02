@@ -50,5 +50,10 @@
                            isLogByDefault="true"/>
     </extensions>
     <actions>
+        <action id="com.fuzzyfilesearch.actions.ShowHelpDialog" class="com.fuzzyfilesearch.actions.ShowHelpDialogAction"
+                text="ShowHelpDialog"
+                description="Opens a dialog with additional information about the FuzzyFileSearch plugin">
+                <keyboard-shortcut keymap="Default for GNOME" first-keystroke="shift alt H"/>
+        </action>
     </actions>
 </idea-plugin>

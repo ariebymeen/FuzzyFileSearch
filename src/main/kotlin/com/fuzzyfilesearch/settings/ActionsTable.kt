@@ -97,6 +97,11 @@ class ActionsTable(columnNames: Array<String>,
     fun setData(data: Array<Array<String>>) {
         mTableModel.rowCount = 0
         for (row in data) {
+            if (mTableModel.columnCount != row.size) {
+                println("Data is not of the correct size, columnCount: ${mTableModel.columnCount}, data size: ${row.size}")
+                break
+            }
+
             mTableModel.addRow(row)
         }
         resize()
