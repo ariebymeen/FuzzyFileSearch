@@ -37,7 +37,8 @@ class GlobalSettingsComponent {
     var editorPreviewLocation = ComboBox(EditorLocation.values());
     val editorSizeRatio = JSpinner(SpinnerNumberModel(0.5.toDouble(), 0.1.toDouble(), 1.0.toDouble(), 0.01.toDouble()))
     var searchOnlyFilesInVersionControlCheckbox = JBCheckBox()
-    var pathDisplayDropdownBox = ComboBox(PathDisplayType.values());
+    var pathDisplayDropdownBox = ComboBox(PathDisplayType.values())
+    var modifierKeyDropdownBox = ComboBox(ModifierKey.values())
     var warningText = createWarningLabel()
     var openRelativeFileActionsTable = ActionsTable(arrayOf("Name", "Reference file", "Open path", "Shortcut"), arrayOf("MyActionName", "Regex", "src/%rname%Test.cc", "alt shift P"))
     var searchPathActionsTable = ActionsTable(arrayOf("Name", "Path", "Extensions", "Shortcut"), arrayOf("ActionName", "/", ".txt, .md", "alt shift H"))
@@ -75,6 +76,13 @@ class GlobalSettingsComponent {
                 createLabelWithDescription("Path display type", """
                     Select how you want to display the files in the search menu.
                 """.trimIndent()), pathDisplayDropdownBox)
+            .addLabeledComponent(
+                createLabelWithDescription("Modifier key", """
+                    The results can be scrolled through using the arrow up/down keys or using the j/k key if the modifier
+                    key is pressed. This key can be either the ctrl or the alt key.
+                    The modifier key can also be used in combination with the number keys to quickly open a result, e.g. ctrl-1 to open result 1 (second result). 
+                    This can be used as an alternative to scrolling to the result and pressing enter.
+                """.trimIndent()), modifierKeyDropdownBox)
             // height and width of search box
             .addLabeledComponent(
                 createLabelWithDescription("Popup scaling", """

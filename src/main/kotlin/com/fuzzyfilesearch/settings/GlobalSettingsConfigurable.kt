@@ -16,6 +16,7 @@ class GlobalSettingsConfigurable : Configurable {
         component.nofVisibleFilesInSearchViewSelector.value = settings.state.numberOfFilesInSearchView
         component.searchCaseSensitiviyCheckbox.isSelected = settings.state.searchCaseSensitivity
         component.pathDisplayDropdownBox.selectedItem = settings.state.filePathDisplayType
+        component.modifierKeyDropdownBox.selectedItem = settings.state.modifierKey
         component.searchBoxWidth.value = settings.state.searchPopupWidth
         component.searchBoxHeight.value = settings.state.searchPopupHeight
         component.searchBoxWidthPx.value = settings.state.searchPopupWidthPx
@@ -61,6 +62,7 @@ class GlobalSettingsConfigurable : Configurable {
                 || settings.state.searchCaseSensitivity != component.searchCaseSensitiviyCheckbox.isSelected
                 || settings.state.searchOnlyFilesInVersionControl != component.searchOnlyFilesInVersionControlCheckbox.isSelected
                 || settings.state.filePathDisplayType != (component.pathDisplayDropdownBox.selectedItem as PathDisplayType)
+                || settings.state.modifierKey != (component.modifierKeyDropdownBox.selectedItem as ModifierKey)
                 || settings.state.searchPopupWidth != component.searchBoxWidth.value
                 || settings.state.searchPopupHeight != component.searchBoxHeight.value
                 || settings.state.searchPopupWidthPx != component.searchBoxWidthPx.value
@@ -148,6 +150,7 @@ class GlobalSettingsConfigurable : Configurable {
         settings.state.searchCaseSensitivity = component.searchCaseSensitiviyCheckbox.isSelected
         settings.state.searchOnlyFilesInVersionControl = component.searchOnlyFilesInVersionControlCheckbox.isSelected
         settings.state.filePathDisplayType = component.pathDisplayDropdownBox.selectedItem as PathDisplayType
+        settings.state.modifierKey = component.modifierKeyDropdownBox.selectedItem as ModifierKey
         settings.state.searchPopupWidth = component.searchBoxWidth.value as Double
         settings.state.searchPopupHeight = component.searchBoxHeight.value as Double
         settings.state.searchPopupWidthPx = component.searchBoxWidthPx.value as Int

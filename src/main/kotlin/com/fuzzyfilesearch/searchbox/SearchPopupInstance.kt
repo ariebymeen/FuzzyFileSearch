@@ -10,6 +10,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.util.width
 import com.intellij.util.ui.JBUI
 import com.fuzzyfilesearch.settings.GlobalSettings
+import com.fuzzyfilesearch.settings.ModifierKey
 import com.fuzzyfilesearch.settings.PopupSizePolicy
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.editor.Editor
@@ -203,7 +204,8 @@ class SearchPopupInstance(
     }
 
     fun keyTypedEvent(e: KeyEvent) {
-        if (Character.isDigit(e.keyChar) && e.isControlDown) {
+        val isModifierPressed = if (this.mSettings.modifierKey == ModifierKey.CTRL) e.isControlDown else e.isAltDown
+        if (Character.isDigit(e.keyChar) && isModifierPressed) {
             e.consume() // Consume the event to prevent the character from being added
             mResultsList.selectedIndex = e.keyChar.digitToInt()
             mPopup?.dispose()
@@ -224,7 +226,8 @@ class SearchPopupInstance(
                 }
             }
         }
-        if (e.isControlDown) {
+        val isModifierPressed = if (this.mSettings.modifierKey == ModifierKey.CTRL) e.isControlDown else e.isAltDown
+        if (isModifierPressed) {
             when (e.keyCode) {
                 KeyEvent.VK_K -> mResultsList.selectedIndex -= 1
                 KeyEvent.VK_J -> mResultsList.selectedIndex += 1

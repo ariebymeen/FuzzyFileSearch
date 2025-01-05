@@ -22,6 +22,11 @@ enum class EditorLocation {
     EDITOR_RIGHT,
 }
 
+enum class ModifierKey {
+    CTRL,
+    ALT
+}
+
 @State(
     name = "com.fuzzyfilesearch.settings.GlobalSettings",
     storages = [Storage(StoragePathMacros.NON_ROAMABLE_FILE)]
@@ -47,6 +52,7 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         var searchOnlyFilesInVersionControl = true
         var excludedDirs: Set<String> = setOf("build", ".gradle", ".idea", ".run")
         var filePathDisplayType: PathDisplayType = PathDisplayType.FILENAME_RELATIVE_PATH
+        var modifierKey: ModifierKey = ModifierKey.CTRL
         var openRelativeFileActions: Array<Array<String>> = emptyArray()
         var openRelatedFileAction: Array<Array<String>> = emptyArray() // TODO
         var searchRelativeFileActions: Array<Array<String>> = emptyArray()
