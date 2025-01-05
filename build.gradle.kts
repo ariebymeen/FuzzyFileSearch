@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.fuzzyfilesearch"
-version = "0.1-SNAPSHOT"
+version = "0.1.3-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -32,7 +32,7 @@ tasks {
 
     patchPluginXml {
         sinceBuild.set("232")
-        untilBuild.set("292.*")
+        untilBuild.set("243.*")
     }
 
     signPlugin {

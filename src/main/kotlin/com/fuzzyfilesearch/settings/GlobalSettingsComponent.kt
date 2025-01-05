@@ -77,7 +77,7 @@ class GlobalSettingsComponent {
                 """.trimIndent()), pathDisplayDropdownBox)
             // height and width of search box
             .addLabeledComponent(
-                createLabelWithDescription("", """
+                createLabelWithDescription("Popup scaling", """
                     Select how the popup resizes. Fixed size will allow you to specify the size in pixels. Resize with
                     ide bounds: specify the size of the popup as a fraction of the ide size. Resize with screen size: 
                     specify the size of the popup as a fraction of the screen size. 
@@ -136,16 +136,16 @@ class GlobalSettingsComponent {
                     Show the preview editor either below or to the right of the search box
                 """.trimIndent()), editorPreviewLocation)
             .addLabeledComponent(
+                createLabelWithDescription("Min size of the editor view in pixels", """
+                    Minimum size of the editor in pixels. If the popup size is scaled with the size of the editor and the editor
+                    size is below this value, the editor is hidden.
+                """.trimIndent()), minSizeEditorPx)
+            .addLabeledComponent(
                 createLabelWithDescription("Editor preview ratio", """
                     The ratio of the preview editor size as a fraction of the total width or height of the popup. 
                     If the preview editor is shown below the search area, the fraction of the total height will be selected.
                     If the preview editor is shown to the right of the search area, the fraction of the total width will be selected.
                 """.trimIndent()), editorSizeRatio)
-            .addLabeledComponent(
-                createLabelWithDescription("Min size of the editor view in pixels", """
-                    Minimum size of the editor in pixels. If the popup size is scaled with the size of the editor and the editor
-                    size is below this value, the editor is hidden.
-                """.trimIndent()), minSizeEditorPx)
 
             // Create Relative file opening actions
             .addSeparator()

@@ -11,6 +11,8 @@ import com.intellij.ui.util.width
 import com.intellij.util.ui.JBUI
 import com.fuzzyfilesearch.settings.GlobalSettings
 import com.fuzzyfilesearch.settings.PopupSizePolicy
+import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.editor.Editor
 import kotlinx.coroutines.*
 import org.jdesktop.swingx.JXList
 import java.awt.*
@@ -20,6 +22,8 @@ import javax.swing.border.EmptyBorder
 import javax.swing.event.*
 import kotlin.math.max
 import kotlin.math.min
+import com.intellij.openapi.editor.actionSystem.TypedAction
+import com.intellij.openapi.editor.actionSystem.TypedActionHandler
 
 class PopupInstanceItem(val vf: VirtualFile,
                         var panel: VerticallyCenteredTextPane? = null)
@@ -51,7 +55,7 @@ class SearchPopupInstance(
     val mSettings: GlobalSettings.SettingsState,
     var mProject: Project,
     var mExtensions: List<String>? = null
-) {
+):  TypedActionHandler {
     val mSearchField: JTextField = JTextField()
     val mExtensionField: JTextField = TransparentTextField(1.0F)
     val mListModel: DefaultListModel<PopupInstanceItem> = DefaultListModel()
@@ -65,23 +69,34 @@ class SearchPopupInstance(
     val mCellRenderer = SearchDialogCellRenderer(mProject, mSettings)
     var mNofTimesClicked = 0;
     var mLastClickedIndex: Int = -1
+    var keyPressedTimer: Timer? = null
 
     init {
         createPopupInstance()
+
+        val typedAction = TypedAction.getInstance()
+//        val originalHandler = typedAction.handler
+//        typedAction.setupHandler(CustomTabHandler(originalHandler))
+        typedAction.setupRawHandler(this)
     }
 
-    fun updatePopupInstance(project: Project, extensions: List<String>?) {
-        mProject = project
-        mExtensions = extensions
+    override fun execute(editor: Editor, charTyped: kotlin.Char, dataContext: DataContext) {
+        println("Handled char: ${charTyped}")
 
-        setSearchBarHeigth(mSettings)
-        setExtensionsField(extensions)
-        mResultsList.cellRenderer = SearchDialogCellRenderer(mProject, mSettings)
-        mSearchField.text = ""
-
-        val splitType = if (mSettings.editorPreviewLocation == EditorLocation.EDITOR_BELOW) JSplitPane.VERTICAL_SPLIT else JSplitPane.HORIZONTAL_SPLIT
-        mSplitPane.orientation = splitType
     }
+
+//    fun updatePopupInstance(project: Project, extensions: List<String>?) {
+//        mProject = project
+//        mExtensions = extensions
+//
+//        setSearchBarHeigth(mSettings)
+//        setExtensionsField(extensions)
+//        mResultsList.cellRenderer = SearchDialogCellRenderer(mProject, mSettings)
+//        mSearchField.text = ""
+//
+//        val splitType = if (mSettings.editorPreviewLocation == EditorLocation.EDITOR_BELOW) JSplitPane.VERTICAL_SPLIT else JSplitPane.HORIZONTAL_SPLIT
+//        mSplitPane.orientation = splitType
+//    }
 
     fun showPopupInstance() {
         val ideFrame = WindowManager.getInstance().getIdeFrame(mProject)
@@ -197,7 +212,7 @@ class SearchPopupInstance(
         }
     }
 
-    fun keyReleasedEvent(e: KeyEvent) {
+    fun keyPressedEvent(e: KeyEvent) {
         when (e.keyCode) {
             KeyEvent.VK_UP -> mResultsList.selectedIndex -= 1
             KeyEvent.VK_DOWN -> mResultsList.selectedIndex += 1
@@ -215,6 +230,19 @@ class SearchPopupInstance(
                 KeyEvent.VK_J -> mResultsList.selectedIndex += 1
             }
         }
+        if (keyPressedTimer == null) {
+            keyPressedTimer = Timer(100) { // Repeat every 100ms
+                keyReleasedEvent(e)
+            }.apply { start() }
+        }
+    }
+
+    fun keyReleasedEvent(e: KeyEvent) {
+        if (keyPressedTimer != null) {
+            keyPressedTimer?.stop()
+            keyPressedTimer = null
+        }
+
     }
 
     fun mouseClickedEvent() {
@@ -243,7 +271,7 @@ class SearchPopupInstance(
     }
 
     private fun createPopupInstance() {
-        val border: EmptyBorder = JBUI.Borders.empty(2, 5)
+        val border: EmptyBorder = JBUI.Borders.empty(2, 5, 0, 5)
         mSearchField.border = border
         mSearchField.toolTipText = "Type to search..."
 
@@ -255,6 +283,7 @@ class SearchPopupInstance(
 
         mSearchField.addKeyListener(object : KeyAdapter() {
             override fun keyTyped(e: KeyEvent) { keyTypedEvent(e) }
+            override fun keyPressed(e: KeyEvent) { keyPressedEvent(e) }
             override fun keyReleased(e: KeyEvent) { keyReleasedEvent(e) }
         })
         val debouncedFunction = debounce<Unit>(30, mCoroutineScope) { updateListedItems() }

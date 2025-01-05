@@ -1,5 +1,5 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
-<idea-plugin>
+<idea-plugin require-restart="false">
     <!-- Unique identifier of the plugin. It should be FQN. It cannot be changed between the plugin versions. -->
     <id>com.FuzzyFileSearch</id>
 
@@ -8,23 +8,22 @@
     <name>FuzzyFileSearch</name>
 
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-    <vendor email="fuzzyfilesearch@outlook.com" url=""></vendor>
+    <vendor email="fuzzyfilesearch@outlook.com" url="">fuzzyfilesearch</vendor>
 
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
     <description><![CDATA[
-    Quickly find files using a fuzzy search algorithm. Integrates the algorithm from fzf to find files more quickly.
+    Helps you find your files more quickly by integrating the fzf search algorithm into your intelij ide.
     <ul>
+    <li> Find your files more quickly with the fzf search algorithm.  </li>
     <li> Assign shortcuts to search in different directories to more quickly find your files. </li>
-    <li> Assign shortcuts to search for files with certain extensions </li>
-    <li> Search in closest directory containing marker file (like CMakeList or .toml) </li>
-    <ul>
+    <li> Assign shortcuts to search for files with certain extensions or patterns </li>
+    <li> Jump between files with shortcuts </li>
+    </ul>
 
-    Integration with fzf for quickly finding files. Create shortcuts to search in specific directories or extensions
-    to speed up finding the file you want! Can be integrated with ideavim by using ide actions.
+    Can be integrated with ideavim by using ide actions: map <Leader>pf <action>(com.fuzzyfilesearch.<ACTION_NAME>)
 
-    // TODO: See settings->Tools->FuzzyFileSearch Settings for configuring your plugin
   ]]></description>
 
     <!-- Product and plugin compatibility requirements.
