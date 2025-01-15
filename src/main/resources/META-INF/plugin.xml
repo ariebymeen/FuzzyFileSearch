@@ -26,6 +26,15 @@
 
   ]]></description>
 
+    <change-notes>
+        <![CDATA[
+        <ul>
+            <li>Add long key pressed option, to more quickly scroll through results</li>
+            <li>Add option to choose modifier key between ctrl and alt</li>
+        </ul>
+        ]]>
+    </change-notes>
+
     <!-- Product and plugin compatibility requirements.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
     <depends>com.intellij.modules.platform</depends>

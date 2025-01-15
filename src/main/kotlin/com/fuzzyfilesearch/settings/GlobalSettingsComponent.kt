@@ -228,7 +228,6 @@ class GlobalSettingsComponent {
             .panel
 
         showHelpButton.addActionListener {
-            println("Button pressed")
             // Trigger ShowHelpDialog action
             val action = ActionManager.getInstance().getAction("com.fuzzyfilesearch.actions.ShowHelpDialog")
             val event = AnActionEvent(null,

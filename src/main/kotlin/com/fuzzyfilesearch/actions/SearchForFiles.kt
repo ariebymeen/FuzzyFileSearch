@@ -41,12 +41,7 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
             mFileNames = mFiles.map { file -> file.vf.name }
         }
 
-//        if (mPopup == null || !mPopup!!.isDisplayable()) {
-            mPopup = SearchPopupInstance(::getSortedFileList, ::openSelectedFile, settings,  project, extensions)
-//        } else {
-//            mPopup?.updatePopupInstance(project, extensions)
-//        }
-
+        mPopup = SearchPopupInstance(::getSortedFileList, settings,  project, extensions)
         mPopup!!.showPopupInstance()
         fzfSearchAction = FzfSearchAction(mFileNames!!, settings.searchCaseSensitivity)
     }
@@ -72,10 +67,6 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
         else {
             return mFiles.subList(0, min(mFiles.size, settings.numberOfFilesInSearchView))
         }
-    }
-
-    fun openSelectedFile(selectedValue: PopupInstanceItem) {
-        FileEditorManager.getInstance(mProject!!).openFile(selectedValue.vf, true)
     }
 
 }

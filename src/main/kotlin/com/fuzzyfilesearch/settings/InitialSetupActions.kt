@@ -5,13 +5,13 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
 import com.fuzzyfilesearch.actions.*
 import com.fuzzyfilesearch.searchbox.initFzf
+import com.fuzzyfilesearch.services.PopupMediator
 import com.fuzzyfilesearch.services.RecentFilesKeeper
+import com.fuzzyfilesearch.services.TabKeyPostProcessor
 
 class ApplicationStartupSetup : ProjectActivity {
 
     override suspend fun execute(project: Project) {
-        println("Starting initial application setup")
-
         val globalSettings = GlobalSettings().getInstance()
         registerQuickFileSearchActions(globalSettings.state.openRelativeFileActions, globalSettings.state)
         registerSearchRelativeFileActions(globalSettings.state.searchRelativeFileActions, globalSettings.state)
@@ -20,7 +20,9 @@ class ApplicationStartupSetup : ProjectActivity {
         registerSearchOpenFiles(globalSettings.state.searchOpenFilesActions, globalSettings.state)
         registerSearchFileMatchingPatternActions(globalSettings.state.searchFilesMatchingPatterActions, globalSettings.state)
 
-        project.service<RecentFilesKeeper>() // Initialize project service
+        project.service<RecentFilesKeeper>()    // Initialize project service
+        project.service<PopupMediator>()        // Initialize project service
+        project.service<TabKeyPostProcessor>().registerProcessor()        // Initialize project service
         initFzf()
     }
 }

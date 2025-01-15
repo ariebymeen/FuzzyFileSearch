@@ -1,6 +1,13 @@
 package com.fuzzyfilesearch.searchbox
 
+import com.fuzzyfilesearch.actions.ShortcutType
+import com.fuzzyfilesearch.services.PopupMediator
 import com.fuzzyfilesearch.settings.EditorLocation
+import com.fuzzyfilesearch.settings.GlobalSettings
+import com.fuzzyfilesearch.settings.ModifierKey
+import com.fuzzyfilesearch.settings.PopupSizePolicy
+import com.intellij.openapi.components.service
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupFactory
@@ -9,22 +16,19 @@ import com.intellij.openapi.wm.WindowManager
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.util.width
 import com.intellij.util.ui.JBUI
-import com.fuzzyfilesearch.settings.GlobalSettings
-import com.fuzzyfilesearch.settings.ModifierKey
-import com.fuzzyfilesearch.settings.PopupSizePolicy
-import com.intellij.openapi.actionSystem.DataContext
-import com.intellij.openapi.editor.Editor
 import kotlinx.coroutines.*
 import org.jdesktop.swingx.JXList
 import java.awt.*
 import java.awt.event.*
 import javax.swing.*
 import javax.swing.border.EmptyBorder
-import javax.swing.event.*
+import javax.swing.event.DocumentEvent
+import javax.swing.event.DocumentListener
+import javax.swing.event.ListSelectionEvent
+import javax.swing.event.ListSelectionListener
 import kotlin.math.max
 import kotlin.math.min
-import com.intellij.openapi.editor.actionSystem.TypedAction
-import com.intellij.openapi.editor.actionSystem.TypedActionHandler
+
 
 class PopupInstanceItem(val vf: VirtualFile,
                         var panel: VerticallyCenteredTextPane? = null)
@@ -52,11 +56,10 @@ fun <T> debounce(delayMillis: Long = 30L, coroutineScope: CoroutineScope, action
 
 class SearchPopupInstance(
     val mGetSearchResultCallback: ((String) -> List<PopupInstanceItem>),
-    val mItemSelectedCallback: ((PopupInstanceItem) -> Unit),
     val mSettings: GlobalSettings.SettingsState,
     var mProject: Project,
     var mExtensions: List<String>? = null
-):  TypedActionHandler {
+) {
     val mSearchField: JTextField = JTextField()
     val mExtensionField: JTextField = TransparentTextField(1.0F)
     val mListModel: DefaultListModel<PopupInstanceItem> = DefaultListModel()
@@ -70,34 +73,11 @@ class SearchPopupInstance(
     val mCellRenderer = SearchDialogCellRenderer(mProject, mSettings)
     var mNofTimesClicked = 0;
     var mLastClickedIndex: Int = -1
-    var keyPressedTimer: Timer? = null
+    var keyPressedTimer: Timer? = null // TODO: Can probably be removed, as using the key pressed event already works
 
     init {
         createPopupInstance()
-
-        val typedAction = TypedAction.getInstance()
-//        val originalHandler = typedAction.handler
-//        typedAction.setupHandler(CustomTabHandler(originalHandler))
-        typedAction.setupRawHandler(this)
     }
-
-    override fun execute(editor: Editor, charTyped: kotlin.Char, dataContext: DataContext) {
-        println("Handled char: ${charTyped}")
-
-    }
-
-//    fun updatePopupInstance(project: Project, extensions: List<String>?) {
-//        mProject = project
-//        mExtensions = extensions
-//
-//        setSearchBarHeigth(mSettings)
-//        setExtensionsField(extensions)
-//        mResultsList.cellRenderer = SearchDialogCellRenderer(mProject, mSettings)
-//        mSearchField.text = ""
-//
-//        val splitType = if (mSettings.editorPreviewLocation == EditorLocation.EDITOR_BELOW) JSplitPane.VERTICAL_SPLIT else JSplitPane.HORIZONTAL_SPLIT
-//        mSplitPane.orientation = splitType
-//    }
 
     fun showPopupInstance() {
         val ideFrame = WindowManager.getInstance().getIdeFrame(mProject)
@@ -163,14 +143,24 @@ class SearchPopupInstance(
             mPopup!!.size = Dimension(popupWidth, popupHeight)
             mPopup!!.showInScreenCoordinates(ideFrame.component, Point(poxXInBounds, posYInBounds))
         }
+
+        mProject.service<PopupMediator>().popupOpened(this) // Register as opened popup
     }
+
+    fun handleActionShortcut(type: ShortcutType) {
+        when (type) {
+            ShortcutType.TAB_PRESSED -> mResultsList.selectedIndex += 1
+            ShortcutType.OPEN_FILE_IN_VERTICAL_SPLIT -> mResultsList.selectedIndex += 1
+            ShortcutType.OPEN_FILE_IN_HORIZONTAL_SPLIT -> mResultsList.selectedIndex += 1
+        }
+    }
+
 
     private fun updateListedItems() {
         // TODO: Add indication that not all files are listed
         SwingUtilities.invokeLater {
             mNofTimesClicked = 0 // Reset nof times clicked counter
             val items = mGetSearchResultCallback.invoke(mSearchField.text);
-//            items ?: return@invokeLater
 
             // update list items. This is optimized for performance as clearing the list model gives problems
             val commonCount = min(items.size, mListModel.size())
@@ -203,27 +193,23 @@ class SearchPopupInstance(
         }
     }
 
-    fun keyTypedEvent(e: KeyEvent) {
+    private fun keyTypedEvent(e: KeyEvent) {
         val isModifierPressed = if (this.mSettings.modifierKey == ModifierKey.CTRL) e.isControlDown else e.isAltDown
         if (Character.isDigit(e.keyChar) && isModifierPressed) {
             e.consume() // Consume the event to prevent the character from being added
             mResultsList.selectedIndex = e.keyChar.digitToInt()
-            mPopup?.dispose()
-            mItemSelectedCallback.invoke(mResultsList.selectedValue as PopupInstanceItem)
+            openFileAndClosePopup()
             return
         }
     }
 
-    fun keyPressedEvent(e: KeyEvent) {
+    private fun keyPressedEvent(e: KeyEvent) {
         when (e.keyCode) {
             KeyEvent.VK_UP -> mResultsList.selectedIndex -= 1
             KeyEvent.VK_DOWN -> mResultsList.selectedIndex += 1
             KeyEvent.VK_TAB -> mResultsList.selectedIndex += 1
             KeyEvent.VK_ENTER -> {
-                if (mResultsList.selectedIndex >= 0) {
-                    mItemSelectedCallback.invoke(mResultsList.selectedValue as PopupInstanceItem)
-                    mPopup?.dispose()
-                }
+                 openFileAndClosePopup()
             }
         }
         val isModifierPressed = if (this.mSettings.modifierKey == ModifierKey.CTRL) e.isControlDown else e.isAltDown
@@ -233,14 +219,23 @@ class SearchPopupInstance(
                 KeyEvent.VK_J -> mResultsList.selectedIndex += 1
             }
         }
-        if (keyPressedTimer == null) {
-            keyPressedTimer = Timer(100) { // Repeat every 100ms
-                keyReleasedEvent(e)
-            }.apply { start() }
+//        if (keyPressedTimer == null) {
+//            keyPressedTimer = Timer(200) { // Repeat every 100ms
+//                keyPressedEvent(e)
+//            }.apply { start() }
+//        }
+    }
+
+    private fun openFileAndClosePopup() {
+        if (mResultsList.selectedIndex >= 0) {
+            val selectedValue = mResultsList.selectedValue as PopupInstanceItem
+            FileEditorManager.getInstance(mProject).openFile(selectedValue.vf, true)
+            mProject.service<PopupMediator>().popupClosed()
+            mPopup?.dispose()
         }
     }
 
-    fun keyReleasedEvent(e: KeyEvent) {
+    private fun keyReleasedEvent() {
         if (keyPressedTimer != null) {
             keyPressedTimer?.stop()
             keyPressedTimer = null
@@ -248,13 +243,10 @@ class SearchPopupInstance(
 
     }
 
-    fun mouseClickedEvent() {
-        val selectedItem = mResultsList.selectedValue as PopupInstanceItem
+    private fun mouseClickedEvent() {
         if ((mResultsList.selectedIndex == mLastClickedIndex && mNofTimesClicked >= 1) ||
-            mSettings.openWithSingleClick)
-        {
-            mPopup?.dispose()
-            mItemSelectedCallback.invoke(selectedItem)
+                    mSettings.openWithSingleClick) {
+            openFileAndClosePopup()
         }
         mNofTimesClicked = 1
         mLastClickedIndex = mResultsList.selectedIndex
@@ -277,6 +269,7 @@ class SearchPopupInstance(
         val border: EmptyBorder = JBUI.Borders.empty(2, 5, 0, 5)
         mSearchField.border = border
         mSearchField.toolTipText = "Type to search..."
+        mSearchField.isFocusable = true
 
         mExtensionField.border = border
         mExtensionField.toolTipText = ""
@@ -287,7 +280,7 @@ class SearchPopupInstance(
         mSearchField.addKeyListener(object : KeyAdapter() {
             override fun keyTyped(e: KeyEvent) { keyTypedEvent(e) }
             override fun keyPressed(e: KeyEvent) { keyPressedEvent(e) }
-            override fun keyReleased(e: KeyEvent) { keyReleasedEvent(e) }
+            override fun keyReleased(e: KeyEvent) { keyReleasedEvent() }
         })
         val debouncedFunction = debounce<Unit>(30, mCoroutineScope) { updateListedItems() }
         mSearchField.document.addDocumentListener(object : DocumentListener {
@@ -335,6 +328,21 @@ class SearchPopupInstance(
             .setShowBorder(false)
             .setMinSize(Dimension(mSettings.searchBarHeight, 0))
             .createPopup()
+
+
+        // Add a custom action for the TAB key using InputMap and ActionMap
+        val inputMap = mSearchField.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
+        val actionMap = mSearchField.getActionMap()
+
+        // Bind the TAB key to a custom action
+        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_TAB, 0), "FuzzyFileSearch.TabKeyAction")
+        actionMap.put("FuzzyFileSearch.TabKeyAction1", object : AbstractAction() {
+            override fun actionPerformed(e: ActionEvent) {
+                println("Action performed")
+                handleActionShortcut(ShortcutType.TAB_PRESSED)
+            }
+        })
+        println("DONE: ${mSearchField.actionMap.keys().joinToString(",")}")
 
     }
 
