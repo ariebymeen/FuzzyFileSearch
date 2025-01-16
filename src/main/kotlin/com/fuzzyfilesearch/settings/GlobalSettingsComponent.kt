@@ -11,6 +11,7 @@ import com.intellij.ui.JBIntSpinner
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextArea
+import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.FormBuilder
 import javax.swing.*
 
@@ -39,6 +40,8 @@ class GlobalSettingsComponent {
     var searchOnlyFilesInVersionControlCheckbox = JBCheckBox()
     var pathDisplayDropdownBox = ComboBox(PathDisplayType.values())
     var modifierKeyDropdownBox = ComboBox(ModifierKey.values())
+    var openFileInVerticalSplitShortcutInputBox = JBTextField()
+    var openFileInHorizontalSplitShortcutInputBox = JBTextField()
     var warningText = createWarningLabel()
     var openRelativeFileActionsTable = ActionsTable(arrayOf("Name", "Reference file", "Open path", "Shortcut"), arrayOf("MyActionName", "Regex", "src/%rname%Test.cc", "alt shift P"))
     var searchPathActionsTable = ActionsTable(arrayOf("Name", "Path", "Extensions", "Shortcut"), arrayOf("ActionName", "/", ".txt, .md", "alt shift H"))
@@ -46,6 +49,7 @@ class GlobalSettingsComponent {
     var searchFileMatchingPatternActionsTable = ActionsTable(arrayOf("Name", "Path", "Pattern (Regex)", "Shortcut"), arrayOf("MyActionName", "/", "Regex", "alt shift P"))
     var searchRecentFiles = StaticTable(arrayOf("Name", "History length", "Extensions", "Shortcut"), arrayOf(arrayOf("SearchRecentFiles", "10", ".txt,.md", "alt shift R")))
     var searchOpenFiles = StaticTable(arrayOf("Name", "Extensions", "Shortcut"), arrayOf(arrayOf("SearchOpenFiles", ".txt,.md", "alt shift O")))
+    // TODO: Add options for a shortcut to open file in horizontal or vertical split
     val regexTestComponent = RegexTestComponent()
     val showHelpButton = JButton("Show help")
 
@@ -83,6 +87,14 @@ class GlobalSettingsComponent {
                     The modifier key can also be used in combination with the number keys to quickly open a result, e.g. ctrl-1 to open result 1 (second result). 
                     This can be used as an alternative to scrolling to the result and pressing enter.
                 """.trimIndent()), modifierKeyDropdownBox)
+            .addLabeledComponent(
+                createLabelWithDescription("Shortcut open file in vertical split", """
+                    Set the shortcut for opening the selected file in a vertical split view
+                """.trimIndent()), openFileInVerticalSplitShortcutInputBox)
+            .addLabeledComponent(
+                createLabelWithDescription("Shortcut open file in horizontal split", """
+                    Set the shortcut for opening the selected file in a horizontal split view
+                """.trimIndent()), openFileInHorizontalSplitShortcutInputBox)
             // height and width of search box
             .addLabeledComponent(
                 createLabelWithDescription("Popup scaling", """

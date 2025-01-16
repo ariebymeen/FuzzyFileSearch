@@ -11,7 +11,7 @@ import javax.swing.*
 import javax.swing.text.AttributeSet
 import javax.swing.text.StyleConstants
 
-data class ClippedWidthInfo(val styledTextWidth: Int, val averageCharWidth: Double, val nofCharsToRemove: Int)
+data class ClippedWidthInfo(val styledTextWidth: Int, val nofCharsToRemove: Int)
 
 fun getStyledTextWidth(textPane: JTextPane, maxWidth: Int): ClippedWidthInfo {
     val doc = textPane.styledDocument
@@ -21,25 +21,26 @@ fun getStyledTextWidth(textPane: JTextPane, maxWidth: Int): ClippedWidthInfo {
 
     var elementIndex = 0
     val nofChars = doc.length
-    var averageCharWidth = 0.0
     while (elementIndex < nofChars) {
         val elem = doc.getCharacterElement(elementIndex)
         val fontStyle = getFontFromAttributes(elem.attributes, textPane.font)
         val fontMetrics: FontMetrics = textPane.getFontMetrics(fontStyle)
         var segmentText = doc.getText(elem.startOffset, elem.endOffset - elem.startOffset)
-        val segmentWidth = fontMetrics.stringWidth(segmentText)
+        var segmentWidth = fontMetrics.stringWidth(segmentText)
         if (totalWidth > maxWidth) {
             charsToRemove += segmentText.length
             break;
         }
         if (totalWidth + segmentWidth > maxWidth) {
             // Compute the nof chars to remove. Start with initial guess from mean char width
-            var nofRemovedChars: Int = (segmentWidth + totalWidth - maxWidth) / segmentText.length
+            var nofRemovedChars: Int = (Math.max(segmentWidth + totalWidth - maxWidth, 1)) / segmentText.length
+            val segmentLen = segmentText.length
             segmentText = doc.getText(elem.startOffset, elem.endOffset - elem.startOffset - nofRemovedChars)
-            var clippedWidth = fontMetrics.stringWidth(segmentText)
-            while (totalWidth + clippedWidth > maxWidth && nofRemovedChars < segmentText.length) {
-                segmentText = doc.getText(elem.startOffset, elem.endOffset - elem.startOffset - nofRemovedChars)
-                clippedWidth = fontMetrics.stringWidth(segmentText)
+            segmentWidth = fontMetrics.stringWidth(segmentText)
+            while (totalWidth + segmentWidth >= maxWidth && nofRemovedChars < segmentLen) {
+                // Create a segment containing the text + "..." which will be placed at the end
+                segmentText = doc.getText(elem.startOffset, Math.max(elem.endOffset - elem.startOffset - nofRemovedChars - 3, 1)) + "..."
+                segmentWidth = fontMetrics.stringWidth(segmentText)
                 nofRemovedChars++
             }
             charsToRemove += nofRemovedChars
@@ -47,10 +48,9 @@ fun getStyledTextWidth(textPane: JTextPane, maxWidth: Int): ClippedWidthInfo {
 
         totalWidth += segmentWidth
         elementIndex = elem.endOffset + 1
-        averageCharWidth = segmentWidth / (elem.endOffset - elem.startOffset).toDouble()
     }
 
-    return ClippedWidthInfo(totalWidth, averageCharWidth, charsToRemove)
+    return ClippedWidthInfo(totalWidth, charsToRemove)
 }
 
 // Helper function to get a Font object based on style attributes
@@ -175,8 +175,8 @@ class SearchDialogCellRenderer(val mProject: Project,
         }
 
         // If text is too wide for the view, remove and place ... at the end
-        val (width, charW, nofCharsToRemove) = getStyledTextWidth(item.panel!!, maxWidth)
-        if (maxWidth > 0 && width > maxWidth) {
+        val (width, nofCharsToRemove) = getStyledTextWidth(item.panel!!, maxWidth)
+        if (maxWidth > 0 && nofCharsToRemove > 0) {
             // Cutoff text. Compute the number of chars to remove + 3, which will be replaced by ...
             doc.remove(doc.length - nofCharsToRemove - 3, nofCharsToRemove + 3)
             val elem = doc.getCharacterElement(doc.length - 1)

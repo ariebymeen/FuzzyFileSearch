@@ -19,6 +19,7 @@
     <li> Find your files more quickly with the fzf search algorithm.  </li>
     <li> Assign shortcuts to search in different directories to more quickly find your files. </li>
     <li> Assign shortcuts to search for files with certain extensions or patterns </li>
+    <li> Quickly open file in vertical and horizontal split </li>
     <li> Jump between files with shortcuts </li>
     </ul>
 
@@ -29,8 +30,8 @@
     <change-notes>
         <![CDATA[
         <ul>
-            <li>Add long key pressed option, to more quickly scroll through results</li>
-            <li>Add option to choose modifier key between ctrl and alt</li>
+            <li>Add TAB action listener to scroll through the list of results</li>
+            <li>Add ability to open a file in horizontal and vertical split using shortcuts</li>
         </ul>
         ]]>
     </change-notes>
@@ -62,6 +63,9 @@
                 text="ShowHelpDialog"
                 description="Opens a dialog with additional information about the FuzzyFileSearch plugin">
                 <keyboard-shortcut keymap="Default for GNOME" first-keystroke="shift alt H"/>
+        </action>
+        <action id="com.example.TabKeyHandler" class="com.fuzzyfilesearch.actions.ShortcutAction" text="Vertical split" description="Custom handler for TAB key">
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl V"/>
         </action>
     </actions>
 </idea-plugin>

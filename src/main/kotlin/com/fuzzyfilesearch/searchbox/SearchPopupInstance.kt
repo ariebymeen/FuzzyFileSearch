@@ -1,17 +1,24 @@
 package com.fuzzyfilesearch.searchbox
 
+import com.fuzzyfilesearch.actions.ShortcutAction
 import com.fuzzyfilesearch.actions.ShortcutType
 import com.fuzzyfilesearch.services.PopupMediator
 import com.fuzzyfilesearch.settings.EditorLocation
 import com.fuzzyfilesearch.settings.GlobalSettings
 import com.fuzzyfilesearch.settings.ModifierKey
 import com.fuzzyfilesearch.settings.PopupSizePolicy
+import com.intellij.injected.editor.EditorWindow
+import com.intellij.mock.MockVirtualFile.file
+import com.intellij.openapi.actionSystem.CustomShortcutSet
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx
+import com.intellij.openapi.progress.ModalTaskOwner.project
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.wm.IdeFocusManager
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.util.width
@@ -29,6 +36,12 @@ import javax.swing.event.ListSelectionListener
 import kotlin.math.max
 import kotlin.math.min
 
+
+enum class OpenLocation {
+    SPLIT_VIEW_VERTICAL,
+    SPLIT_VIEW_HORIZONTAL,
+    MAIN_VIEW
+}
 
 class PopupInstanceItem(val vf: VirtualFile,
                         var panel: VerticallyCenteredTextPane? = null)
@@ -102,7 +115,7 @@ class SearchPopupInstance(
         }
 
         mMaxPopupHeight = popupHeight
-        mCellRenderer.maxWidth = popupWidth - 20
+        mCellRenderer.maxWidth = popupWidth - 15
 
         // Set the position of the splitter between the search results list and the editor view
         val splitPaneSizeAttr = if (mSettings.editorPreviewLocation == EditorLocation.EDITOR_BELOW) popupHeight else popupWidth
@@ -150,8 +163,8 @@ class SearchPopupInstance(
     fun handleActionShortcut(type: ShortcutType) {
         when (type) {
             ShortcutType.TAB_PRESSED -> mResultsList.selectedIndex += 1
-            ShortcutType.OPEN_FILE_IN_VERTICAL_SPLIT -> mResultsList.selectedIndex += 1
-            ShortcutType.OPEN_FILE_IN_HORIZONTAL_SPLIT -> mResultsList.selectedIndex += 1
+            ShortcutType.OPEN_FILE_IN_VERTICAL_SPLIT -> openFileAndClosePopup(OpenLocation.SPLIT_VIEW_VERTICAL)
+            ShortcutType.OPEN_FILE_IN_HORIZONTAL_SPLIT -> openFileAndClosePopup(OpenLocation.SPLIT_VIEW_HORIZONTAL)
         }
     }
 
@@ -198,7 +211,7 @@ class SearchPopupInstance(
         if (Character.isDigit(e.keyChar) && isModifierPressed) {
             e.consume() // Consume the event to prevent the character from being added
             mResultsList.selectedIndex = e.keyChar.digitToInt()
-            openFileAndClosePopup()
+            openFileAndClosePopup(OpenLocation.MAIN_VIEW)
             return
         }
     }
@@ -209,7 +222,7 @@ class SearchPopupInstance(
             KeyEvent.VK_DOWN -> mResultsList.selectedIndex += 1
             KeyEvent.VK_TAB -> mResultsList.selectedIndex += 1
             KeyEvent.VK_ENTER -> {
-                 openFileAndClosePopup()
+                 openFileAndClosePopup(OpenLocation.MAIN_VIEW)
             }
         }
         val isModifierPressed = if (this.mSettings.modifierKey == ModifierKey.CTRL) e.isControlDown else e.isAltDown
@@ -226,13 +239,32 @@ class SearchPopupInstance(
 //        }
     }
 
-    private fun openFileAndClosePopup() {
-        if (mResultsList.selectedIndex >= 0) {
-            val selectedValue = mResultsList.selectedValue as PopupInstanceItem
-            FileEditorManager.getInstance(mProject).openFile(selectedValue.vf, true)
-            mProject.service<PopupMediator>().popupClosed()
-            mPopup?.dispose()
+    private fun openFileAndClosePopup(location: OpenLocation) {
+        if (mResultsList.selectedIndex < 0) {
+            return;
         }
+
+        val selectedValue = mResultsList.selectedValue as PopupInstanceItem
+        val manager = FileEditorManager.getInstance(mProject)
+        when (location) {
+            OpenLocation.MAIN_VIEW -> manager.openFile(selectedValue.vf, true)
+            OpenLocation.SPLIT_VIEW_VERTICAL -> {
+                val currentWindow = FileEditorManagerEx.getInstanceEx(mProject).currentWindow
+                if (currentWindow != null) {
+                    currentWindow.split(SwingConstants.VERTICAL, true, selectedValue.vf, true)
+                }
+            }
+            OpenLocation.SPLIT_VIEW_HORIZONTAL -> {
+                val currentWindow = FileEditorManagerEx.getInstanceEx(mProject).currentWindow
+                if (currentWindow != null) {
+                    currentWindow.split(SwingConstants.HORIZONTAL, true, selectedValue.vf, true)
+                }
+            }
+        }
+
+
+        mProject.service<PopupMediator>().popupClosed()
+        mPopup?.dispose()
     }
 
     private fun keyReleasedEvent() {
@@ -246,7 +278,7 @@ class SearchPopupInstance(
     private fun mouseClickedEvent() {
         if ((mResultsList.selectedIndex == mLastClickedIndex && mNofTimesClicked >= 1) ||
                     mSettings.openWithSingleClick) {
-            openFileAndClosePopup()
+            openFileAndClosePopup(OpenLocation.MAIN_VIEW)
         }
         mNofTimesClicked = 1
         mLastClickedIndex = mResultsList.selectedIndex
@@ -326,24 +358,30 @@ class SearchPopupInstance(
             .createComponentPopupBuilder(mSplitPane, mSearchField)
             .setRequestFocus(true)
             .setShowBorder(false)
+            .setCancelOnClickOutside(true) // Dismiss the popup if clicked outside
             .setMinSize(Dimension(mSettings.searchBarHeight, 0))
             .createPopup()
 
+        SwingUtilities.invokeLater {
+            registerCustomShortcutActions();
+        }
+    }
 
-        // Add a custom action for the TAB key using InputMap and ActionMap
-        val inputMap = mSearchField.getInputMap(JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT)
-        val actionMap = mSearchField.getActionMap()
-
-        // Bind the TAB key to a custom action
-        inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_TAB, 0), "FuzzyFileSearch.TabKeyAction")
-        actionMap.put("FuzzyFileSearch.TabKeyAction1", object : AbstractAction() {
-            override fun actionPerformed(e: ActionEvent) {
-                println("Action performed")
-                handleActionShortcut(ShortcutType.TAB_PRESSED)
+    private fun registerCustomShortcutActions() {
+        if (mSettings.openInHorizontalSplit.isNotEmpty()) {
+            val action = ShortcutAction("OpenInHorizontalSplit", ShortcutType.OPEN_FILE_IN_HORIZONTAL_SPLIT)
+            val tt = KeyStroke.getKeyStroke(mSettings.openInHorizontalSplit)
+            if (tt == null) {
+                println("Invalid shortcut: ${mSettings.openInHorizontalSplit}")
             }
-        })
-        println("DONE: ${mSearchField.actionMap.keys().joinToString(",")}")
-
+            val tabShortcut = CustomShortcutSet(KeyStroke.getKeyStroke(mSettings.openInHorizontalSplit))
+            action.registerCustomShortcutSet(tabShortcut, mSearchField)
+        }
+        if (mSettings.openInVerticalSplit.isNotEmpty()) {
+            val action = ShortcutAction("OpenInVerticalSplit", ShortcutType.OPEN_FILE_IN_VERTICAL_SPLIT)
+            val tabShortcut = CustomShortcutSet(KeyStroke.getKeyStroke(mSettings.openInVerticalSplit))
+            action.registerCustomShortcutSet(tabShortcut, mSearchField)
+        }
     }
 
 }

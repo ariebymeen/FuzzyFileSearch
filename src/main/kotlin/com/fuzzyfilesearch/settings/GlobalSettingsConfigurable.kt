@@ -2,7 +2,9 @@ package com.fuzzyfilesearch.settings
 
 import com.intellij.openapi.options.Configurable
 import com.fuzzyfilesearch.actions.*
+import com.fuzzyfilesearch.showErrorNotification
 import javax.swing.JComponent
+import javax.swing.KeyStroke
 
 class GlobalSettingsConfigurable : Configurable {
     private lateinit var component: GlobalSettingsComponent
@@ -17,6 +19,8 @@ class GlobalSettingsConfigurable : Configurable {
         component.searchCaseSensitiviyCheckbox.isSelected = settings.state.searchCaseSensitivity
         component.pathDisplayDropdownBox.selectedItem = settings.state.filePathDisplayType
         component.modifierKeyDropdownBox.selectedItem = settings.state.modifierKey
+        component.openFileInVerticalSplitShortcutInputBox.text = settings.state.openInVerticalSplit
+        component.openFileInHorizontalSplitShortcutInputBox.text = settings.state.openInHorizontalSplit
         component.searchBoxWidth.value = settings.state.searchPopupWidth
         component.searchBoxHeight.value = settings.state.searchPopupHeight
         component.searchBoxWidthPx.value = settings.state.searchPopupWidthPx
@@ -63,6 +67,8 @@ class GlobalSettingsConfigurable : Configurable {
                 || settings.state.searchOnlyFilesInVersionControl != component.searchOnlyFilesInVersionControlCheckbox.isSelected
                 || settings.state.filePathDisplayType != (component.pathDisplayDropdownBox.selectedItem as PathDisplayType)
                 || settings.state.modifierKey != (component.modifierKeyDropdownBox.selectedItem as ModifierKey)
+                || settings.state.openInVerticalSplit != component.openFileInVerticalSplitShortcutInputBox.text
+                || settings.state.openInHorizontalSplit != component.openFileInHorizontalSplitShortcutInputBox.text
                 || settings.state.searchPopupWidth != component.searchBoxWidth.value
                 || settings.state.searchPopupHeight != component.searchBoxHeight.value
                 || settings.state.searchPopupWidthPx != component.searchBoxWidthPx.value
@@ -102,6 +108,17 @@ class GlobalSettingsConfigurable : Configurable {
     }
 
     override fun apply() {
+        var sc = component.openFileInVerticalSplitShortcutInputBox.text
+        if (sc.isNotEmpty() && KeyStroke.getKeyStroke(sc) == null) {
+            showErrorNotification("Invalid shortcut ${sc}", "Shortcut ${sc} is not valid and cannot be saved")
+            return
+        }
+        sc = component.openFileInHorizontalSplitShortcutInputBox.text
+        if (sc.isNotEmpty() && KeyStroke.getKeyStroke(sc) == null) {
+            showErrorNotification("Invalid shortcut ${sc}", "Shortcut ${sc} is not valid and cannot be saved")
+            return
+        }
+
         if (!isEqual(settings.state.openRelativeFileActions, component.openRelativeFileActionsTable.getData())) {
             unregisterActions(settings.state.openRelativeFileActions, OpenRelativeFileAction::getActionName, OpenRelativeFileAction::getActionShortcut)
             settings.state.openRelativeFileActions = component.openRelativeFileActionsTable.getData()
@@ -151,6 +168,8 @@ class GlobalSettingsConfigurable : Configurable {
         settings.state.searchOnlyFilesInVersionControl = component.searchOnlyFilesInVersionControlCheckbox.isSelected
         settings.state.filePathDisplayType = component.pathDisplayDropdownBox.selectedItem as PathDisplayType
         settings.state.modifierKey = component.modifierKeyDropdownBox.selectedItem as ModifierKey
+        settings.state.openInVerticalSplit = component.openFileInVerticalSplitShortcutInputBox.text
+        settings.state.openInHorizontalSplit = component.openFileInHorizontalSplitShortcutInputBox.text
         settings.state.searchPopupWidth = component.searchBoxWidth.value as Double
         settings.state.searchPopupHeight = component.searchBoxHeight.value as Double
         settings.state.searchPopupWidthPx = component.searchBoxWidthPx.value as Int
