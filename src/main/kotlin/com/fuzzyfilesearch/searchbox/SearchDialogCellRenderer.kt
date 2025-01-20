@@ -36,7 +36,7 @@ fun computeNofCharsToRemove(textPane: JTextPane, maxWidth: Int): Int {
             val segmentLen = segmentText.length
             segmentText = doc.getText(elem.startOffset, elem.endOffset - elem.startOffset - nofRemovedChars)
             segmentWidth = fontMetrics.stringWidth(segmentText)
-            while (totalWidth + segmentWidth + dotsTextWidth >= maxWidth && nofRemovedChars < segmentLen) {
+            while (totalWidth + segmentWidth + dotsTextWidth > maxWidth && nofRemovedChars < segmentLen) {
                 // Iteratively move to the chars until the text including '...' fits into the max width
                 segmentWidth -= fontMetrics.stringWidth(segmentText.get(segmentLen - nofRemovedChars - 1).toString())
                 ++nofRemovedChars

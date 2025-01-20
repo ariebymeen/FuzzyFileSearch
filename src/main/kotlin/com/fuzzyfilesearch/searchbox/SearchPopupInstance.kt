@@ -7,18 +7,14 @@ import com.fuzzyfilesearch.settings.EditorLocation
 import com.fuzzyfilesearch.settings.GlobalSettings
 import com.fuzzyfilesearch.settings.ModifierKey
 import com.fuzzyfilesearch.settings.PopupSizePolicy
-import com.intellij.injected.editor.EditorWindow
-import com.intellij.mock.MockVirtualFile.file
 import com.intellij.openapi.actionSystem.CustomShortcutSet
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx
-import com.intellij.openapi.progress.ModalTaskOwner.project
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.wm.IdeFocusManager
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.util.width
@@ -84,9 +80,8 @@ class SearchPopupInstance(
     val mEditorView = SearchBoxEditor(mProject)
     val mMainPanel: JPanel = JPanel(BorderLayout())
     val mCellRenderer = SearchDialogCellRenderer(mProject, mSettings)
-    var mNofTimesClicked = 0;
+    var mNofTimesClicked = 0
     var mLastClickedIndex: Int = -1
-    var keyPressedTimer: Timer? = null // TODO: Can probably be removed, as using the key pressed event already works
 
     init {
         createPopupInstance()
@@ -173,7 +168,7 @@ class SearchPopupInstance(
         // TODO: Add indication that not all files are listed
         SwingUtilities.invokeLater {
             mNofTimesClicked = 0 // Reset nof times clicked counter
-            val items = mGetSearchResultCallback.invoke(mSearchField.text);
+            val items = mGetSearchResultCallback.invoke(mSearchField.text)
 
             // update list items. This is optimized for performance as clearing the list model gives problems
             val commonCount = min(items.size, mListModel.size())
@@ -232,16 +227,11 @@ class SearchPopupInstance(
                 KeyEvent.VK_J -> mResultsList.selectedIndex += 1
             }
         }
-//        if (keyPressedTimer == null) {
-//            keyPressedTimer = Timer(200) { // Repeat every 100ms
-//                keyPressedEvent(e)
-//            }.apply { start() }
-//        }
     }
 
     private fun openFileAndClosePopup(location: OpenLocation) {
         if (mResultsList.selectedIndex < 0) {
-            return;
+            return
         }
 
         val selectedValue = mResultsList.selectedValue as PopupInstanceItem
@@ -249,30 +239,26 @@ class SearchPopupInstance(
         when (location) {
             OpenLocation.MAIN_VIEW -> manager.openFile(selectedValue.vf, true)
             OpenLocation.SPLIT_VIEW_VERTICAL -> {
-                val currentWindow = FileEditorManagerEx.getInstanceEx(mProject).currentWindow
-                if (currentWindow != null) {
-                    currentWindow.split(SwingConstants.VERTICAL, true, selectedValue.vf, true)
-                }
+                FileEditorManagerEx.getInstanceEx(mProject).currentWindow?.split(
+                    SwingConstants.VERTICAL,
+                    true,
+                    selectedValue.vf,
+                    true
+                )
             }
             OpenLocation.SPLIT_VIEW_HORIZONTAL -> {
-                val currentWindow = FileEditorManagerEx.getInstanceEx(mProject).currentWindow
-                if (currentWindow != null) {
-                    currentWindow.split(SwingConstants.HORIZONTAL, true, selectedValue.vf, true)
-                }
+                FileEditorManagerEx.getInstanceEx(mProject).currentWindow?.split(
+                    SwingConstants.HORIZONTAL,
+                    true,
+                    selectedValue.vf,
+                    true
+                )
             }
         }
 
 
         mProject.service<PopupMediator>().popupClosed()
         mPopup?.dispose()
-    }
-
-    private fun keyReleasedEvent() {
-        if (keyPressedTimer != null) {
-            keyPressedTimer?.stop()
-            keyPressedTimer = null
-        }
-
     }
 
     private fun mouseClickedEvent() {
@@ -312,7 +298,6 @@ class SearchPopupInstance(
         mSearchField.addKeyListener(object : KeyAdapter() {
             override fun keyTyped(e: KeyEvent) { keyTypedEvent(e) }
             override fun keyPressed(e: KeyEvent) { keyPressedEvent(e) }
-            override fun keyReleased(e: KeyEvent) { keyReleasedEvent() }
         })
         val debouncedFunction = debounce<Unit>(30, mCoroutineScope) { updateListedItems() }
         mSearchField.document.addDocumentListener(object : DocumentListener {
@@ -342,7 +327,7 @@ class SearchPopupInstance(
         mResultsList.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent?) { mouseClickedEvent() }
         })
-        val scrollPanel = JBScrollPane(mResultsList);
+        val scrollPanel = JBScrollPane(mResultsList)
         scrollPanel.border = null
         scrollPanel.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
         scrollPanel.verticalScrollBar.preferredSize = Dimension(6, 0)
@@ -363,7 +348,7 @@ class SearchPopupInstance(
             .createPopup()
 
         SwingUtilities.invokeLater {
-            registerCustomShortcutActions();
+            registerCustomShortcutActions()
         }
     }
 

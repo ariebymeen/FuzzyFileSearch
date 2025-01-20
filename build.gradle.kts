@@ -11,6 +11,12 @@ repositories {
     mavenCentral()
 }
 
+dependencies {
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0") // Latest JUnit 5 version
+    testImplementation("org.jetbrains.kotlin:kotlin-test") // Kotlin test utilities
+    implementation(kotlin("test"))
+}
+
 // Configure Gradle IntelliJ Plugin
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
 intellij {

@@ -181,7 +181,7 @@ fun calculateScore(
         // Handle case sensitivity
         if (!caseSensitive) {
             char = char.lowercaseChar()
-            pChar = char.lowercaseChar()
+            pChar = pChar.lowercaseChar()
         }
 
         val classType = charClassOf(char)
@@ -353,11 +353,6 @@ fun FuzzyMatchV2(
     pattern: CharArray,
     withPos: Boolean,
 ): Result {
-//    var pattern = pattern
-//    if (!caseSensitive) {
-//        pattern = pattern.toString().lowercase().toCharArray()
-//    }
-
     // Assume that pattern is given in lowercase if case-insensitive.
     val M = pattern.size
     if (M == 0) {
@@ -370,7 +365,7 @@ fun FuzzyMatchV2(
 
     // Since O(nm) algorithm can be prohibitively expensive for large input,
     // we fall back to the greedy algorithm.
-    if (input.size > 100) {
+    if (input.size > 200) {
         return FuzzyMatchV1(caseSensitive, normalize, forward, input, pattern, withPos)
     }
 
@@ -578,7 +573,6 @@ fun FuzzyMatchV2(
     // Start offset we return here is only relevant when begin tiebreak is used.
     // However, finding the accurate offset requires backtracking, and we don't
     // want to pay extra cost for the option that has lost its importance.
-//    return Pair(Result(minIdx + j, minIdx + maxScorePos + 1, maxScore.toInt()), pos.toIntArray())
     return Result(minIdx + j, minIdx + maxScorePos + 1, maxScore.toInt())
 }
 
@@ -591,11 +585,6 @@ fun FuzzyMatchV1(
     pattern: CharArray, // Using CharArray for rune equivalent in Kotlin
     withPos: Boolean,
 ): Result {
-//    var pattern = pattern
-//    if (!caseSensitive) {
-//        pattern = pattern.toString().lowercase().toCharArray()
-//    }
-
     if (pattern.isEmpty()) {
         return Result(0, 0, 0)
     }
@@ -646,11 +635,6 @@ fun FuzzyMatchV1(
 
             if (!caseSensitive) {
                 char = char.lowercaseChar()
-//                char = when {
-//                    char in 'A'..'Z' -> char + 32
-//                    char > Char.MAX_VALUE -> char.lowercaseChar()
-//                    else -> char
-//                }
             }
 
             val pidx_ = indexAt(pidx, lenPattern, forward)
