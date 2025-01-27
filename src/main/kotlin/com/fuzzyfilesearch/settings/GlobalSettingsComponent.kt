@@ -42,6 +42,7 @@ class GlobalSettingsComponent {
     var modifierKeyDropdownBox = ComboBox(ModifierKey.values())
     var openFileInVerticalSplitShortcutInputBox = JBTextField()
     var openFileInHorizontalSplitShortcutInputBox = JBTextField()
+    var openFileInActiveEditorShortcutInputBox = JBTextField()
     var warningText = createWarningLabel()
     var openRelativeFileActionsTable = ActionsTable(arrayOf("Name", "Reference file", "Open path", "Shortcut"), arrayOf("MyActionName", "Regex", "src/%rname%Test.cc", "alt shift P"))
     var searchPathActionsTable = ActionsTable(arrayOf("Name", "Path", "Extensions", "Shortcut"), arrayOf("ActionName", "/", ".txt, .md", "alt shift H"))
@@ -95,6 +96,10 @@ class GlobalSettingsComponent {
                 createLabelWithDescription("Shortcut open file in horizontal split", """
                     Set the shortcut for opening the selected file in a horizontal split view
                 """.trimIndent()), openFileInHorizontalSplitShortcutInputBox)
+            .addLabeledComponent(
+                createLabelWithDescription("Shortcut open file in the currently active editor", """
+                    Apart from using enter, a custom shortcut can be added to open the currently selected file in the active edito
+                """.trimIndent()), openFileInActiveEditorShortcutInputBox)
             // height and width of search box
             .addLabeledComponent(
                 createLabelWithDescription("Popup scaling", """

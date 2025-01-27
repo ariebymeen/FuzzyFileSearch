@@ -1,11 +1,8 @@
 package com.fuzzyfilesearch.searchbox
 
-import com.intellij.credentialStore.toByteArrayAndClear
-import com.intellij.util.containers.toArray
 import com.intellij.util.io.toByteArray
 import java.io.File
 import java.nio.CharBuffer
-import kotlin.math.max
 import kotlin.math.min
 
 // Constants:
@@ -98,8 +95,8 @@ fun initFzf(): Boolean {
         asciiCharClasses[i] = c
     }
 
-    for (i in 0..charNumber.toInt()) {
-        for (j in 0..charNumber.toInt()) {
+    for (i in 0..charNumber) {
+        for (j in 0..charNumber) {
             bonusMatrix[i][j] = bonusFor(i, j).toShort()
         }
     }
@@ -151,19 +148,19 @@ fun charClassOf(char: Char): CharClass {
 
 fun calculateScore(
     caseSensitive: Boolean,
-    normalize: Boolean,
+//    normalize: Boolean,
     text: CharArray, // Assuming this is a Kotlin equivalent of util.Chars
     pattern: CharArray, // Use CharArray to represent the slice of runes
     sidx: Int,
     eidx: Int,
-    withPos: Boolean
+//    withPos: Boolean
 ): Pair<Int, IntArray?> { // Using Pair to return both score and positions
     var pidx = 0
     var score = 0
     var inGap = false
     var consecutive = 0
     var firstBonus: Short = 0
-    val pos = if (withPos) IntArray(pattern.size) else null // Initialize position array if needed
+    val pos = null // Initialize position array if needed
 
     var prevClass = initialCharClass
     if (sidx > 0) {
@@ -185,16 +182,9 @@ fun calculateScore(
         }
 
         val classType = charClassOf(char)
-
-        // Normalize character if required
-        if (normalize) {
-            char = normalizeRune(char)
-        }
+        char = normalizeRune(char)
 
         if (char == pChar) {
-            if (withPos) {
-                pos?.set(pidx, idx) // Store the position
-            }
             score += scoreMatch
 
             var bonus = bonusMatrix[prevClass][classType]
@@ -235,13 +225,6 @@ fun calculateScore(
     }
 
     return Pair(score, pos) // Return the score and positions as a Pair
-}
-
-fun indexAt(index: Int,
-            max: Int,
-            forward: Boolean): Int {
-    if (forward) return index
-    return max - index - 1
 }
 
 fun bonusAt(input: CharArray,
@@ -347,11 +330,8 @@ fun asciiFuzzyIndex(input: CharArray,
 
 fun FuzzyMatchV2(
     caseSensitive: Boolean,
-    normalize: Boolean,
-    forward: Boolean,
     input: CharArray,
     pattern: CharArray,
-    withPos: Boolean,
 ): Result {
     // Assume that pattern is given in lowercase if case-insensitive.
     val M = pattern.size
@@ -366,7 +346,7 @@ fun FuzzyMatchV2(
     // Since O(nm) algorithm can be prohibitively expensive for large input,
     // we fall back to the greedy algorithm.
     if (input.size > 200) {
-        return FuzzyMatchV1(caseSensitive, normalize, forward, input, pattern, withPos)
+        return FuzzyMatchV1(caseSensitive, input, pattern)
     }
 
     // Phase 1. Optimized search for ASCII string
@@ -415,7 +395,7 @@ fun FuzzyMatchV2(
 
         if (char == pchar) {
             if (pidx < M) {
-                F[pidx] = off.toInt()
+                F[pidx] = off
                 pidx++
                 pchar = pattern[min(pidx, M-1)]
             }
@@ -426,10 +406,10 @@ fun FuzzyMatchV2(
             val score = (scoreMatch + B[off] * bonusFirstCharMultiplier).toShort()
             H0[off] = score
             C0[off] = 1
-            if (M == 1 && (forward && score > maxScore || !forward && score >= maxScore)) {
+            if (M == 1 && score > maxScore) {
                 maxScore = score
                 maxScorePos = off
-                if (forward && B[off] >= bonusBoundary) {
+                if (B[off] >= bonusBoundary) {
                     break
                 }
             }
@@ -452,12 +432,7 @@ fun FuzzyMatchV2(
 
     if (M == 1) {
         val result = Result(minIdx + maxScorePos, minIdx + maxScorePos + 1, maxScore.toInt())
-        return if (!withPos) {
-            result
-        } else {
-//            val pos = intArrayOf(minIdx + maxScorePos)
-            result
-        }
+        return result
     }
 
     // Phase 3. Fill in score matrix (H)
@@ -475,7 +450,7 @@ fun FuzzyMatchV2(
     val Psub = pattern.copyOfRange(1, min(1 + Fsub.size, pattern.size))
 
     for (off in Fsub.indices) {
-        val f = Fsub[off].toInt()
+        val f = Fsub[off]
         pchar = Psub[off]
         if (!caseSensitive) {
             pchar = pchar.lowercaseChar()
@@ -530,7 +505,7 @@ fun FuzzyMatchV2(
 
             inGap = s1 < s2
             val score = maxOf(maxOf(s1, s2), 0)
-            if (pidx == M - 1 && (forward && score > maxScore || !forward && score >= maxScore)) {
+            if (pidx == M - 1 && score > maxScore) {
                 maxScore = score
                 maxScorePos = col
             }
@@ -538,52 +513,17 @@ fun FuzzyMatchV2(
         }
     }
 
-    // Phase 4. (Optional) Backtrace to find character positions
-    val pos = mutableListOf<Int>()
-    var j = f0
-    if (withPos) {
-        var i = M - 1
-        j = maxScorePos
-        var preferMatch = true
-        while (true) {
-            val I = i * width
-            val j0 = j - f0
-            val s = H[I + j0]
-
-            var s1: Short = 0
-            var s2: Short = 0
-            if (i > 0 && j >= F[i].toInt()) {
-                s1 = H[I - width + j0 - 1].toShort()
-            }
-            if (j > F[i].toInt()) {
-                s2 = H[I + j0 - 1].toShort()
-            }
-
-            if (s > s1 && (s > s2 || s.toShort() == s2 && preferMatch)) {
-                pos.add(j + minIdx)
-                if (i == 0) {
-                    break
-                }
-                i--
-            }
-            preferMatch = C[I + j0] > 1 || I + width + j0 + 1 < C.size && C[I + width + j0 + 1] > 0
-            j--
-        }
-    }
     // Start offset we return here is only relevant when begin tiebreak is used.
     // However, finding the accurate offset requires backtracking, and we don't
     // want to pay extra cost for the option that has lost its importance.
-    return Result(minIdx + j, minIdx + maxScorePos + 1, maxScore.toInt())
+    return Result(minIdx + f0, minIdx + maxScorePos + 1, maxScore.toInt())
 }
 
 
 fun FuzzyMatchV1(
     caseSensitive: Boolean,
-    normalize: Boolean,
-    forward: Boolean,
     text: CharArray,
     pattern: CharArray, // Using CharArray for rune equivalent in Kotlin
-    withPos: Boolean,
 ): Result {
     if (pattern.isEmpty()) {
         return Result(0, 0, 0)
@@ -602,17 +542,13 @@ fun FuzzyMatchV1(
     val lenPattern = pattern.size
 
     for (index in 0 until lenRunes) {
-        var char = text.get(indexAt(index, lenRunes, forward))
-
+        var char = text.get(index)
         if (!caseSensitive) {
             char = char.lowercaseChar()
         }
 
-        if (normalize) {
-            char = normalizeRune(char)
-        }
-
-        var pchar = pattern[indexAt(pidx, lenPattern, forward)]
+        char = normalizeRune(char)
+        var pchar = pattern[pidx]
         if (!caseSensitive) {
             pchar = pchar.lowercaseChar()
         }
@@ -630,15 +566,12 @@ fun FuzzyMatchV1(
     if (sidx >= 0 && eidx >= 0) {
         pidx--
         for (index in eidx - 1 downTo sidx) {
-            val tidx = indexAt(index, lenRunes, forward)
-            var char = text.get(tidx)
-
+            var char = text.get(index)
             if (!caseSensitive) {
                 char = char.lowercaseChar()
             }
 
-            val pidx_ = indexAt(pidx, lenPattern, forward)
-            var pchar = pattern[pidx_]
+            var pchar = pattern[pidx]
             if (!caseSensitive) {
                 pchar = pchar.lowercaseChar()
             }
@@ -650,12 +583,7 @@ fun FuzzyMatchV1(
             }
         }
 
-        if (!forward) {
-            sidx = lenRunes - eidx
-            eidx = lenRunes - sidx
-        }
-
-        val (score, _) = calculateScore(caseSensitive, normalize, text, pattern, sidx, eidx, withPos)
+        val (score, _) = calculateScore(caseSensitive, text, pattern, sidx, eidx)
         return Result(sidx, eidx, score)
     }
 

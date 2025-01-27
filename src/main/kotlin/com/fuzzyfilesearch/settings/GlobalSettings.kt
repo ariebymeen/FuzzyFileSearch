@@ -62,6 +62,7 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         var searchOpenFilesActions: Array<Array<String>> = arrayOf(arrayOf("SearchOpenFiles", "", "alt shift O"))
         var openInVerticalSplit: String = "ctrl S"
         var openInHorizontalSplit: String = "ctrl H"
+        var openInActiveEditor: String = "ctrl U"
         var showEditorPreview = true
         var editorPreviewLocation = EditorLocation.EDITOR_RIGHT
         var editorSizeRatio = 0.5

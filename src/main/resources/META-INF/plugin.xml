@@ -33,6 +33,7 @@
             <li>Add TAB action listener to scroll through the list of results</li>
             <li>Add ability to open a file in horizontal and vertical split using shortcuts</li>
             <li>Fix issue with incorrect text clipping</li>
+            <li>Fix small issue with search algo</li>
         </ul>
         ]]>
     </change-notes>

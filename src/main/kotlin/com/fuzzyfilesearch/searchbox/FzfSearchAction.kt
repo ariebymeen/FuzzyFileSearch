@@ -33,7 +33,7 @@ class FzfSearchAction(val files: List<String>,
         val scores = mutableListOf<Int>()
         val queryChars = if (!caseSensitive) query.toCharArray() else query.lowercase().toCharArray()
         for (file in searchFiles) {
-            val result = searchFunc(caseSensitive, true, true, file.toCharArray(), queryChars, false)
+            val result = searchFunc(caseSensitive, file.toCharArray(), queryChars)
             if (result.score > 0) {
                 results.add(file)
                 scores.add(result.score)

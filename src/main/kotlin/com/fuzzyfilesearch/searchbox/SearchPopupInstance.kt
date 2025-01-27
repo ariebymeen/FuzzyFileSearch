@@ -110,7 +110,7 @@ class SearchPopupInstance(
         }
 
         mMaxPopupHeight = popupHeight
-        mCellRenderer.maxWidth = popupWidth - 15
+        mCellRenderer.maxWidth = popupWidth - 20
 
         // Set the position of the splitter between the search results list and the editor view
         val splitPaneSizeAttr = if (mSettings.editorPreviewLocation == EditorLocation.EDITOR_BELOW) popupHeight else popupWidth
@@ -158,8 +158,9 @@ class SearchPopupInstance(
     fun handleActionShortcut(type: ShortcutType) {
         when (type) {
             ShortcutType.TAB_PRESSED -> mResultsList.selectedIndex += 1
-            ShortcutType.OPEN_FILE_IN_VERTICAL_SPLIT -> openFileAndClosePopup(OpenLocation.SPLIT_VIEW_VERTICAL)
-            ShortcutType.OPEN_FILE_IN_HORIZONTAL_SPLIT -> openFileAndClosePopup(OpenLocation.SPLIT_VIEW_HORIZONTAL)
+            ShortcutType.OPEN_FILE_IN_VERTICAL_SPLIT    -> openFileAndClosePopup(OpenLocation.SPLIT_VIEW_VERTICAL)
+            ShortcutType.OPEN_FILE_IN_HORIZONTAL_SPLIT  -> openFileAndClosePopup(OpenLocation.SPLIT_VIEW_HORIZONTAL)
+            ShortcutType.OPEN_FILE_IN_ACTIVE_EDITOR     -> openFileAndClosePopup(OpenLocation.MAIN_VIEW)
         }
     }
 
@@ -365,6 +366,15 @@ class SearchPopupInstance(
         if (mSettings.openInVerticalSplit.isNotEmpty()) {
             val action = ShortcutAction("OpenInVerticalSplit", ShortcutType.OPEN_FILE_IN_VERTICAL_SPLIT)
             val tabShortcut = CustomShortcutSet(KeyStroke.getKeyStroke(mSettings.openInVerticalSplit))
+            action.registerCustomShortcutSet(tabShortcut, mSearchField)
+        }
+        if (mSettings.openInActiveEditor.isNotEmpty()) {
+            val action = ShortcutAction("OpenInActiveEditor", ShortcutType.OPEN_FILE_IN_ACTIVE_EDITOR)
+            val tt = KeyStroke.getKeyStroke(mSettings.openInActiveEditor)
+            if (tt == null) {
+                println("Invalid shortcut: ${mSettings.openInActiveEditor}")
+            }
+            val tabShortcut = CustomShortcutSet(KeyStroke.getKeyStroke(mSettings.openInActiveEditor))
             action.registerCustomShortcutSet(tabShortcut, mSearchField)
         }
     }

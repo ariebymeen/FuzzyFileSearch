@@ -11,11 +11,12 @@ import javax.swing.*
 import javax.swing.text.AttributeSet
 import javax.swing.text.StyleConstants
 
-fun computeNofCharsToRemove(textPane: JTextPane, maxWidth: Int): Int {
+fun computeNofCharsToRemove(textPane: JTextPane, maxWidth: Int): Pair<Int, Int> {
     val doc = textPane.styledDocument
 
     var totalWidth = 0
     var charsToRemove = 0
+    var dotsTextWidth = 0
 
     var elementIndex = 0
     val nofChars = doc.length
@@ -27,16 +28,16 @@ fun computeNofCharsToRemove(textPane: JTextPane, maxWidth: Int): Int {
         var segmentWidth = fontMetrics.stringWidth(segmentText)
         if (totalWidth > maxWidth) {
             charsToRemove += segmentText.length
-            break;
+            break
         }
         if (totalWidth + segmentWidth > maxWidth) {
             // Compute the nof chars to remove. Start with initial guess from mean char width
-            val dotsTextWidth = fontMetrics.stringWidth("...")
+            dotsTextWidth = fontMetrics.stringWidth(".")
             var nofRemovedChars: Int = (Math.max(segmentWidth + totalWidth - maxWidth, 1)) / segmentText.length
             val segmentLen = segmentText.length
             segmentText = doc.getText(elem.startOffset, elem.endOffset - elem.startOffset - nofRemovedChars)
             segmentWidth = fontMetrics.stringWidth(segmentText)
-            while (totalWidth + segmentWidth + dotsTextWidth > maxWidth && nofRemovedChars < segmentLen) {
+            while (totalWidth + segmentWidth + dotsTextWidth * 2 > maxWidth && nofRemovedChars < segmentLen) {
                 // Iteratively move to the chars until the text including '...' fits into the max width
                 segmentWidth -= fontMetrics.stringWidth(segmentText.get(segmentLen - nofRemovedChars - 1).toString())
                 ++nofRemovedChars
@@ -48,7 +49,11 @@ fun computeNofCharsToRemove(textPane: JTextPane, maxWidth: Int): Int {
         elementIndex = elem.endOffset + 1
     }
 
-    return charsToRemove
+    // Now we can compute the number of dots that fit into the remaining space
+    val spaceLeft = maxWidth - totalWidth
+    val nofDots = Math.floor(spaceLeft / dotsTextWidth.toDouble()).toInt()
+
+    return Pair(charsToRemove, nofDots)
 }
 
 // Helper function to get a Font object based on style attributes
@@ -173,13 +178,13 @@ class SearchDialogCellRenderer(val mProject: Project,
         }
 
         // If text is too wide for the view, remove and place ... at the end
-        val nofCharsToRemove = computeNofCharsToRemove(item.panel!!, maxWidth)
+        val (nofCharsToRemove, nofDots) = computeNofCharsToRemove(item.panel!!, maxWidth)
         if (maxWidth > 0 && nofCharsToRemove > 0) {
             // Cutoff text. Compute the number of chars to remove + 3, which will be replaced by ...
             doc.remove(doc.length - nofCharsToRemove, nofCharsToRemove)
             val elem = doc.getCharacterElement(doc.length - 1)
             // insert ... with the same style as the last text
-            doc.insertString(doc.length, "...", elem.attributes)
+            doc.insertString(doc.length, ".".repeat(nofDots), elem.attributes)
         }
         if (maxWidth == 0) {
             println("Max width zero!")
