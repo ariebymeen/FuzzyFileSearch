@@ -67,6 +67,11 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         var editorPreviewLocation = EditorLocation.EDITOR_RIGHT
         var editorSizeRatio = 0.5
         var openWithSingleClick = true
+        var useDefaultFont = true
+        var selectedFontName = "JetBrains Mono"
+        var fontSize = 0
+        var useDefaultHighlightColor = true
+        var selectedColor = ""
     }
 
     fun getInstance() : GlobalSettings {

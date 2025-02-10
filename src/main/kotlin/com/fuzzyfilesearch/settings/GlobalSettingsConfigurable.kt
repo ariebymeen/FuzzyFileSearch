@@ -2,7 +2,12 @@ package com.fuzzyfilesearch.settings
 
 import com.intellij.openapi.options.Configurable
 import com.fuzzyfilesearch.actions.*
+import com.fuzzyfilesearch.searchbox.colorToHexWithAlpha
+import com.fuzzyfilesearch.searchbox.hexToColorWithAlpha
 import com.fuzzyfilesearch.showErrorNotification
+import com.intellij.ui.ColorPanel
+import com.intellij.ui.components.JBCheckBox
+import java.awt.GraphicsEnvironment
 import javax.swing.JComponent
 import javax.swing.KeyStroke
 
@@ -32,11 +37,17 @@ class GlobalSettingsConfigurable : Configurable {
         component.searchBoxPosY.value = settings.state.verticalPositionOnScreen
         component.searchBarHeight.value = settings.state.searchBarHeight
         component.searchItemHeight.value = settings.state.searchItemHeight
+        component.useDefaultFontCheckbox.isSelected = settings.state.useDefaultFont
+        component.fontSelectorDropdown.fontName = settings.state.selectedFontName
+        component.fontSize.value = settings.state.fontSize
+        component.useDefaultHighlightColorCheckbox.isSelected = settings.state.useDefaultHighlightColor
+        component.colorSelectorElement.selectedColor = hexToColorWithAlpha(settings.state.selectedColor)
+
         component.shrinkSearchAreaWithResults.isSelected = settings.state.shrinkViewDynamically
         component.searchOnlyFilesInVersionControlCheckbox.isSelected = settings.state.searchOnlyFilesInVersionControl
         component.openFilesSingleClick.isSelected = settings.state.openWithSingleClick
 
-        component.showEditorPreviewCheckbox.isSelected  = settings.state.showEditorPreview
+        component.showEditorPreviewCheckbox.isSelected = settings.state.showEditorPreview
         component.editorPreviewLocation.selectedItem = settings.state.editorPreviewLocation
         component.editorSizeRatio.value = settings.state.editorSizeRatio
 
@@ -81,6 +92,11 @@ class GlobalSettingsConfigurable : Configurable {
                 || settings.state.verticalPositionOnScreen != component.searchBoxPosY.value
                 || settings.state.searchBarHeight != component.searchBarHeight.value
                 || settings.state.searchItemHeight != component.searchItemHeight.value
+                || settings.state.useDefaultFont != component.useDefaultFontCheckbox.isSelected
+                || settings.state.selectedFontName != component.fontSelectorDropdown.fontName
+                || settings.state.fontSize != component.fontSize.value
+                || settings.state.useDefaultHighlightColor != component.useDefaultHighlightColorCheckbox.isSelected
+                || settings.state.selectedColor != colorToHexWithAlpha(component.colorSelectorElement.selectedColor)
                 || settings.state.shrinkViewDynamically != component.shrinkSearchAreaWithResults.isSelected
                 || settings.state.openWithSingleClick != component.openFilesSingleClick.isSelected
                 || settings.state.showEditorPreview != component.showEditorPreviewCheckbox.isSelected
@@ -106,6 +122,8 @@ class GlobalSettingsConfigurable : Configurable {
                 component.setEditorScalingFields()
             }
         }
+        component.fontSelectorDropdown.isEnabled = !component.useDefaultFontCheckbox.isSelected
+        component.colorSelectorElement.isEnabled = !component.useDefaultHighlightColorCheckbox.isSelected
         return modified
     }
 
@@ -122,39 +140,65 @@ class GlobalSettingsConfigurable : Configurable {
         }
 
         if (!isEqual(settings.state.openRelativeFileActions, component.openRelativeFileActionsTable.getData())) {
-            unregisterActions(settings.state.openRelativeFileActions, OpenRelativeFileAction::getActionName, OpenRelativeFileAction::getActionShortcut)
+            unregisterActions(
+                settings.state.openRelativeFileActions,
+                OpenRelativeFileAction::getActionName,
+                OpenRelativeFileAction::getActionShortcut
+            )
             settings.state.openRelativeFileActions = component.openRelativeFileActionsTable.getData()
             registerQuickFileSearchActions(settings.state.openRelativeFileActions, settings.state)
         }
 
         if (!isEqual(settings.state.searchRelativeFileActions, component.searchRelativeFileActionsTable.getData())) {
-            unregisterActions(settings.state.searchRelativeFileActions, SearchRelativeFileAction::getActionName, SearchRelativeFileAction::getActionShortcut)
+            unregisterActions(
+                settings.state.searchRelativeFileActions,
+                SearchRelativeFileAction::getActionName,
+                SearchRelativeFileAction::getActionShortcut
+            )
             settings.state.searchRelativeFileActions = component.searchRelativeFileActionsTable.getData()
             registerSearchRelativeFileActions(settings.state.searchRelativeFileActions, settings.state)
         }
 
         if (!isEqual(settings.state.searchPathActions, component.searchPathActionsTable.getData())) {
-            unregisterActions(settings.state.searchPathActions, SearchFileInPathAction::getActionName, SearchFileInPathAction::getActionShortcut)
+            unregisterActions(
+                settings.state.searchPathActions,
+                SearchFileInPathAction::getActionName,
+                SearchFileInPathAction::getActionShortcut
+            )
             settings.state.searchPathActions = component.searchPathActionsTable.getData()
             registerSearchFileInPathActions(settings.state.searchPathActions, settings.state)
         }
 
         if (!isEqual(settings.state.searchRecentFilesActions, component.searchRecentFiles.getData())) {
-            unregisterActions(settings.state.searchRecentFilesActions, SearchRecentFilesAction::getActionName, SearchRecentFilesAction::getActionShortcut)
-            settings.state.searchRecentFilesActions= component.searchRecentFiles.getData()
+            unregisterActions(
+                settings.state.searchRecentFilesActions,
+                SearchRecentFilesAction::getActionName,
+                SearchRecentFilesAction::getActionShortcut
+            )
+            settings.state.searchRecentFilesActions = component.searchRecentFiles.getData()
             registerSearchRecentFiles(settings.state.searchRecentFilesActions, settings.state)
         }
 
         if (!isEqual(settings.state.searchOpenFilesActions, component.searchOpenFiles.getData())) {
-            unregisterActions(settings.state.searchOpenFilesActions, SearchOpenFilesAction::getActionName, SearchOpenFilesAction::getActionShortcut)
+            unregisterActions(
+                settings.state.searchOpenFilesActions,
+                SearchOpenFilesAction::getActionName,
+                SearchOpenFilesAction::getActionShortcut
+            )
             settings.state.searchOpenFilesActions = component.searchOpenFiles.getData()
             registerSearchOpenFiles(settings.state.searchOpenFilesActions, settings.state)
         }
 
-        if (!isEqual(settings.state.searchFilesMatchingPatterActions, component.searchFileMatchingPatternActionsTable.getData())) {
-            unregisterActions(settings.state.searchFilesMatchingPatterActions,
-                              SearchFilesWithPatternAction::getActionName,
-                              SearchFilesWithPatternAction::getActionShortcut)
+        if (!isEqual(
+                settings.state.searchFilesMatchingPatterActions,
+                component.searchFileMatchingPatternActionsTable.getData()
+            )
+        ) {
+            unregisterActions(
+                settings.state.searchFilesMatchingPatterActions,
+                SearchFilesWithPatternAction::getActionName,
+                SearchFilesWithPatternAction::getActionShortcut
+            )
             settings.state.searchFilesMatchingPatterActions = component.searchFileMatchingPatternActionsTable.getData()
             registerSearchFileMatchingPatternActions(settings.state.searchFilesMatchingPatterActions, settings.state)
         }
@@ -183,6 +227,11 @@ class GlobalSettingsConfigurable : Configurable {
         settings.state.verticalPositionOnScreen = component.searchBoxPosY.value as Double
         settings.state.searchBarHeight = component.searchBarHeight.value as Int
         settings.state.searchItemHeight = component.searchItemHeight.value as Int
+        settings.state.useDefaultFont = component.useDefaultFontCheckbox.isSelected
+        settings.state.selectedFontName = component.fontSelectorDropdown.fontName as String
+        settings.state.fontSize = component.fontSize.value as Int
+        settings.state.useDefaultHighlightColor = component.useDefaultHighlightColorCheckbox.isSelected
+        settings.state.selectedColor = colorToHexWithAlpha(component.colorSelectorElement.selectedColor)
         settings.state.shrinkViewDynamically = component.shrinkSearchAreaWithResults.isSelected
         settings.state.openWithSingleClick = component.openFilesSingleClick.isSelected
         settings.state.showEditorPreview = component.showEditorPreviewCheckbox.isSelected
@@ -195,7 +244,7 @@ class GlobalSettingsConfigurable : Configurable {
     }
 
     override fun getDisplayName(): String {
-        return "Quick File Search Settings"
+        return "FuzzyFileSearch Settings"
     }
 
 }

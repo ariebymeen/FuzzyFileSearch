@@ -5,15 +5,13 @@ plugins {
 }
 
 group = "com.fuzzyfilesearch"
-version = "0.1.5"
+version = "0.1.7"
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0") // Latest JUnit 5 version
-    testImplementation("org.jetbrains.kotlin:kotlin-test") // Kotlin test utilities
     implementation(kotlin("test"))
 }
 

@@ -97,6 +97,7 @@ class SearchDialogCellRenderer(val mProject: Project,
                                val mSettings: GlobalSettings.SettingsState) : ListCellRenderer<PopupInstanceItem> {
     val basePath = mProject.basePath!!
     var maxWidth = 0
+    val font = getFont(mSettings)
 
     override fun getListCellRendererComponent(
         list: JList<out PopupInstanceItem>,
@@ -111,10 +112,10 @@ class SearchDialogCellRenderer(val mProject: Project,
             value.panel!!.isOpaque = true
             value.panel?.preferredHeight = mSettings.searchItemHeight
             value.panel?.maximumHeight = mSettings.searchItemHeight
-            value.panel?.baselineResizeBehavior
+            value.panel?.font = font
             setText(value, index)
         } else {
-            val formattedNumber = String.format("  %02d  -  ", index)
+            val formattedNumber = String.format(" %02d - ", index)
             value.panel!!.styledDocument.remove(0, formattedNumber.length)
             value.panel!!.styledDocument.insertString(0, formattedNumber, value.panel!!.getStyle("Tiny"))
         }
@@ -138,7 +139,7 @@ class SearchDialogCellRenderer(val mProject: Project,
         }
 
         val doc = item.panel!!.styledDocument
-        val formattedNumber = String.format("  %02d  -  ", index)
+        val formattedNumber = String.format(" %02d - ", index)
         doc.insertString(doc.length, formattedNumber, tinyStyle)
         when (mSettings.filePathDisplayType) {
             PathDisplayType.FILENAME_ONLY -> {

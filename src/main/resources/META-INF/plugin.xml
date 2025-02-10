@@ -21,6 +21,7 @@
     <li> Assign shortcuts to search for files with certain extensions or patterns </li>
     <li> Quickly open file in vertical and horizontal split </li>
     <li> Jump between files with shortcuts </li>
+    <li> Change font and default colorscheme </li>
     </ul>
 
     Can be integrated with ideavim by using ide actions: map <Leader>pf <action>(com.fuzzyfilesearch.<ACTION_NAME>)
@@ -32,6 +33,7 @@
         <ul>
             <li>Add TAB action listener to scroll through the list of results</li>
             <li>Add ability to open a file in horizontal and vertical split using shortcuts</li>
+            <li>Add ability to open a file in active editor using shortcut</li>
             <li>Fix issue with incorrect text clipping</li>
             <li>Fix small issue with search algo</li>
         </ul>

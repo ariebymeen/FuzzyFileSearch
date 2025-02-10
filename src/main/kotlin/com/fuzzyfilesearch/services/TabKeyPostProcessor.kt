@@ -16,7 +16,7 @@ class TabKeyPostProcessor(private val mProject: Project) {
                 val keyEvent = event
                 if (keyEvent.id == KeyEvent.KEY_PRESSED && keyEvent.keyCode == KeyEvent.VK_TAB) {
                     val instance = mProject.service<PopupMediator>().getPopupInstance()
-                    if (instance != null) {
+                    if (instance?.mPopup != null && !instance.mPopup!!.isDisposed) {
                         instance.handleActionShortcut(ShortcutType.TAB_PRESSED)
                         keyEvent.consume() // Prevent default behavior
                     }

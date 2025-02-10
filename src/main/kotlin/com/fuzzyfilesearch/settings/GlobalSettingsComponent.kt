@@ -2,12 +2,11 @@ package com.fuzzyfilesearch.settings
 
 import com.intellij.icons.AllIcons
 import com.intellij.ide.DataManager
+import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.Presentation
-import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.ui.ComboBox
-import com.intellij.ui.JBColor
-import com.intellij.ui.JBIntSpinner
+import com.intellij.ui.*
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextArea
@@ -22,21 +21,26 @@ class GlobalSettingsComponent {
     var excludedDirs = JBTextArea()
     var nofVisibleFilesInSearchViewSelector = JBIntSpinner(10, 1, 100)
     var popupSizePolicySelector = ComboBox(PopupSizePolicy.values());
-    val searchBoxWidth = JSpinner(SpinnerNumberModel(0.3.toDouble(), 0.1.toDouble(), 1.0.toDouble(), 0.05.toDouble()))
-    val searchBoxHeight = JSpinner(SpinnerNumberModel(0.3.toDouble(), 0.1.toDouble(), 1.0.toDouble(), 0.05.toDouble()))
-    val searchBoxPosX = JSpinner(SpinnerNumberModel(0.5.toDouble(), 0.1.toDouble(), 1.0.toDouble(), 0.01.toDouble()))
-    val searchBoxPosY = JSpinner(SpinnerNumberModel(0.5.toDouble(), 0.1.toDouble(), 1.0.toDouble(), 0.01.toDouble()))
+    val searchBoxWidth = JSpinner(SpinnerNumberModel(0.3, 0.1, 1.0, 0.05))
+    val searchBoxHeight = JSpinner(SpinnerNumberModel(0.3, 0.1, 1.0, 0.05))
+    val searchBoxPosX = JSpinner(SpinnerNumberModel(0.5, 0.1, 1.0, 0.01))
+    val searchBoxPosY = JSpinner(SpinnerNumberModel(0.5, 0.1, 1.0, 0.01))
     var searchBoxWidthPx = JBIntSpinner(700, 50, 10000, 5)
     var searchBoxHeightPx = JBIntSpinner(500, 50, 10000, 5)
     var minSizeEditorPx = JBIntSpinner(200, 50, 5000, 5)
     var searchBarHeight = JBIntSpinner(30, 10, 300)
     var searchItemHeight = JBIntSpinner(30, 10, 100)
+    var useDefaultFontCheckbox = JBCheckBox()
+    var fontSelectorDropdown = FontComboBox()
+    var useDefaultHighlightColorCheckbox = JBCheckBox()
+    var colorSelectorElement = ColorPanel()
+    var fontSize = JBIntSpinner(13, 1, 30)
     var shrinkSearchAreaWithResults = JBCheckBox()
     var searchCaseSensitiviyCheckbox = JBCheckBox()
     var showEditorPreviewCheckbox = JBCheckBox()
     var openFilesSingleClick = JBCheckBox()
     var editorPreviewLocation = ComboBox(EditorLocation.values());
-    val editorSizeRatio = JSpinner(SpinnerNumberModel(0.5.toDouble(), 0.1.toDouble(), 1.0.toDouble(), 0.01.toDouble()))
+    val editorSizeRatio = JSpinner(SpinnerNumberModel(0.5, 0.1, 1.0, 0.01))
     var searchOnlyFilesInVersionControlCheckbox = JBCheckBox()
     var pathDisplayDropdownBox = ComboBox(PathDisplayType.values())
     var modifierKeyDropdownBox = ComboBox(ModifierKey.values())
@@ -97,7 +101,7 @@ class GlobalSettingsComponent {
                     Set the shortcut for opening the selected file in a horizontal split view
                 """.trimIndent()), openFileInHorizontalSplitShortcutInputBox)
             .addLabeledComponent(
-                createLabelWithDescription("Shortcut open file in the currently active editor", """
+                createLabelWithDescription("Shortcut open file in aive editor", """
                     Apart from using enter, a custom shortcut can be added to open the currently selected file in the active edito
                 """.trimIndent()), openFileInActiveEditorShortcutInputBox)
             // height and width of search box
@@ -139,6 +143,25 @@ class GlobalSettingsComponent {
             .addLabeledComponent(
                 createLabelWithDescription("Height of the search items in pixels", """
                 """.trimIndent()), searchItemHeight)
+            .addLabeledComponent(
+                createLabelWithDescription("Use default popup font", """
+                    If checked use the same font as the editor, else a font can be selected
+                """.trimIndent()), useDefaultFontCheckbox)
+            .addLabeledComponent(
+                createLabelWithDescription("Select popup font", """
+                    Choose the font to be used in poupp
+                """.trimIndent()), fontSelectorDropdown)
+            .addLabeledComponent(
+                createLabelWithDescription("Popup font size", """
+                    Choose the font size
+                """.trimIndent()), fontSize)
+            .addLabeledComponent(
+                createLabelWithDescription("Use default highlight color", """
+                """.trimIndent()), useDefaultHighlightColorCheckbox)
+            .addLabeledComponent(
+                createLabelWithDescription("Choose the highlight color", """
+                    Choose the highlight color to be used in popup
+                """.trimIndent()), colorSelectorElement)
             .addLabeledComponent(
                 createLabelWithDescription("Shrink the search area to only the found results", """
                     If checked the search area will shrink to the number of results. Else the search area height

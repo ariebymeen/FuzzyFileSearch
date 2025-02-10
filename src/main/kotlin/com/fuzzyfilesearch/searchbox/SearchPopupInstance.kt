@@ -9,6 +9,7 @@ import com.fuzzyfilesearch.settings.ModifierKey
 import com.fuzzyfilesearch.settings.PopupSizePolicy
 import com.intellij.openapi.actionSystem.CustomShortcutSet
 import com.intellij.openapi.components.service
+import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx
 import com.intellij.openapi.project.Project
@@ -31,6 +32,7 @@ import javax.swing.event.ListSelectionEvent
 import javax.swing.event.ListSelectionListener
 import kotlin.math.max
 import kotlin.math.min
+import com.intellij.openapi.util.Disposer
 
 
 enum class OpenLocation {
@@ -156,6 +158,9 @@ class SearchPopupInstance(
     }
 
     fun handleActionShortcut(type: ShortcutType) {
+        if (mPopup == null || mPopup!!.isDisposed) {
+            return
+        }
         when (type) {
             ShortcutType.TAB_PRESSED -> mResultsList.selectedIndex += 1
             ShortcutType.OPEN_FILE_IN_VERTICAL_SPLIT    -> openFileAndClosePopup(OpenLocation.SPLIT_VIEW_VERTICAL)
@@ -285,14 +290,19 @@ class SearchPopupInstance(
     }
 
     private fun createPopupInstance() {
+        val font = getFont(mSettings)
+        println("Foreground olor!: ${mResultsList.foreground}")
+
         val border: EmptyBorder = JBUI.Borders.empty(2, 5, 0, 5)
         mSearchField.border = border
         mSearchField.toolTipText = "Type to search..."
         mSearchField.isFocusable = true
+        mSearchField.font = font
 
         mExtensionField.border = border
         mExtensionField.toolTipText = ""
         mExtensionField.isEditable = false
+        mExtensionField.font = font
         setSearchBarHeigth(mSettings)
         setExtensionsField(mExtensions)
 
@@ -325,6 +335,7 @@ class SearchPopupInstance(
         mMainPanel.add(searchBar, BorderLayout.NORTH)
 
         mResultsList.cellRenderer = mCellRenderer
+        mResultsList.selectionBackground = getForegroundColor(mSettings)
         mResultsList.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent?) { mouseClickedEvent() }
         })
@@ -351,6 +362,12 @@ class SearchPopupInstance(
         SwingUtilities.invokeLater {
             registerCustomShortcutActions()
         }
+        Disposer.register(mPopup!!) {
+            for (listener in mSearchField.keyListeners) {
+                mSearchField.removeKeyListener(listener)
+            }
+        }
+
     }
 
     private fun registerCustomShortcutActions() {
