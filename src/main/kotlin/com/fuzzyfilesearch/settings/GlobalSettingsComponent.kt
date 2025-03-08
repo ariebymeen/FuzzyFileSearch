@@ -39,7 +39,7 @@ class GlobalSettingsComponent {
     var searchCaseSensitiviyCheckbox = JBCheckBox()
     var showEditorPreviewCheckbox = JBCheckBox()
     var openFilesSingleClick = JBCheckBox()
-    var editorPreviewLocation = ComboBox(EditorLocation.values());
+    var editorPreviewLocation = ComboBox(EditorLocation.values())
     val editorSizeRatio = JSpinner(SpinnerNumberModel(0.5, 0.1, 1.0, 0.01))
     var searchOnlyFilesInVersionControlCheckbox = JBCheckBox()
     var pathDisplayDropdownBox = ComboBox(PathDisplayType.values())

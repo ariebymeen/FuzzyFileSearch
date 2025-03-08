@@ -1,13 +1,27 @@
 package com.fuzzyfilesearch.settings
 
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.fileChooser.FileChooser
+import com.intellij.openapi.fileChooser.FileChooserDescriptor
+import com.intellij.openapi.vfs.VfsUtil
+import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.fileChooser.FileSaverDescriptor
+import com.intellij.openapi.fileChooser.FileSaverDialog
+import com.intellij.openapi.fileChooser.FileChooserFactory
+import com.intellij.openapi.vfs.VirtualFileWrapper
+import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.table.JBTable
 import com.intellij.ui.util.preferredHeight
 import java.awt.BorderLayout
+import java.io.IOException
 import javax.swing.BoxLayout
 import javax.swing.JButton
 import javax.swing.table.DefaultTableModel
+
 
 class ActionsTable(columnNames: Array<String>,
                    private val emptyItem: Array<String>) : JBPanel<ActionsTable>() {
@@ -64,6 +78,18 @@ class ActionsTable(columnNames: Array<String>,
                 }
             }
             add(duplicateButton)
+            val exportButton = JButton("Export").apply {
+                addActionListener {
+                    exportToFile()
+                }
+            }
+            add(exportButton)
+            val importButton = JButton("Import").apply {
+                addActionListener {
+                    importFromFile()
+                }
+            }
+            add(importButton)
         }
         add(formPanel, BorderLayout.SOUTH)
     }
@@ -105,5 +131,40 @@ class ActionsTable(columnNames: Array<String>,
             mTableModel.addRow(row)
         }
         resize()
+    }
+
+    fun exportToFile() {
+        val gson: Gson = Gson()
+        val jsonData: String = gson.toJson(getData())
+
+        // Open a file chooser where the user can specify the file name
+        val descriptor = FileSaverDescriptor("Save JSON File", "Choose a location to save")
+        val dialog: FileSaverDialog = FileChooserFactory.getInstance().createSaveFileDialog(descriptor, null)
+        val fileWrapper: VirtualFileWrapper? = dialog.save(null as VirtualFile?, "exported_data.json")
+
+        fileWrapper?.file?.let { file ->
+            ApplicationManager.getApplication().runWriteAction {
+                try {
+                    file.writeText(jsonData)
+                } catch (e: IOException) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
+
+    fun importFromFile() {
+        val descriptor = FileChooserDescriptor(true, false, false, false, false, false)
+        val file = FileChooser.chooseFile(descriptor, null, null) ?: return
+
+        try {
+            val content = VfsUtil.loadText(file)
+            val gson = Gson()
+            val listType = object : TypeToken<Array<Array<String>>>() {}.type
+            setData(gson.fromJson(content, listType))
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+        return
     }
 }
