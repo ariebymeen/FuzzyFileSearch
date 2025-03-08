@@ -1,17 +1,20 @@
 package com.fuzzyfilesearch.actions
 
-import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.project.Project
 import com.fuzzyfilesearch.searchbox.*
+import com.intellij.openapi.project.Project
 import com.fuzzyfilesearch.settings.GlobalSettings
 import com.fuzzyfilesearch.settings.PathDisplayType
 import com.fuzzyfilesearch.showErrorNotification
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx
+import com.intellij.openapi.vfs.VirtualFile
+import javax.swing.SwingConstants
 import kotlin.math.min
 
 class SearchForFiles(val settings: GlobalSettings.SettingsState) {
 
     var mFileNames: List<String>? = null
-    var mPopup: SearchPopupInstance? = null
+    var mPopup: SearchPopupInstance<PopupInstanceItem>? = null
     var mFiles = emptyList<PopupInstanceItem>()
     var mProject: Project? = null
     var fzfSearchAction: FzfSearchAction? = null
@@ -41,7 +44,7 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
             mFileNames = mFiles.map { file -> file.vf.name }
         }
 
-        mPopup = SearchPopupInstance(::getSortedFileList, settings,  project, extensions)
+        mPopup = SearchPopupInstance(SearchDialogCellRenderer(project, settings), ::getSortedFileList, ::openFile, settings,  project, extensions)
         mPopup!!.showPopupInstance()
         fzfSearchAction = FzfSearchAction(mFileNames!!, settings.searchCaseSensitivity)
     }
@@ -69,4 +72,7 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
         }
     }
 
+    fun openFile(item: PopupInstanceItem, location: OpenLocation) {
+        openFileWithLocation(item.vf, location, mProject!!)
+    }
 }

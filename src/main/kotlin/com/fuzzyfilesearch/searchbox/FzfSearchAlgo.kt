@@ -72,7 +72,7 @@ data class Result(
     val end  : Int,
     val score: Int)
 
-fun initFzf(): Boolean {
+public fun initFzf(): Boolean {
     bonusBoundaryWhite = bonusBoundary
     bonusBoundaryDelimiter = bonusBoundary + 1
     delimiterChars = if (File.separatorChar == '/') {

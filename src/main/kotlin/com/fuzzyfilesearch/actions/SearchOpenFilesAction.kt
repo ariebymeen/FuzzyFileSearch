@@ -5,10 +5,7 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.VirtualFile
 import com.fuzzyfilesearch.searchbox.PopupInstanceItem
-import com.fuzzyfilesearch.searchbox.SearchDialogCellRenderer
-import javax.swing.Popup
 
 class SearchOpenFilesAction(val action: Array<String>,
                             val settings: GlobalSettings.SettingsState) : AnAction(getActionName(action))
@@ -25,11 +22,11 @@ class SearchOpenFilesAction(val action: Array<String>,
     }
 
     companion object {
-        fun getActionName(actionSettins: Array<String>) : String {
-            return actionSettins[0]
+        fun getActionName(actionSettings: Array<String>) : String {
+            return actionSettings[0]
         }
-        fun getActionShortcut(actionSettins: Array<String>) : String {
-            return actionSettins[2]
+        fun getActionShortcut(actionSettings: Array<String>) : String {
+            return actionSettings[2]
         }
     }
 

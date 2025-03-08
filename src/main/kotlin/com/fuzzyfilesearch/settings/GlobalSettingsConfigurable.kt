@@ -5,9 +5,6 @@ import com.fuzzyfilesearch.actions.*
 import com.fuzzyfilesearch.searchbox.colorToHexWithAlpha
 import com.fuzzyfilesearch.searchbox.hexToColorWithAlpha
 import com.fuzzyfilesearch.showErrorNotification
-import com.intellij.ui.ColorPanel
-import com.intellij.ui.components.JBCheckBox
-import java.awt.GraphicsEnvironment
 import javax.swing.JComponent
 import javax.swing.KeyStroke
 
@@ -38,6 +35,7 @@ class GlobalSettingsConfigurable : Configurable {
         component.searchBarHeight.value = settings.state.searchBarHeight
         component.searchItemHeight.value = settings.state.searchItemHeight
         component.useDefaultFontCheckbox.isSelected = settings.state.useDefaultFont
+        component.showNumberInSearchView.isSelected = settings.state.showNumberInSearchView
         component.fontSelectorDropdown.fontName = settings.state.selectedFontName
         component.fontSize.value = settings.state.fontSize
         component.useDefaultHighlightColorCheckbox.isSelected = settings.state.useDefaultHighlightColor
@@ -55,12 +53,16 @@ class GlobalSettingsConfigurable : Configurable {
         component.searchFileMatchingPatternActionsTable.setData(settings.state.searchFilesMatchingPatterActions)
         component.searchRelativeFileActionsTable.setData(settings.state.searchRelativeFileActions)
         component.searchPathActionsTable.setData(settings.state.searchPathActions)
+        component.searchStringMatchingPattern.setData(settings.state.searchStringMatchingPatternActions)
 
         if (settings.state.searchRecentFilesActions.isNotEmpty()) {
             component.searchRecentFiles.setData(settings.state.searchRecentFilesActions)
         }
         if (settings.state.searchOpenFilesActions.isNotEmpty()) {
             component.searchOpenFiles.setData(settings.state.searchOpenFilesActions)
+        }
+        if (settings.state.searchAllFilesActions.isNotEmpty()) {
+            component.searchAllFiles.setData(settings.state.searchAllFilesActions)
         }
 
         component.setEditorScalingFields()
@@ -92,6 +94,7 @@ class GlobalSettingsConfigurable : Configurable {
                 || settings.state.verticalPositionOnScreen != component.searchBoxPosY.value
                 || settings.state.searchBarHeight != component.searchBarHeight.value
                 || settings.state.searchItemHeight != component.searchItemHeight.value
+                || settings.state.showNumberInSearchView != component.showNumberInSearchView.isSelected
                 || settings.state.useDefaultFont != component.useDefaultFontCheckbox.isSelected
                 || settings.state.selectedFontName != component.fontSelectorDropdown.fontName
                 || settings.state.fontSize != component.fontSize.value
@@ -109,6 +112,8 @@ class GlobalSettingsConfigurable : Configurable {
                 || !isEqual(settings.state.searchPathActions, component.searchPathActionsTable.getData())
                 || !isEqual(settings.state.searchRecentFilesActions, component.searchRecentFiles.getData())
                 || !isEqual(settings.state.searchOpenFilesActions, component.searchOpenFiles.getData())
+                || !isEqual(settings.state.searchAllFilesActions, component.searchAllFiles.getData())
+                || !isEqual(settings.state.searchStringMatchingPatternActions, component.searchStringMatchingPattern.getData())
 
         if (modified) {
             val error = checkSettings(component)
@@ -189,11 +194,17 @@ class GlobalSettingsConfigurable : Configurable {
             registerSearchOpenFiles(settings.state.searchOpenFilesActions, settings.state)
         }
 
-        if (!isEqual(
-                settings.state.searchFilesMatchingPatterActions,
-                component.searchFileMatchingPatternActionsTable.getData()
+        if (!isEqual(settings.state.searchAllFilesActions, component.searchAllFiles.getData())) {
+            unregisterActions(
+                settings.state.searchAllFilesActions,
+                { action -> action[0] },
+                { action -> action[1] },
             )
-        ) {
+            settings.state.searchAllFilesActions = component.searchAllFiles.getData()
+            registerSearchAllFiles(settings.state.searchAllFilesActions, settings.state)
+        }
+
+        if (!isEqual(settings.state.searchFilesMatchingPatterActions, component.searchFileMatchingPatternActionsTable.getData())) {
             unregisterActions(
                 settings.state.searchFilesMatchingPatterActions,
                 SearchFilesWithPatternAction::getActionName,
@@ -201,6 +212,16 @@ class GlobalSettingsConfigurable : Configurable {
             )
             settings.state.searchFilesMatchingPatterActions = component.searchFileMatchingPatternActionsTable.getData()
             registerSearchFileMatchingPatternActions(settings.state.searchFilesMatchingPatterActions, settings.state)
+        }
+
+        if (!isEqual(settings.state.searchStringMatchingPatternActions, component.searchStringMatchingPattern.getData())) {
+            unregisterActions(
+                settings.state.searchStringMatchingPatternActions,
+                GrepInFiles::getActionName,
+                GrepInFiles::getActionShortcut
+            )
+            settings.state.searchStringMatchingPatternActions = component.searchStringMatchingPattern.getData()
+            registerGrepInFilesActions(settings.state.searchStringMatchingPatternActions, settings.state)
         }
 
         val newSet = component.excludedDirs.text
@@ -227,6 +248,7 @@ class GlobalSettingsConfigurable : Configurable {
         settings.state.verticalPositionOnScreen = component.searchBoxPosY.value as Double
         settings.state.searchBarHeight = component.searchBarHeight.value as Int
         settings.state.searchItemHeight = component.searchItemHeight.value as Int
+        settings.state.showNumberInSearchView = component.showNumberInSearchView.isSelected
         settings.state.useDefaultFont = component.useDefaultFontCheckbox.isSelected
         settings.state.selectedFontName = component.fontSelectorDropdown.fontName as String
         settings.state.fontSize = component.fontSize.value as Int

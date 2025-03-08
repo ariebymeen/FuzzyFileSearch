@@ -1,6 +1,6 @@
 package com.fuzzyfilesearch.searchbox
 
-val normalized = mapOf(
+public val normalized = mapOf(
     0x00E1.toChar() to 'a', // WITH ACUTE, LATIN SMALL LETTER
     0x0103.toChar() to 'a', // WITH BREVE, LATIN SMALL LETTER
     0x01CE.toChar() to 'a', // WITH CARON, LATIN SMALL LETTER

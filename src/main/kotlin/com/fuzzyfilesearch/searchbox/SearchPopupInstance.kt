@@ -9,7 +9,6 @@ import com.fuzzyfilesearch.settings.ModifierKey
 import com.fuzzyfilesearch.settings.PopupSizePolicy
 import com.intellij.openapi.actionSystem.CustomShortcutSet
 import com.intellij.openapi.components.service
-import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx
 import com.intellij.openapi.project.Project
@@ -34,6 +33,9 @@ import kotlin.math.max
 import kotlin.math.min
 import com.intellij.openapi.util.Disposer
 
+abstract class CustomRenderer<T> : ListCellRenderer<T> {
+    var maxWidth = 0
+}
 
 enum class OpenLocation {
     SPLIT_VIEW_VERTICAL,
@@ -65,15 +67,17 @@ fun <T> debounce(delayMillis: Long = 30L, coroutineScope: CoroutineScope, action
 }
 
 
-class SearchPopupInstance(
-    val mGetSearchResultCallback: ((String) -> List<PopupInstanceItem>),
+class SearchPopupInstance<ListItemType> (
+    val mCellRenderer: CustomRenderer<ListItemType>,
+    val mGetSearchResultCallback: ((String) -> List<ListItemType>),
+    val mOpenItemCallback: (ListItemType, OpenLocation) -> Unit,
     val mSettings: GlobalSettings.SettingsState,
     var mProject: Project,
     var mExtensions: List<String>? = null
 ) {
     val mSearchField: JTextField = JTextField()
     val mExtensionField: JTextField = TransparentTextField(1.0F)
-    val mListModel: DefaultListModel<PopupInstanceItem> = DefaultListModel()
+    val mListModel: DefaultListModel<ListItemType> = DefaultListModel()
     val mResultsList = JXList(mListModel)
     var mPopup: JBPopup? = null
     var mMaxPopupHeight : Int? = null
@@ -81,7 +85,6 @@ class SearchPopupInstance(
     lateinit var mSplitPane: JSplitPane
     val mEditorView = SearchBoxEditor(mProject)
     val mMainPanel: JPanel = JPanel(BorderLayout())
-    val mCellRenderer = SearchDialogCellRenderer(mProject, mSettings)
     var mNofTimesClicked = 0
     var mLastClickedIndex: Int = -1
 
@@ -163,12 +166,11 @@ class SearchPopupInstance(
         }
         when (type) {
             ShortcutType.TAB_PRESSED -> mResultsList.selectedIndex += 1
-            ShortcutType.OPEN_FILE_IN_VERTICAL_SPLIT    -> openFileAndClosePopup(OpenLocation.SPLIT_VIEW_VERTICAL)
-            ShortcutType.OPEN_FILE_IN_HORIZONTAL_SPLIT  -> openFileAndClosePopup(OpenLocation.SPLIT_VIEW_HORIZONTAL)
-            ShortcutType.OPEN_FILE_IN_ACTIVE_EDITOR     -> openFileAndClosePopup(OpenLocation.MAIN_VIEW)
+            ShortcutType.OPEN_FILE_IN_VERTICAL_SPLIT    -> callOpenCallbackAndClosePopup(OpenLocation.SPLIT_VIEW_VERTICAL)
+            ShortcutType.OPEN_FILE_IN_HORIZONTAL_SPLIT  -> callOpenCallbackAndClosePopup(OpenLocation.SPLIT_VIEW_HORIZONTAL)
+            ShortcutType.OPEN_FILE_IN_ACTIVE_EDITOR     -> callOpenCallbackAndClosePopup(OpenLocation.MAIN_VIEW)
         }
     }
-
 
     private fun updateListedItems() {
         // TODO: Add indication that not all files are listed
@@ -212,7 +214,7 @@ class SearchPopupInstance(
         if (Character.isDigit(e.keyChar) && isModifierPressed) {
             e.consume() // Consume the event to prevent the character from being added
             mResultsList.selectedIndex = e.keyChar.digitToInt()
-            openFileAndClosePopup(OpenLocation.MAIN_VIEW)
+            callOpenCallbackAndClosePopup(OpenLocation.MAIN_VIEW)
             return
         }
     }
@@ -223,7 +225,7 @@ class SearchPopupInstance(
             KeyEvent.VK_DOWN -> mResultsList.selectedIndex += 1
             KeyEvent.VK_TAB -> mResultsList.selectedIndex += 1
             KeyEvent.VK_ENTER -> {
-                 openFileAndClosePopup(OpenLocation.MAIN_VIEW)
+                 callOpenCallbackAndClosePopup(OpenLocation.MAIN_VIEW)
             }
         }
         val isModifierPressed = if (this.mSettings.modifierKey == ModifierKey.CTRL) e.isControlDown else e.isAltDown
@@ -235,33 +237,13 @@ class SearchPopupInstance(
         }
     }
 
-    private fun openFileAndClosePopup(location: OpenLocation) {
+    private fun callOpenCallbackAndClosePopup(location: OpenLocation) {
         if (mResultsList.selectedIndex < 0) {
             return
         }
 
-        val selectedValue = mResultsList.selectedValue as PopupInstanceItem
-        val manager = FileEditorManager.getInstance(mProject)
-        when (location) {
-            OpenLocation.MAIN_VIEW -> manager.openFile(selectedValue.vf, true)
-            OpenLocation.SPLIT_VIEW_VERTICAL -> {
-                FileEditorManagerEx.getInstanceEx(mProject).currentWindow?.split(
-                    SwingConstants.VERTICAL,
-                    true,
-                    selectedValue.vf,
-                    true
-                )
-            }
-            OpenLocation.SPLIT_VIEW_HORIZONTAL -> {
-                FileEditorManagerEx.getInstanceEx(mProject).currentWindow?.split(
-                    SwingConstants.HORIZONTAL,
-                    true,
-                    selectedValue.vf,
-                    true
-                )
-            }
-        }
-
+        val selectedValue = mResultsList.selectedValue as ListItemType
+        mOpenItemCallback(selectedValue, location)
 
         mProject.service<PopupMediator>().popupClosed()
         mPopup?.dispose()
@@ -270,7 +252,7 @@ class SearchPopupInstance(
     private fun mouseClickedEvent() {
         if ((mResultsList.selectedIndex == mLastClickedIndex && mNofTimesClicked >= 1) ||
                     mSettings.openWithSingleClick) {
-            openFileAndClosePopup(OpenLocation.MAIN_VIEW)
+            callOpenCallbackAndClosePopup(OpenLocation.MAIN_VIEW)
         }
         mNofTimesClicked = 1
         mLastClickedIndex = mResultsList.selectedIndex
@@ -289,10 +271,18 @@ class SearchPopupInstance(
         mExtensionField.preferredSize = Dimension(0, settings.searchBarHeight)
     }
 
+    private fun getFont(settings: GlobalSettings.SettingsState): Font {
+        var fontName = ""
+        if (settings.useDefaultFont) {
+            fontName = UIManager.getFont("Label.font").fontName
+        } else  {
+            fontName = settings.selectedFontName
+        }
+        return Font(fontName, Font.PLAIN, settings.fontSize)
+    }
+
     private fun createPopupInstance() {
         val font = getFont(mSettings)
-        println("Foreground olor!: ${mResultsList.foreground}")
-
         val border: EmptyBorder = JBUI.Borders.empty(2, 5, 0, 5)
         mSearchField.border = border
         mSearchField.toolTipText = "Type to search..."
@@ -368,6 +358,14 @@ class SearchPopupInstance(
             }
         }
 
+    }
+
+    private fun getForegroundColor(settings: GlobalSettings.SettingsState): Color {
+        var color = hexToColorWithAlpha(settings.selectedColor)
+        if (settings.useDefaultHighlightColor || color == null) {
+            color = UIManager.getColor("List.selectionBackground")
+        }
+        return color!!
     }
 
     private fun registerCustomShortcutActions() {

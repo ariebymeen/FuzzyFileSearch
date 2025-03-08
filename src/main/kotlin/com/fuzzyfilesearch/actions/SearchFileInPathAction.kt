@@ -13,7 +13,8 @@ import com.fuzzyfilesearch.searchbox.getAllFilesInRoot
 import kotlin.io.path.Path
 
 class SearchFileInPathAction(val action: Array<String>,
-                             val settings: GlobalSettings.SettingsState) : AnAction(getActionName(action))
+                             val settings: GlobalSettings.SettingsState,
+                             val overrideVscIgnore: Boolean = false) : AnAction(getActionName(action))
 {
     val name = action[0]
     val location = action[1]
@@ -31,7 +32,7 @@ class SearchFileInPathAction(val action: Array<String>,
         val project = e.project ?: return
 
         val searchPath: String
-        if (location[0] == '/') { // Search from project root
+        if (location.isEmpty() || location[0] == '/') { // Search from project root
             searchPath = project.basePath + location
         } else { // Search from current file
             val currentFile = e.getData(com.intellij.openapi.actionSystem.CommonDataKeys.VIRTUAL_FILE)
@@ -48,7 +49,7 @@ class SearchFileInPathAction(val action: Array<String>,
             return
         }
 
-        val changeListManager = if (settings.searchOnlyFilesInVersionControl) ChangeListManager.getInstance(project) else null
+        val changeListManager = if (settings.searchOnlyFilesInVersionControl && !overrideVscIgnore) ChangeListManager.getInstance(project) else null
         files = getAllFilesInRoot(vfPath, settings.excludedDirs, extensions, changeListManager)
         searchAction.doSearchForFiles(files!!, project, searchPath, extensions)
     }

@@ -22,7 +22,7 @@ fun CharArray.trailingWhitespaces(): Int {
     return count
 }
 
-fun normalizeRune(r: Char): Char {
+public fun normalizeRune(r: Char): Char {
     if (r < '\u00C0' || r > '\u2184') {
         return r
     }

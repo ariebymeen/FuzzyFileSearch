@@ -33,7 +33,7 @@ fun registerAction(name: String, shortcut: String, action: AnAction) {
             return
         }
         val sc = KeyboardShortcut(keyStroke, null)
-        KeymapManager.getInstance().activeKeymap.addShortcut(getActionName(name), sc);
+        KeymapManager.getInstance().activeKeymap.addShortcut(getActionName(name), sc)
     }
 }
 
@@ -43,7 +43,7 @@ fun unregisterAction(name: String, shortcut: String) {
     if (shortcut.isNotEmpty()) {
         val keyStroke = KeyStroke.getKeyStroke(shortcut.trim()) ?: return
         val sc = KeyboardShortcut(keyStroke, null)
-        KeymapManager.getInstance().activeKeymap.removeShortcut(getActionName(name), sc);
+        KeymapManager.getInstance().activeKeymap.removeShortcut(getActionName(name), sc)
     }
 }
 
@@ -108,6 +108,14 @@ fun registerSearchOpenFiles(actions: Array<Array<String>>, settings: GlobalSetti
     }
 }
 
+fun registerSearchAllFiles(actions: Array<Array<String>>, settings: GlobalSettings.SettingsState) {
+    actions.forEach { action ->
+        run {
+            registerAction(action[0], action[1], SearchFileInPathAction(arrayOf(action[0], "/", "", action[1]), settings, true))
+        }
+    }
+}
+
 fun registerSearchFileMatchingPatternActions(actions: Array<Array<String>>, settings: GlobalSettings.SettingsState) {
     actions.forEach { action ->
         run {
@@ -115,6 +123,19 @@ fun registerSearchFileMatchingPatternActions(actions: Array<Array<String>>, sett
                 SearchFilesWithPatternAction.getActionName(action),
                 SearchFilesWithPatternAction.getActionShortcut(action),
                 SearchFilesWithPatternAction(action, settings)
+            )
+        }
+    }
+}
+
+
+fun registerGrepInFilesActions(actions: Array<Array<String>>, settings: GlobalSettings.SettingsState) {
+    actions.forEach { action ->
+        run {
+            registerAction(
+                GrepInFiles.getActionName(action),
+                GrepInFiles.getActionShortcut(action),
+                GrepInFiles(action, settings)
             )
         }
     }

@@ -8,12 +8,12 @@ import javax.swing.SwingUtilities
 
 
 fun showErrorNotification(title: String, content: String) {
-    val notification = Notification("QuickFileSearchGroup", title, content, NotificationType.ERROR)
+    val notification = Notification("FuzzyFileSearchGroup", title, content, NotificationType.ERROR)
     Notifications.Bus.notify(notification)
 }
 
 fun showTimedNotification(title: String, content: String) {
-    val notification = Notification("QuickFileSearchGroup", title, content, NotificationType.INFORMATION)
+    val notification = Notification("FuzzyFileSearchGroup", title, content, NotificationType.INFORMATION)
     Notifications.Bus.notify(notification)
 
     // Schedule a task to close the notification after the specified duration

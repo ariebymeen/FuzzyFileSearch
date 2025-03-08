@@ -1,17 +1,16 @@
 package com.fuzzyfilesearch.searchbox
 
 import ai.grazie.text.find
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootManager
-import com.intellij.openapi.vcs.FileStatusManager
-import com.intellij.openapi.vcs.ProjectLevelVcsManager
 import com.intellij.openapi.vcs.changes.ChangeListManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.isFile
 import java.security.MessageDigest
+import javax.swing.SwingConstants
 import kotlin.collections.ArrayList
-import kotlin.math.min
-
 
 fun getParentSatisfyingRegex(project: Project,
                              directory: VirtualFile,
@@ -156,4 +155,28 @@ fun getAllFilesInRoot(root: VirtualFile,
 fun String.sha256(): String {
     val md = MessageDigest.getInstance("SHA-256")
     return md.digest(toByteArray()).joinToString("") { "%02x".format(it) }
+}
+
+fun openFileWithLocation(vf: VirtualFile, location: OpenLocation, project: Project) {
+    val manager = FileEditorManager.getInstance(project)
+    when (location) {
+        OpenLocation.MAIN_VIEW -> manager.openFile(vf, true)
+        OpenLocation.SPLIT_VIEW_VERTICAL -> {
+            FileEditorManagerEx.getInstanceEx(project).currentWindow?.split(
+                SwingConstants.VERTICAL,
+                true,
+                vf,
+                true
+            )
+        }
+
+        OpenLocation.SPLIT_VIEW_HORIZONTAL -> {
+            FileEditorManagerEx.getInstanceEx(project).currentWindow?.split(
+                SwingConstants.HORIZONTAL,
+                true,
+                vf,
+                true
+            )
+        }
+    }
 }

@@ -30,6 +30,7 @@ class GlobalSettingsComponent {
     var minSizeEditorPx = JBIntSpinner(200, 50, 5000, 5)
     var searchBarHeight = JBIntSpinner(30, 10, 300)
     var searchItemHeight = JBIntSpinner(30, 10, 100)
+    var showNumberInSearchView = JBCheckBox()
     var useDefaultFontCheckbox = JBCheckBox()
     var fontSelectorDropdown = FontComboBox()
     var useDefaultHighlightColorCheckbox = JBCheckBox()
@@ -53,7 +54,10 @@ class GlobalSettingsComponent {
     var searchRelativeFileActionsTable = ActionsTable(arrayOf("Name", "Reference file", "Extensions", "Shortcut"), arrayOf("MyActionName", "Regex", "h", "alt shift P"))
     var searchFileMatchingPatternActionsTable = ActionsTable(arrayOf("Name", "Path", "Pattern (Regex)", "Shortcut"), arrayOf("MyActionName", "/", "Regex", "alt shift P"))
     var searchRecentFiles = StaticTable(arrayOf("Name", "History length", "Extensions", "Shortcut"), arrayOf(arrayOf("SearchRecentFiles", "10", ".txt,.md", "alt shift R")))
-    var searchOpenFiles = StaticTable(arrayOf("Name", "Extensions", "Shortcut"), arrayOf(arrayOf("SearchOpenFiles", ".txt,.md", "alt shift O")))
+    var searchOpenFiles = StaticTable(arrayOf("Name", "Extensions", "Shortcut"), arrayOf(arrayOf("SearchOpenFiles", ".txt,.md", "")))
+    var searchAllFiles = StaticTable(arrayOf("Name", "Shortcut"), arrayOf(arrayOf("SearchAllFiles", "alt shift O")))
+    var searchStringMatchingPattern = ActionsTable(arrayOf("Name", "Path", "Regex", "Shortcut"), arrayOf("MySearchAction", "", "Enter regex", ""))
+
     // TODO: Add options for a shortcut to open file in horizontal or vertical split
     val regexTestComponent = RegexTestComponent()
     val showHelpButton = JButton("Show help")
@@ -61,7 +65,7 @@ class GlobalSettingsComponent {
     init {
 
         panel = FormBuilder()
-            .addComponent(JBLabel("<html><strong>Settings for QuickFileSearch</strong></html>"))
+            .addComponent(JBLabel("<html><strong>Settings for FuzzyFileSearch</strong></html>"))
             .addSeparator()
 
             .addComponent(createLabelWithDescription("Excluded folders", "Wildcards are not supported, enter the full name of the folder"))
@@ -143,6 +147,10 @@ class GlobalSettingsComponent {
             .addLabeledComponent(
                 createLabelWithDescription("Height of the search items in pixels", """
                 """.trimIndent()), searchItemHeight)
+            .addLabeledComponent(
+                createLabelWithDescription("Show the index of each item in search view", """
+                    If checked show the number (index) of the item in the view as a number in front of the result
+                """.trimIndent()), showNumberInSearchView)
             .addLabeledComponent(
                 createLabelWithDescription("Use default popup font", """
                     If checked use the same font as the editor, else a font can be selected
@@ -258,6 +266,21 @@ class GlobalSettingsComponent {
                 """.trimIndent())
             )
             .addComponent(searchOpenFiles)
+            .addComponent(
+                createLabelWithDescription("Search in all files, including files that are not tracked by version control", """
+                    Special action to search through all files
+                """.trimIndent())
+            )
+            .addComponent(searchAllFiles)
+            .addComponent(
+                createLabelWithDescription("Search for pattern in files", """
+                    Search through all instances that match the pattern. If path starts with '/', search through all files. This may
+                    be performance intensive if there are many files. If path is empty or '.' search only the current path. Else a relative path
+                    is selected
+                """.trimIndent())
+            )
+            .addComponent(searchStringMatchingPattern)
+
 
             .addSeparator()
             .addComponent(JBLabel("Test your regex below"))

@@ -94,9 +94,8 @@ class VerticallyCenteredTextPane() : JTextPane() {
 }
 
 class SearchDialogCellRenderer(val mProject: Project,
-                               val mSettings: GlobalSettings.SettingsState) : ListCellRenderer<PopupInstanceItem> {
+                               val mSettings: GlobalSettings.SettingsState) : CustomRenderer<PopupInstanceItem>() {
     val basePath = mProject.basePath!!
-    var maxWidth = 0
     val font = getFont(mSettings)
 
     override fun getListCellRendererComponent(
@@ -114,10 +113,10 @@ class SearchDialogCellRenderer(val mProject: Project,
             value.panel?.maximumHeight = mSettings.searchItemHeight
             value.panel?.font = font
             setText(value, index)
-        } else {
-            val formattedNumber = String.format(" %02d - ", index)
-            value.panel!!.styledDocument.remove(0, formattedNumber.length)
-            value.panel!!.styledDocument.insertString(0, formattedNumber, value.panel!!.getStyle("Tiny"))
+        } else if (mSettings.showNumberInSearchView) {
+             val formattedNumber = String.format(" %02d - ", index)
+             value.panel!!.styledDocument.remove(0, formattedNumber.length)
+             value.panel!!.styledDocument.insertString(0, formattedNumber, value.panel!!.getStyle("Tiny"))
         }
 
         value.panel!!.background = if (isSelected) list.selectionBackground else list.background
@@ -139,8 +138,12 @@ class SearchDialogCellRenderer(val mProject: Project,
         }
 
         val doc = item.panel!!.styledDocument
-        val formattedNumber = String.format(" %02d - ", index)
-        doc.insertString(doc.length, formattedNumber, tinyStyle)
+        if (mSettings.showNumberInSearchView) {
+            val formattedNumber = String.format(" %02d - ", index)
+            doc.insertString(doc.length, formattedNumber, tinyStyle)
+        } else {
+            doc.insertString(doc.length, " ", tinyStyle)
+        }
         when (mSettings.filePathDisplayType) {
             PathDisplayType.FILENAME_ONLY -> {
                 doc.insertString(doc.length, "${item.vf.name} ", boldStyle)

@@ -57,7 +57,7 @@
                 instance="com.fuzzyfilesearch.settings.GlobalSettingsConfigurable"
                 id="com.fuzzyfilesearch.settings.GlobalSettingsConfigurable"
                 displayName="FuzzyFileSearch Settings"/>
-        <notificationGroup id="QuickFileSearchGroup"
+        <notificationGroup id="FuzzyFileSearchGroup"
                            displayType="BALLOON"
                            toolWindowId="Event Log"
                            isLogByDefault="true"/>

@@ -44,6 +44,7 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         var minSizeEditorPx = 200
         var numberOfFilesInSearchView = 99
         var searchCaseSensitivity = false
+        var showNumberInSearchView = true
         var verticalPositionOnScreen = 0.5
         var horizontalPositionOnScreen = 0.5
         var shrinkViewDynamically = false
@@ -60,6 +61,8 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         var searchFilesMatchingPatterActions: Array<Array<String>> = emptyArray()
         var searchRecentFilesActions: Array<Array<String>> = arrayOf(arrayOf("SearchRecentFiles", "10", "", "alt shift R"))
         var searchOpenFilesActions: Array<Array<String>> = arrayOf(arrayOf("SearchOpenFiles", "", "alt shift O"))
+        var searchAllFilesActions: Array<Array<String>> = arrayOf(arrayOf("SearchAllFiles", "", "alt shift F"))
+        var searchStringMatchingPatternActions: Array<Array<String>> = emptyArray()
         var openInVerticalSplit: String = "ctrl S"
         var openInHorizontalSplit: String = "ctrl H"
         var openInActiveEditor: String = "ctrl U"

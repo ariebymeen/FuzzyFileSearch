@@ -16,14 +16,6 @@ fun getFont(settings: GlobalSettings.SettingsState): Font {
     return Font(fontName, Font.PLAIN, settings.fontSize)
 }
 
-fun getForegroundColor(settings: GlobalSettings.SettingsState): Color {
-    var color = hexToColorWithAlpha(settings.selectedColor)
-    if (settings.useDefaultHighlightColor || color == null) {
-        color = UIManager.getColor("List.selectionBackground")
-    }
-    return color!!
-}
-
 fun colorToHexWithAlpha(color: Color?): String {
     if (color == null) {
         return ""

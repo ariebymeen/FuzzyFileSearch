@@ -4,7 +4,7 @@ import com.fuzzyfilesearch.actions.*
 import javax.swing.KeyStroke
 
 // Check if settings are correct. If not, return a string with the error message
-fun checkSettings(globalSettings: GlobalSettingsComponent): String? {
+public fun checkSettings(globalSettings: GlobalSettingsComponent): String? {
     val actionNameError = checkActionNames(globalSettings);
     if (actionNameError != null) {
         return actionNameError
@@ -27,6 +27,8 @@ fun checkActionNames(globalSettings: GlobalSettingsComponent) : String? {
     names += globalSettings.searchRecentFiles.getData().map{ action -> SearchFileInPathAction.getActionName(action) }
     names += globalSettings.searchOpenFiles.getData().map{ action -> SearchOpenFilesAction.getActionName(action) }
     names += globalSettings.searchFileMatchingPatternActionsTable.getData().map{ action -> SearchFilesWithPatternAction.getActionName(action) }
+    names += globalSettings.searchAllFiles.getData().map{ action -> SearchFilesWithPatternAction.getActionName(action) }
+    names += globalSettings.searchStringMatchingPattern.getData().map{ action -> GrepInFiles.getActionName(action) }
 
     for (name in names) {
         if (actionSet.contains(name)) {
@@ -50,6 +52,8 @@ fun checkShortcuts(globalSettings: GlobalSettingsComponent) : String? {
     shortcuts += globalSettings.searchRecentFiles.getData().map{ action -> SearchFileInPathAction.getActionShortcut(action) }
     shortcuts += globalSettings.searchOpenFiles.getData().map{ action -> SearchOpenFilesAction.getActionShortcut(action) }
     shortcuts += globalSettings.searchFileMatchingPatternActionsTable.getData().map{ action -> SearchFilesWithPatternAction.getActionShortcut(action) }
+    shortcuts += globalSettings.searchAllFiles.getData().map{ action -> action[1] }
+    shortcuts += globalSettings.searchStringMatchingPattern.getData().map{ action -> GrepInFiles.getActionShortcut(action) }
 
     for (shortcut in shortcuts) {
         if (shortcut.trim().isNotEmpty() && actionSet.contains(shortcut)) {

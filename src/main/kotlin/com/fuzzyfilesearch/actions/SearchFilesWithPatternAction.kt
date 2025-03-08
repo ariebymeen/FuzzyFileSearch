@@ -27,7 +27,7 @@ class SearchFilesWithPatternAction(val action: Array<String>,
         val project = e.project ?: return
 
         val searchPath: String
-        if (location[0] == '/') { // Search from project root
+        if (location.isEmpty() || location[0] == '/') { // Search from project root
             searchPath = project.basePath + location
         } else { // Search from current file
             val currentFile = e.getData(com.intellij.openapi.actionSystem.CommonDataKeys.VIRTUAL_FILE)
