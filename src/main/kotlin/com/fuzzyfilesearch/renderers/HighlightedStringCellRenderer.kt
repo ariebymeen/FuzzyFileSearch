@@ -1,20 +1,20 @@
-package com.fuzzyfilesearch.searchbox
+package com.fuzzyfilesearch.renderers
 
 import com.fuzzyfilesearch.actions.GrepInstanceItem
+import com.fuzzyfilesearch.searchbox.CustomRenderer
+import com.fuzzyfilesearch.searchbox.getFont
 import com.intellij.openapi.project.Project
 import com.intellij.ui.util.preferredHeight
-import com.intellij.util.ui.JBUI
 import com.fuzzyfilesearch.settings.GlobalSettings
-import com.fuzzyfilesearch.settings.PathDisplayType
 import com.intellij.ui.util.maximumHeight
 import java.awt.*
 import javax.swing.*
-import javax.swing.text.AttributeSet
 import javax.swing.text.StyleConstants
+import cutoffStringToMaxWidth
+import highlightText
 
 class SimpleStringCellRenderer(val mProject: Project,
                                val mSettings: GlobalSettings.SettingsState) : CustomRenderer<GrepInstanceItem>() {
-    val basePath = mProject.basePath!!
     val font = getFont(mSettings)
 
     override fun getListCellRendererComponent(
@@ -59,16 +59,15 @@ class SimpleStringCellRenderer(val mProject: Project,
         } else {
             doc.insertString(doc.length, " ", tinyStyle)
         }
-        doc.insertString(doc.length, "${item.match.result.value} ", normalStyle)
+
+        val offset = doc.length
+        doc.insertString(doc.length, "${item.text}", normalStyle)
+        if (mSettings.applySyntaxHighlightingOnTextSearch) {
+            highlightText(mProject, doc, offset, item.text, item.vf.extension!!)
+        }
 
         // If text is too wide for the view, remove and place ... at the end
-        val (nofCharsToRemove, nofDots) = computeNofCharsToRemove(item.panel!!, maxWidth)
-        if (maxWidth > 0 && nofCharsToRemove > 0) {
-            // Cutoff text. Compute the number of chars to remove + 3, which will be replaced by ...
-            doc.remove(doc.length - nofCharsToRemove, nofCharsToRemove)
-            val elem = doc.getCharacterElement(doc.length - 1)
-            // insert ... with the same style as the last text
-            doc.insertString(doc.length, ".".repeat(nofDots), elem.attributes)
-        }
+        cutoffStringToMaxWidth(item.panel!!, doc, maxWidth)
     }
+
 }

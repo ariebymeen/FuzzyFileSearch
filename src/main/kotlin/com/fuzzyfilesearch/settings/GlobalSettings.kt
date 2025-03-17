@@ -48,6 +48,7 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         var verticalPositionOnScreen = 0.5
         var horizontalPositionOnScreen = 0.5
         var shrinkViewDynamically = false
+        var applySyntaxHighlightingOnTextSearch = true
         var searchBarHeight = 40
         var searchItemHeight = 30
         var searchOnlyFilesInVersionControl = true
@@ -67,6 +68,7 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         var openInHorizontalSplit: String = "ctrl H"
         var openInActiveEditor: String = "ctrl U"
         var showEditorPreview = true
+        var showEditorPreviewStringSearch = true
         var editorPreviewLocation = EditorLocation.EDITOR_RIGHT
         var editorSizeRatio = 0.5
         var openWithSingleClick = true

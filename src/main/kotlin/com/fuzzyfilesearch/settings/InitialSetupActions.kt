@@ -20,7 +20,7 @@ class ApplicationStartupSetup : ProjectActivity {
 
     override suspend fun execute(project: Project) {
         val globalSettings = GlobalSettings().getInstance()
-        registerQuickFileSearchActions(globalSettings.state.openRelativeFileActions, globalSettings.state)
+        registerOpenRelativeFileActions(globalSettings.state.openRelativeFileActions, globalSettings.state)
         registerSearchRelativeFileActions(globalSettings.state.searchRelativeFileActions, globalSettings.state)
         registerSearchFileInPathActions(globalSettings.state.searchPathActions, globalSettings.state)
         registerSearchRecentFiles(globalSettings.state.searchRecentFilesActions, globalSettings.state)

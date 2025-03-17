@@ -1,10 +1,11 @@
 package com.fuzzyfilesearch.actions
 
 //import com.fuzzyfilesearch.searchbox.*
+import com.fuzzyfilesearch.renderers.SimpleStringCellRenderer
+import com.fuzzyfilesearch.renderers.VerticallyCenteredTextPane
 import com.fuzzyfilesearch.searchbox.*
 import com.fuzzyfilesearch.settings.GlobalSettings
 import com.fuzzyfilesearch.showErrorNotification
-import com.fuzzyfilesearch.showTimedNotification
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
@@ -18,8 +19,14 @@ import kotlin.io.path.Path
 import kotlin.math.min
 import kotlin.system.measureTimeMillis
 
-class RegexMatch(val result: MatchResult, val file: VirtualFile)
-class GrepInstanceItem(val match: RegexMatch,
+//class RegexMatch(val result: MatchResult, val file: VirtualFile)
+//class GrepInstanceItem(val match: RegexMatch,
+//                       val shownString: String,
+//                       var panel: VerticallyCenteredTextPane? = null)
+class GrepInstanceItem(val vf: VirtualFile,
+                       val start: Int,
+                       val end: Int,
+                       val text: String,
                        var panel: VerticallyCenteredTextPane? = null)
 
 class GrepInFiles(val action: Array<String>,
@@ -65,16 +72,34 @@ class GrepInFiles(val action: Array<String>,
         }
 
         val timeTaken = measureTimeMillis {
+            // Loop over all files and find regex matches. Store result into class variable to use in search
             mFileNames.forEach{ vf ->
                 val matches = mRegex.findAll(readFileContents(vf)).toList()
-                mSearchItems.addAll(matches.map { match -> GrepInstanceItem(RegexMatch(match, vf)) })
+                mSearchItems.addAll(matches.map { match ->
+                    // Remove newlines and indenting for to make the view single line
+                    // TODO: This may not be the most efficient way to do any of this
+                    var oldText = match.value.replace('\n', ' ')
+                    var newText = oldText.replace("  ", " ")
+                    while (newText != oldText) {
+                        oldText = newText
+                        newText = newText.replace("    ", " ")
+                                         .replace("   " , " ")
+                                         .replace("  "  , " ")
+                    }
+//                    GrepInstanceItem(RegexMatch(match, vf), newText)
+                    GrepInstanceItem(vf, match.range.first, match.range.last, newText)
+                })
             }
-            mSearchItemStrings = mSearchItems.map { item -> item.match.result.value }
+            mSearchItemStrings = mSearchItems.map { item -> item.text }
         }
+
+        // TODO: Remove debug prints
         println("Elapsed time: $timeTaken ms")
         println("GrepInFiles: ${mSearchItems.size}. Nof files to search: ${mFileNames.size}, regex: ${getActionRegex(action)}")
 
-        mPopup = SearchPopupInstance(SimpleStringCellRenderer(project, settings), ::getSortedResult, ::moveToLocation, settings, project, emptyList())
+        mPopup = SearchPopupInstance(SimpleStringCellRenderer(project, settings), ::getSortedResult, ::moveToLocation, ::getFileFromItem,
+                                                                            settings, project, getActionExtension(action),
+                                                                            settings.showEditorPreviewStringSearch)
         mPopup!!.showPopupInstance()
         fzfSearchAction = FzfSearchAction(mSearchItemStrings, settings.searchCaseSensitivity)
     }
@@ -104,15 +129,19 @@ class GrepInFiles(val action: Array<String>,
 
     fun moveToLocation(item: GrepInstanceItem, location: OpenLocation) {
         val event = mEvent?: return
-        if (item.match.file != getCurrentFile(event)) {
-            openFileWithLocation(item.match.file, location, mProject!!)
+        if (item.vf != getCurrentFile(event)) {
+            openFileWithLocation(item.vf, location, mProject!!)
         }
 
         val editor = FileEditorManager.getInstance(mProject!!).selectedTextEditor
-        editor?.caretModel?.moveToOffset(item.match.result.range.last)
+        editor?.caretModel?.moveToOffset(item.start)
         editor?.scrollingModel?.scrollToCaret(ScrollType.CENTER_UP)
 
         mEvent = null
+    }
+
+    fun getFileFromItem(item: GrepInstanceItem): FileLocation? {
+        return FileLocation(item.vf, item.start)
     }
 
     private fun getCurrentFile(e: AnActionEvent) : VirtualFile? {
@@ -148,6 +177,10 @@ class GrepInFiles(val action: Array<String>,
         }
         fun getActionShortcut(actionSettings: Array<String>) : String {
             return actionSettings[3]
+        }
+        fun getActionExtension(actionSettings: Array<String>) : List<String> {
+            if (actionSettings.size <= 4) return emptyList()
+            return extractExtensions(actionSettings[4])
         }
     }
 

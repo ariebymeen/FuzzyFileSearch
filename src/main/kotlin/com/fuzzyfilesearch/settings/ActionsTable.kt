@@ -26,6 +26,9 @@ import javax.swing.table.DefaultTableModel
 class ActionsTable(columnNames: Array<String>,
                    private val emptyItem: Array<String>) : JBPanel<ActionsTable>() {
 
+                       // TODO: Resize according to content
+                       // TODO: Double click for flyout that is editable
+                       // TODO: Single click to edit contents
     private val mTableModel = DefaultTableModel(columnNames, 0)
     private val mTable = JBTable(mTableModel)
     private val mTablePanel = JBPanel<JBPanel<*>>()

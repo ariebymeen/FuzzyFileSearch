@@ -13,57 +13,65 @@ class GlobalSettingsConfigurable : Configurable {
     private var settings = GlobalSettings().getInstance()
 
     override fun createComponent(): JComponent? {
-        component = GlobalSettingsComponent()
+        component = GlobalSettingsComponent(settings.state)
 
+//        component.checkboxes.forEach{checkbox ->
+//            checkbox.initialize()
+//        }
+        component.components.forEach{component ->
+            component.initialize()
+        }
         // TODO: Make this naming consistent
         component.excludedDirs.text = settings.state.excludedDirs.joinToString("\n")
-        component.nofVisibleFilesInSearchViewSelector.value = settings.state.numberOfFilesInSearchView
-        component.searchCaseSensitiviyCheckbox.isSelected = settings.state.searchCaseSensitivity
-        component.pathDisplayDropdownBox.selectedItem = settings.state.filePathDisplayType
-        component.modifierKeyDropdownBox.selectedItem = settings.state.modifierKey
-        component.openFileInVerticalSplitShortcutInputBox.text = settings.state.openInVerticalSplit
-        component.openFileInHorizontalSplitShortcutInputBox.text = settings.state.openInHorizontalSplit
-        component.openFileInActiveEditorShortcutInputBox.text = settings.state.openInActiveEditor
-        component.searchBoxWidth.value = settings.state.searchPopupWidth
-        component.searchBoxHeight.value = settings.state.searchPopupHeight
-        component.searchBoxWidthPx.value = settings.state.searchPopupWidthPx
-        component.searchBoxHeightPx.value = settings.state.searchPopupHeightPx
-        component.minSizeEditorPx.value = settings.state.minSizeEditorPx
-        component.popupSizePolicySelector.selectedItem = settings.state.popupSizePolicy
-        component.searchBoxPosX.value = settings.state.horizontalPositionOnScreen
-        component.searchBoxPosY.value = settings.state.verticalPositionOnScreen
-        component.searchBarHeight.value = settings.state.searchBarHeight
-        component.searchItemHeight.value = settings.state.searchItemHeight
-        component.useDefaultFontCheckbox.isSelected = settings.state.useDefaultFont
-        component.showNumberInSearchView.isSelected = settings.state.showNumberInSearchView
+//        component.nofVisibleFilesInSearchViewSelector.value = settings.state.numberOfFilesInSearchView
+//        component.searchCaseSensitiviyCheckbox.isSelected = settings.state.searchCaseSensitivity
+//        component.pathDisplayDropdownBox.selectedItem = settings.state.filePathDisplayType
+//        component.modifierKeyDropdownBox.selectedItem = settings.state.modifierKey
+//        component.openFileInVerticalSplitShortcutInputBox.text = settings.state.openInVerticalSplit
+//        component.openFileInHorizontalSplitShortcutInputBox.text = settings.state.openInHorizontalSplit
+//        component.openFileInActiveEditorShortcutInputBox.text = settings.state.openInActiveEditor
+//        component.searchBoxWidth.value = settings.state.searchPopupWidth
+//        component.searchBoxHeight.value = settings.state.searchPopupHeight
+//        component.searchBoxWidthPx.value = settings.state.searchPopupWidthPx
+//        component.searchBoxHeightPx.value = settings.state.searchPopupHeightPx
+//        component.minSizeEditorPx.value = settings.state.minSizeEditorPx
+//        component.popupSizePolicySelector.selectedItem = settings.state.popupSizePolicy
+//        component.searchBoxPosX.value = settings.state.horizontalPositionOnScreen
+//        component.searchBoxPosY.value = settings.state.verticalPositionOnScreen
+//        component.searchBarHeight.value = settings.state.searchBarHeight
+//        component.searchItemHeight.value = settings.state.searchItemHeight
+//        component.useDefaultFontCheckbox.isSelected = settings.state.useDefaultFont
+//        component.showNumberInSearchView.isSelected = settings.state.showNumberInSearchView
         component.fontSelectorDropdown.fontName = settings.state.selectedFontName
-        component.fontSize.value = settings.state.fontSize
-        component.useDefaultHighlightColorCheckbox.isSelected = settings.state.useDefaultHighlightColor
+//        component.fontSize.value = settings.state.fontSize
+//        component.useDefaultHighlightColorCheckbox.isSelected = settings.state.useDefaultHighlightColor
         component.colorSelectorElement.selectedColor = hexToColorWithAlpha(settings.state.selectedColor)
 
-        component.shrinkSearchAreaWithResults.isSelected = settings.state.shrinkViewDynamically
-        component.searchOnlyFilesInVersionControlCheckbox.isSelected = settings.state.searchOnlyFilesInVersionControl
-        component.openFilesSingleClick.isSelected = settings.state.openWithSingleClick
+//        component.shrinkSearchAreaWithResults.isSelected = settings.state.shrinkViewDynamically
+//        component.searchOnlyFilesInVersionControlCheckbox.isSelected = settings.state.searchOnlyFilesInVersionControl
+//        component.openFilesSingleClick.isSelected = settings.state.openWithSingleClick
 
-        component.showEditorPreviewCheckbox.isSelected = settings.state.showEditorPreview
-        component.editorPreviewLocation.selectedItem = settings.state.editorPreviewLocation
-        component.editorSizeRatio.value = settings.state.editorSizeRatio
+//        component.showEditorPreviewCheckbox.isSelected = settings.state.showEditorPreview
+//        component.editorPreviewLocation.selectedItem = settings.state.editorPreviewLocation
+//        component.editorSizeRatio.value = settings.state.editorSizeRatio
+//        component.applySyntaxHighlightingOnTextSearchCheckbox.isSelected = settings.state.applySyntaxHighlightingOnTextSearch
+//        component.showEditorPreviewStringSearch.isSelected = settings.state.showEditorPreviewStringSearch
 
-        component.openRelativeFileActionsTable.setData(settings.state.openRelativeFileActions)
-        component.searchFileMatchingPatternActionsTable.setData(settings.state.searchFilesMatchingPatterActions)
-        component.searchRelativeFileActionsTable.setData(settings.state.searchRelativeFileActions)
-        component.searchPathActionsTable.setData(settings.state.searchPathActions)
-        component.searchStringMatchingPattern.setData(settings.state.searchStringMatchingPatternActions)
+//        component.openRelativeFileActionsTable.setData(settings.state.openRelativeFileActions)
+//        component.searchFileMatchingPatternActionsTable.setData(settings.state.searchFilesMatchingPatterActions)
+//        component.searchRelativeFileActionsTable.setData(settings.state.searchRelativeFileActions)
+//        component.searchPathActionsTable.setData(settings.state.searchPathActions)
+//        component.searchStringMatchingPattern.setData(settings.state.searchStringMatchingPatternActions)
 
-        if (settings.state.searchRecentFilesActions.isNotEmpty()) {
-            component.searchRecentFiles.setData(settings.state.searchRecentFilesActions)
-        }
-        if (settings.state.searchOpenFilesActions.isNotEmpty()) {
-            component.searchOpenFiles.setData(settings.state.searchOpenFilesActions)
-        }
-        if (settings.state.searchAllFilesActions.isNotEmpty()) {
-            component.searchAllFiles.setData(settings.state.searchAllFilesActions)
-        }
+//        if (settings.state.searchRecentFilesActions.isNotEmpty()) {
+//            component.searchRecentFiles.setData(settings.state.searchRecentFilesActions)
+//        }
+//        if (settings.state.searchOpenFilesActions.isNotEmpty()) {
+//            component.searchOpenFiles.setData(settings.state.searchOpenFilesActions)
+//        }
+//        if (settings.state.searchAllFilesActions.isNotEmpty()) {
+//            component.searchAllFiles.setData(settings.state.searchAllFilesActions)
+//        }
 
         component.setEditorScalingFields()
         return component.panel
@@ -75,48 +83,15 @@ class GlobalSettingsConfigurable : Configurable {
             .filter { it.isNotBlank() }
             .toSet()
 
-        val modified = settings.state.excludedDirs != newSet
-                || settings.state.numberOfFilesInSearchView != component.nofVisibleFilesInSearchViewSelector.value
-                || settings.state.searchCaseSensitivity != component.searchCaseSensitiviyCheckbox.isSelected
-                || settings.state.searchOnlyFilesInVersionControl != component.searchOnlyFilesInVersionControlCheckbox.isSelected
-                || settings.state.filePathDisplayType != (component.pathDisplayDropdownBox.selectedItem as PathDisplayType)
-                || settings.state.modifierKey != (component.modifierKeyDropdownBox.selectedItem as ModifierKey)
-                || settings.state.openInVerticalSplit != component.openFileInVerticalSplitShortcutInputBox.text
-                || settings.state.openInHorizontalSplit != component.openFileInHorizontalSplitShortcutInputBox.text
-                || settings.state.openInActiveEditor != component.openFileInActiveEditorShortcutInputBox.text
-                || settings.state.searchPopupWidth != component.searchBoxWidth.value
-                || settings.state.searchPopupHeight != component.searchBoxHeight.value
-                || settings.state.searchPopupWidthPx != component.searchBoxWidthPx.value
-                || settings.state.searchPopupHeightPx != component.searchBoxHeightPx.value
-                || settings.state.minSizeEditorPx != component.minSizeEditorPx.value
-                || settings.state.popupSizePolicy != (component.popupSizePolicySelector.selectedItem as PopupSizePolicy)
-                || settings.state.horizontalPositionOnScreen != component.searchBoxPosX.value
-                || settings.state.verticalPositionOnScreen != component.searchBoxPosY.value
-                || settings.state.searchBarHeight != component.searchBarHeight.value
-                || settings.state.searchItemHeight != component.searchItemHeight.value
-                || settings.state.showNumberInSearchView != component.showNumberInSearchView.isSelected
-                || settings.state.useDefaultFont != component.useDefaultFontCheckbox.isSelected
+        var modified = settings.state.excludedDirs != newSet
                 || settings.state.selectedFontName != component.fontSelectorDropdown.fontName
-                || settings.state.fontSize != component.fontSize.value
-                || settings.state.useDefaultHighlightColor != component.useDefaultHighlightColorCheckbox.isSelected
                 || settings.state.selectedColor != colorToHexWithAlpha(component.colorSelectorElement.selectedColor)
-                || settings.state.shrinkViewDynamically != component.shrinkSearchAreaWithResults.isSelected
-                || settings.state.openWithSingleClick != component.openFilesSingleClick.isSelected
-                || settings.state.showEditorPreview != component.showEditorPreviewCheckbox.isSelected
-                || settings.state.editorPreviewLocation != component.editorPreviewLocation.selectedItem
-                || settings.state.editorSizeRatio != component.editorSizeRatio.value
-                || !isEqual(settings.state.openRelativeFileActions, component.openRelativeFileActionsTable.getData())
-                || !isEqual(settings.state.searchRelativeFileActions, component.searchRelativeFileActionsTable.getData())
-//                || !isEqual(settings.state.openRelatedFileAction, component.open.getData())
-                || !isEqual(settings.state.searchFilesMatchingPatterActions, component.searchFileMatchingPatternActionsTable.getData())
-                || !isEqual(settings.state.searchPathActions, component.searchPathActionsTable.getData())
-                || !isEqual(settings.state.searchRecentFilesActions, component.searchRecentFiles.getData())
-                || !isEqual(settings.state.searchOpenFilesActions, component.searchOpenFiles.getData())
-                || !isEqual(settings.state.searchAllFilesActions, component.searchAllFiles.getData())
-                || !isEqual(settings.state.searchStringMatchingPatternActions, component.searchStringMatchingPattern.getData())
+        component.components.forEach{component ->
+            modified = modified || component.modified()
+        }
 
         if (modified) {
-            val error = checkSettings(component)
+            val error = checkSettings(component.components)
             if (error != null) {
                 // show error message
                 component.warningText.text = error
@@ -127,138 +102,21 @@ class GlobalSettingsConfigurable : Configurable {
                 component.setEditorScalingFields()
             }
         }
-        component.fontSelectorDropdown.isEnabled = !component.useDefaultFontCheckbox.isSelected
-        component.colorSelectorElement.isEnabled = !component.useDefaultHighlightColorCheckbox.isSelected
+
         return modified
     }
 
     override fun apply() {
-        var sc = component.openFileInVerticalSplitShortcutInputBox.text
-        if (sc.isNotEmpty() && KeyStroke.getKeyStroke(sc) == null) {
-            showErrorNotification("Invalid shortcut ${sc}", "Shortcut ${sc} is not valid and cannot be saved")
-            return
-        }
-        sc = component.openFileInHorizontalSplitShortcutInputBox.text
-        if (sc.isNotEmpty() && KeyStroke.getKeyStroke(sc) == null) {
-            showErrorNotification("Invalid shortcut ${sc}", "Shortcut ${sc} is not valid and cannot be saved")
-            return
-        }
-
-        if (!isEqual(settings.state.openRelativeFileActions, component.openRelativeFileActionsTable.getData())) {
-            unregisterActions(
-                settings.state.openRelativeFileActions,
-                OpenRelativeFileAction::getActionName,
-                OpenRelativeFileAction::getActionShortcut
-            )
-            settings.state.openRelativeFileActions = component.openRelativeFileActionsTable.getData()
-            registerQuickFileSearchActions(settings.state.openRelativeFileActions, settings.state)
-        }
-
-        if (!isEqual(settings.state.searchRelativeFileActions, component.searchRelativeFileActionsTable.getData())) {
-            unregisterActions(
-                settings.state.searchRelativeFileActions,
-                SearchRelativeFileAction::getActionName,
-                SearchRelativeFileAction::getActionShortcut
-            )
-            settings.state.searchRelativeFileActions = component.searchRelativeFileActionsTable.getData()
-            registerSearchRelativeFileActions(settings.state.searchRelativeFileActions, settings.state)
-        }
-
-        if (!isEqual(settings.state.searchPathActions, component.searchPathActionsTable.getData())) {
-            unregisterActions(
-                settings.state.searchPathActions,
-                SearchFileInPathAction::getActionName,
-                SearchFileInPathAction::getActionShortcut
-            )
-            settings.state.searchPathActions = component.searchPathActionsTable.getData()
-            registerSearchFileInPathActions(settings.state.searchPathActions, settings.state)
-        }
-
-        if (!isEqual(settings.state.searchRecentFilesActions, component.searchRecentFiles.getData())) {
-            unregisterActions(
-                settings.state.searchRecentFilesActions,
-                SearchRecentFilesAction::getActionName,
-                SearchRecentFilesAction::getActionShortcut
-            )
-            settings.state.searchRecentFilesActions = component.searchRecentFiles.getData()
-            registerSearchRecentFiles(settings.state.searchRecentFilesActions, settings.state)
-        }
-
-        if (!isEqual(settings.state.searchOpenFilesActions, component.searchOpenFiles.getData())) {
-            unregisterActions(
-                settings.state.searchOpenFilesActions,
-                SearchOpenFilesAction::getActionName,
-                SearchOpenFilesAction::getActionShortcut
-            )
-            settings.state.searchOpenFilesActions = component.searchOpenFiles.getData()
-            registerSearchOpenFiles(settings.state.searchOpenFilesActions, settings.state)
-        }
-
-        if (!isEqual(settings.state.searchAllFilesActions, component.searchAllFiles.getData())) {
-            unregisterActions(
-                settings.state.searchAllFilesActions,
-                { action -> action[0] },
-                { action -> action[1] },
-            )
-            settings.state.searchAllFilesActions = component.searchAllFiles.getData()
-            registerSearchAllFiles(settings.state.searchAllFilesActions, settings.state)
-        }
-
-        if (!isEqual(settings.state.searchFilesMatchingPatterActions, component.searchFileMatchingPatternActionsTable.getData())) {
-            unregisterActions(
-                settings.state.searchFilesMatchingPatterActions,
-                SearchFilesWithPatternAction::getActionName,
-                SearchFilesWithPatternAction::getActionShortcut
-            )
-            settings.state.searchFilesMatchingPatterActions = component.searchFileMatchingPatternActionsTable.getData()
-            registerSearchFileMatchingPatternActions(settings.state.searchFilesMatchingPatterActions, settings.state)
-        }
-
-        if (!isEqual(settings.state.searchStringMatchingPatternActions, component.searchStringMatchingPattern.getData())) {
-            unregisterActions(
-                settings.state.searchStringMatchingPatternActions,
-                GrepInFiles::getActionName,
-                GrepInFiles::getActionShortcut
-            )
-            settings.state.searchStringMatchingPatternActions = component.searchStringMatchingPattern.getData()
-            registerGrepInFilesActions(settings.state.searchStringMatchingPatternActions, settings.state)
-        }
-
         val newSet = component.excludedDirs.text
             .split("\n")
             .filter { it.isNotBlank() }
             .toSet()
 
         settings.state.excludedDirs = newSet
-        settings.state.numberOfFilesInSearchView = component.nofVisibleFilesInSearchViewSelector.value as Int
-        settings.state.searchCaseSensitivity = component.searchCaseSensitiviyCheckbox.isSelected
-        settings.state.searchOnlyFilesInVersionControl = component.searchOnlyFilesInVersionControlCheckbox.isSelected
-        settings.state.filePathDisplayType = component.pathDisplayDropdownBox.selectedItem as PathDisplayType
-        settings.state.modifierKey = component.modifierKeyDropdownBox.selectedItem as ModifierKey
-        settings.state.openInVerticalSplit = component.openFileInVerticalSplitShortcutInputBox.text
-        settings.state.openInHorizontalSplit = component.openFileInHorizontalSplitShortcutInputBox.text
-        settings.state.openInActiveEditor = component.openFileInActiveEditorShortcutInputBox.text
-        settings.state.searchPopupWidth = component.searchBoxWidth.value as Double
-        settings.state.searchPopupHeight = component.searchBoxHeight.value as Double
-        settings.state.searchPopupWidthPx = component.searchBoxWidthPx.value as Int
-        settings.state.searchPopupHeightPx = component.searchBoxHeightPx.value as Int
-        settings.state.minSizeEditorPx = component.minSizeEditorPx.value as Int
-        settings.state.popupSizePolicy = component.popupSizePolicySelector.selectedItem as PopupSizePolicy
-        settings.state.horizontalPositionOnScreen = component.searchBoxPosX.value as Double
-        settings.state.verticalPositionOnScreen = component.searchBoxPosY.value as Double
-        settings.state.searchBarHeight = component.searchBarHeight.value as Int
-        settings.state.searchItemHeight = component.searchItemHeight.value as Int
-        settings.state.showNumberInSearchView = component.showNumberInSearchView.isSelected
-        settings.state.useDefaultFont = component.useDefaultFontCheckbox.isSelected
         settings.state.selectedFontName = component.fontSelectorDropdown.fontName as String
-        settings.state.fontSize = component.fontSize.value as Int
-        settings.state.useDefaultHighlightColor = component.useDefaultHighlightColorCheckbox.isSelected
         settings.state.selectedColor = colorToHexWithAlpha(component.colorSelectorElement.selectedColor)
-        settings.state.shrinkViewDynamically = component.shrinkSearchAreaWithResults.isSelected
-        settings.state.openWithSingleClick = component.openFilesSingleClick.isSelected
-        settings.state.showEditorPreview = component.showEditorPreviewCheckbox.isSelected
-        settings.state.editorPreviewLocation = component.editorPreviewLocation.selectedItem as EditorLocation
-        settings.state.editorSizeRatio = component.editorSizeRatio.value as Double
+
+        component.components.forEach{ component -> component.store() }
 
         if (settings.state.showEditorPreview) {
             settings.state.shrinkViewDynamically = false

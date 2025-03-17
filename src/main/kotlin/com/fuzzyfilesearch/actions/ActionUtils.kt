@@ -47,7 +47,7 @@ fun unregisterAction(name: String, shortcut: String) {
     }
 }
 
-fun registerQuickFileSearchActions(actions: Array<Array<String>>, settings: GlobalSettings.SettingsState) {
+fun registerOpenRelativeFileActions(actions: Array<Array<String>>, settings: GlobalSettings.SettingsState) {
     actions.forEach { action ->
         run {
             registerAction(
@@ -111,7 +111,7 @@ fun registerSearchOpenFiles(actions: Array<Array<String>>, settings: GlobalSetti
 fun registerSearchAllFiles(actions: Array<Array<String>>, settings: GlobalSettings.SettingsState) {
     actions.forEach { action ->
         run {
-            registerAction(action[0], action[1], SearchFileInPathAction(arrayOf(action[0], "/", "", action[1]), settings, true))
+            registerAction(action[0], action[2], SearchFileInPathAction(arrayOf(action[0], "/", action[1], action[2]), settings, true))
         }
     }
 }

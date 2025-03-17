@@ -32,16 +32,12 @@ import com.intellij.openapi.editor.colors.EditorColors
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.fileEditor.FileDocumentManager
-import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.EditorTextField
-import com.intellij.util.ui.JBUI
 import javax.swing.BorderFactory
-import kotlin.math.min
 
 class SearchBoxEditor(project: Project?) : EditorTextField(project, PlainTextFileType.INSTANCE) {
     private var currentFile: VirtualFile? = null
@@ -53,6 +49,7 @@ class SearchBoxEditor(project: Project?) : EditorTextField(project, PlainTextFil
         editor.isOneLineMode = false
         editor.settings.isLineNumbersShown = true
         editor.isViewer = false
+        // TODO: Make this editable
         editor.foldingModel.isFoldingEnabled = false
         editor.setBorder(BorderFactory.createEmptyBorder())
         editor.scrollPane.border = BorderFactory.createEmptyBorder(2, 4, 2, 4)
@@ -73,9 +70,9 @@ class SearchBoxEditor(project: Project?) : EditorTextField(project, PlainTextFil
         return editor
     }
 
-    fun updateFile(virtualFile: VirtualFile?, lineNumber: Int = 0) {
+    fun updateFile(virtualFile: VirtualFile?, caretOffset: Int = 0) {
         if (currentFile == virtualFile) {
-            ApplicationManager.getApplication().invokeLater { moveToLine(lineNumber) }
+            ApplicationManager.getApplication().invokeLater { moveToOffset(caretOffset) }
             return
         }
         currentFile = virtualFile
@@ -91,7 +88,7 @@ class SearchBoxEditor(project: Project?) : EditorTextField(project, PlainTextFil
                     WriteCommandAction.runWriteCommandAction(project) {
                         // Use the actual document to enable full highlighting in the preview
                         document = sourceDocument
-                        ApplicationManager.getApplication().invokeLater { moveToLine(lineNumber) }
+                        ApplicationManager.getApplication().invokeLater { moveToOffset(caretOffset) }
                     }
                 } else {
                     document = EditorFactory.getInstance().createDocument("Cannot preview file")
@@ -101,13 +98,19 @@ class SearchBoxEditor(project: Project?) : EditorTextField(project, PlainTextFil
         }
     }
 
-    fun moveToLine(lineNumber: Int) {
+    fun moveToOffset(offset: Int) {
         val editor = this.editor as? EditorEx ?: return
-        val document = editor.document
-        if (lineNumber in 1..document.lineCount) {
-            val offset = document.getLineStartOffset(lineNumber - 1)
-            editor.caretModel.moveToOffset(offset)
-            editor.scrollingModel.scrollToCaret(com.intellij.openapi.editor.ScrollType.CENTER)
-        }
+        editor.caretModel.moveToOffset(offset)
+        editor.scrollingModel.scrollToCaret(com.intellij.openapi.editor.ScrollType.CENTER_UP)
     }
+
+//    fun moveToLine(lineNumber: Int) {
+//        val editor = this.editor as? EditorEx ?: return
+//        val document = editor.document
+//        if (lineNumber in 1..document.lineCount) {
+//            val offset = document.getLineStartOffset(lineNumber - 1)
+//            editor.caretModel.moveToOffset(offset)
+//            editor.scrollingModel.scrollToCaret(com.intellij.openapi.editor.ScrollType.CENTER)
+//        }
+//    }
 }

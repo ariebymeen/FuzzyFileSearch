@@ -1,16 +1,15 @@
 package com.fuzzyfilesearch.settings
 
-import com.fuzzyfilesearch.actions.*
 import javax.swing.KeyStroke
 
 // Check if settings are correct. If not, return a string with the error message
-public fun checkSettings(globalSettings: GlobalSettingsComponent): String? {
-    val actionNameError = checkActionNames(globalSettings);
+public fun checkSettings(components: MutableList<SettingsComponent>): String? {
+    val actionNameError = checkActionNames(components)
     if (actionNameError != null) {
         return actionNameError
     }
 
-    val shortcutsError = checkShortcuts(globalSettings);
+    val shortcutsError = checkShortcuts(components)
     if (shortcutsError != null) {
         return shortcutsError
     }
@@ -18,17 +17,13 @@ public fun checkSettings(globalSettings: GlobalSettingsComponent): String? {
     return null
 }
 
-fun checkActionNames(globalSettings: GlobalSettingsComponent) : String? {
+fun checkActionNames(components: MutableList<SettingsComponent>) : String? {
     val actionSet = mutableSetOf<String>()
     val names = mutableListOf<String>()
-    names += globalSettings.openRelativeFileActionsTable.getData().map{ action -> OpenRelativeFileAction.getActionName(action) }
-    names += globalSettings.searchRelativeFileActionsTable.getData().map{ action -> SearchRelativeFileAction.getActionName(action) }
-    names += globalSettings.searchPathActionsTable.getData().map{ action -> SearchFileInPathAction.getActionName(action) }
-    names += globalSettings.searchRecentFiles.getData().map{ action -> SearchFileInPathAction.getActionName(action) }
-    names += globalSettings.searchOpenFiles.getData().map{ action -> SearchOpenFilesAction.getActionName(action) }
-    names += globalSettings.searchFileMatchingPatternActionsTable.getData().map{ action -> SearchFilesWithPatternAction.getActionName(action) }
-    names += globalSettings.searchAllFiles.getData().map{ action -> SearchFilesWithPatternAction.getActionName(action) }
-    names += globalSettings.searchStringMatchingPattern.getData().map{ action -> GrepInFiles.getActionName(action) }
+    components.forEach { comp ->
+        val tableComponent = comp as? ActionsTableComponent ?: return@forEach
+        names += tableComponent.table.getData().map{ action -> tableComponent.getActionName(action) }
+    }
 
     for (name in names) {
         if (actionSet.contains(name)) {
@@ -43,17 +38,13 @@ fun checkActionNames(globalSettings: GlobalSettingsComponent) : String? {
     return null
 }
 
-fun checkShortcuts(globalSettings: GlobalSettingsComponent) : String? {
+fun checkShortcuts(components: MutableList<SettingsComponent>) : String? {
     val actionSet = mutableSetOf<String>()
     val shortcuts = mutableListOf<String>()
-    shortcuts += globalSettings.openRelativeFileActionsTable.getData().map{ action -> OpenRelativeFileAction.getActionShortcut(action) }
-    shortcuts += globalSettings.searchRelativeFileActionsTable.getData().map{ action -> SearchRelativeFileAction.getActionShortcut(action) }
-    shortcuts += globalSettings.searchPathActionsTable.getData().map{ action -> SearchFileInPathAction.getActionShortcut(action) }
-    shortcuts += globalSettings.searchRecentFiles.getData().map{ action -> SearchFileInPathAction.getActionShortcut(action) }
-    shortcuts += globalSettings.searchOpenFiles.getData().map{ action -> SearchOpenFilesAction.getActionShortcut(action) }
-    shortcuts += globalSettings.searchFileMatchingPatternActionsTable.getData().map{ action -> SearchFilesWithPatternAction.getActionShortcut(action) }
-    shortcuts += globalSettings.searchAllFiles.getData().map{ action -> action[1] }
-    shortcuts += globalSettings.searchStringMatchingPattern.getData().map{ action -> GrepInFiles.getActionShortcut(action) }
+    components.forEach { comp ->
+        val tableComponent = comp as? ActionsTableComponent ?: return@forEach
+        shortcuts += tableComponent.table.getData().map{ action -> tableComponent.getActionShortcut(action) }
+    }
 
     for (shortcut in shortcuts) {
         if (shortcut.trim().isNotEmpty() && actionSet.contains(shortcut)) {

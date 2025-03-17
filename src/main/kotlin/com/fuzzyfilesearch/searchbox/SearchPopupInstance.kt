@@ -2,6 +2,7 @@ package com.fuzzyfilesearch.searchbox
 
 import com.fuzzyfilesearch.actions.ShortcutAction
 import com.fuzzyfilesearch.actions.ShortcutType
+import com.fuzzyfilesearch.renderers.VerticallyCenteredTextPane
 import com.fuzzyfilesearch.services.PopupMediator
 import com.fuzzyfilesearch.settings.EditorLocation
 import com.fuzzyfilesearch.settings.GlobalSettings
@@ -9,8 +10,6 @@ import com.fuzzyfilesearch.settings.ModifierKey
 import com.fuzzyfilesearch.settings.PopupSizePolicy
 import com.intellij.openapi.actionSystem.CustomShortcutSet
 import com.intellij.openapi.components.service
-import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupFactory
@@ -66,14 +65,17 @@ fun <T> debounce(delayMillis: Long = 30L, coroutineScope: CoroutineScope, action
     }
 }
 
+class FileLocation(val vf: VirtualFile, val caretOffset: Int)
 
 class SearchPopupInstance<ListItemType> (
     val mCellRenderer: CustomRenderer<ListItemType>,
     val mGetSearchResultCallback: ((String) -> List<ListItemType>),
     val mOpenItemCallback: (ListItemType, OpenLocation) -> Unit,
+    val mGetFileAndLocationCallback: ((ListItemType) -> FileLocation?),
     val mSettings: GlobalSettings.SettingsState,
     var mProject: Project,
-    var mExtensions: List<String>? = null
+    var mExtensions: List<String>? = null,
+    var mShowEditorPreview: Boolean,
 ) {
     val mSearchField: JTextField = JTextField()
     val mExtensionField: JTextField = TransparentTextField(1.0F)
@@ -87,6 +89,7 @@ class SearchPopupInstance<ListItemType> (
     val mMainPanel: JPanel = JPanel(BorderLayout())
     var mNofTimesClicked = 0
     var mLastClickedIndex: Int = -1
+    var mMaxCellRendererWidthOffset = 30
 
     init {
         createPopupInstance()
@@ -96,8 +99,8 @@ class SearchPopupInstance<ListItemType> (
         val ideFrame = WindowManager.getInstance().getIdeFrame(mProject)
         val ideBounds = WindowManager.getInstance().getFrame(mProject)
 
-        val popupWidth: Int
-        val popupHeight: Int
+        var popupWidth: Int
+        var popupHeight: Int
         when (mSettings.popupSizePolicy) {
             PopupSizePolicy.FIXED_SIZE -> {
                 popupWidth = mSettings.searchPopupWidthPx
@@ -115,20 +118,27 @@ class SearchPopupInstance<ListItemType> (
         }
 
         mMaxPopupHeight = popupHeight
-        mCellRenderer.maxWidth = popupWidth - 20
+        mCellRenderer.maxWidth = popupWidth - mMaxCellRendererWidthOffset
+
+        if (mShowEditorPreview && mSettings.editorPreviewLocation == EditorLocation.EDITOR_RIGHT) {
+            popupWidth = (popupWidth.toDouble() / (1.0 - mSettings.editorSizeRatio)).toInt()
+        } else if (mShowEditorPreview && mSettings.editorPreviewLocation == EditorLocation.EDITOR_BELOW) {
+            popupHeight = (popupHeight.toDouble() / (1.0 - mSettings.editorSizeRatio)).toInt()
+        }
 
         // Set the position of the splitter between the search results list and the editor view
         val splitPaneSizeAttr = if (mSettings.editorPreviewLocation == EditorLocation.EDITOR_BELOW) popupHeight else popupWidth
-        if (mSettings.showEditorPreview) {
+        if (mShowEditorPreview) {
             mSplitPane.dividerLocation = (splitPaneSizeAttr * (1.0 - mSettings.editorSizeRatio)).toInt()
             if (mSettings.editorPreviewLocation == EditorLocation.EDITOR_RIGHT) {
-                mCellRenderer.maxWidth = (splitPaneSizeAttr * mSettings.editorSizeRatio).toInt() - 20
+                mCellRenderer.maxWidth = (splitPaneSizeAttr * mSettings.editorSizeRatio).toInt() - mMaxCellRendererWidthOffset
             }
         } else {
             mSplitPane.dividerLocation = splitPaneSizeAttr
         }
         if (splitPaneSizeAttr * mSettings.editorSizeRatio < mSettings.minSizeEditorPx) {
             mSplitPane.dividerLocation = splitPaneSizeAttr
+
         }
 
 
@@ -196,9 +206,9 @@ class SearchPopupInstance<ListItemType> (
 
             mResultsList.selectedIndex = 0
             mResultsList.ensureIndexIsVisible(0)
-            if (mSettings.showEditorPreview && mResultsList.selectedIndex >= 0) {
-                val selectedFile = mResultsList.selectedValue as PopupInstanceItem
-                mEditorView.updateFile(selectedFile.vf)
+            if (mShowEditorPreview && mResultsList.selectedIndex >= 0) {
+                val selectedFile = mGetFileAndLocationCallback(mResultsList.selectedValue as ListItemType)
+                if (selectedFile != null) mEditorView.updateFile(selectedFile.vf, selectedFile.caretOffset)
             }
 
             if (mSettings.shrinkViewDynamically) {
@@ -310,9 +320,9 @@ class SearchPopupInstance<ListItemType> (
             override fun valueChanged(e: ListSelectionEvent?) {
                 if (e != null && !e.valueIsAdjusting) {
                     mResultsList.ensureIndexIsVisible(mResultsList.selectedIndex)
-                    if (mSettings.showEditorPreview && mResultsList.selectedIndex >= 0) {
-                        val selectedFile = mResultsList.selectedValue as PopupInstanceItem
-                        mEditorView.updateFile(selectedFile.vf)
+                    if (mShowEditorPreview && mResultsList.selectedIndex >= 0) {
+                        val selectedFile = mGetFileAndLocationCallback(mResultsList.selectedValue as ListItemType)
+                        if (selectedFile != null) mEditorView.updateFile(selectedFile.vf, selectedFile.caretOffset)
                     }
                 }
             }
