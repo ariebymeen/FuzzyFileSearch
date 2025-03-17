@@ -31,11 +31,11 @@ class SearchDialogCellRenderer(val mProject: Project,
             value.panel = VerticallyCenteredTextPane()
             value.panel!!.text = ""
             value.panel!!.isOpaque = true
-            value.panel?.preferredHeight = mSettings.searchItemHeight
-            value.panel?.maximumHeight = mSettings.searchItemHeight
+            value.panel?.preferredHeight = mSettings.file.searchItemHeight
+            value.panel?.maximumHeight = mSettings.file.searchItemHeight
             value.panel?.font = font
             setText(value, index)
-        } else if (mSettings.showNumberInSearchView) {
+        } else if (mSettings.file.showNumberInSearchView) {
              val formattedNumber = String.format(" %02d - ", index)
              value.panel!!.styledDocument.remove(0, formattedNumber.length)
              value.panel!!.styledDocument.insertString(0, formattedNumber, value.panel!!.getStyle("Tiny"))
@@ -60,7 +60,7 @@ class SearchDialogCellRenderer(val mProject: Project,
         }
 
         val doc = item.panel!!.styledDocument
-        if (mSettings.showNumberInSearchView) {
+        if (mSettings.file.showNumberInSearchView) {
             val formattedNumber = String.format(" %02d - ", index)
             doc.insertString(doc.length, formattedNumber, tinyStyle)
         } else {

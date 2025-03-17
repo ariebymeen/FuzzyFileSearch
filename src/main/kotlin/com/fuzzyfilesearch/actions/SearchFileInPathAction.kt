@@ -49,8 +49,8 @@ class SearchFileInPathAction(val action: Array<String>,
             return
         }
 
-        val changeListManager = if (settings.searchOnlyFilesInVersionControl && !overrideVscIgnore) ChangeListManager.getInstance(project) else null
-        files = getAllFilesInRoot(vfPath, settings.excludedDirs, extensions, changeListManager)
+        val changeListManager = if (settings.common.searchOnlyFilesTrackedByVersionControl && !overrideVscIgnore) ChangeListManager.getInstance(project) else null
+        files = getAllFilesInRoot(vfPath, settings.common.excludedDirs, extensions, changeListManager)
         searchAction.doSearchForFiles(files!!, project, searchPath, extensions)
     }
 

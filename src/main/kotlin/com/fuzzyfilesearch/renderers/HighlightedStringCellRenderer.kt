@@ -28,11 +28,11 @@ class SimpleStringCellRenderer(val mProject: Project,
             value.panel = VerticallyCenteredTextPane()
             value.panel!!.text = ""
             value.panel!!.isOpaque = true
-            value.panel?.preferredHeight = mSettings.searchItemHeight
-            value.panel?.maximumHeight = mSettings.searchItemHeight
+            value.panel?.preferredHeight = mSettings.string.searchItemHeight
+            value.panel?.maximumHeight = mSettings.string.searchItemHeight
             value.panel?.font = font
             setText(value, index)
-        } else if (mSettings.showNumberInSearchView) {
+        } else if (mSettings.string.showNumberInSearchView) {
             val formattedNumber = String.format(" %02d - ", index)
             value.panel!!.styledDocument.remove(0, formattedNumber.length)
             value.panel!!.styledDocument.insertString(0, formattedNumber, value.panel!!.getStyle("Tiny"))
@@ -53,7 +53,7 @@ class SimpleStringCellRenderer(val mProject: Project,
 
         val doc = item.panel!!.styledDocument
 
-        if (mSettings.showNumberInSearchView) {
+        if (mSettings.string.showNumberInSearchView) {
             val formattedNumber = String.format(" %02d - ", index)
             doc.insertString(doc.length, formattedNumber, tinyStyle)
         } else {
@@ -63,7 +63,7 @@ class SimpleStringCellRenderer(val mProject: Project,
         val offset = doc.length
         doc.insertString(doc.length, "${item.text}", normalStyle)
         if (mSettings.applySyntaxHighlightingOnTextSearch) {
-            highlightText(mProject, doc, offset, item.text, item.vf.extension!!)
+            highlightText(mProject, doc, offset, item.text, item.vf.extension)
         }
 
         // If text is too wide for the view, remove and place ... at the end

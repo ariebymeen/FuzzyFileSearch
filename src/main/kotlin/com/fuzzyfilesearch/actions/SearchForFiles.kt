@@ -44,15 +44,15 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
 
         mPopup = SearchPopupInstance(SearchDialogCellRenderer(project, settings), ::getSortedFileList, ::openFile,
                                                                     ::getFileFromItem, settings,  project, extensions,
-                                                                            settings.showEditorPreview)
+                                                                            settings.file)
         mPopup!!.showPopupInstance()
-        fzfSearchAction = FzfSearchAction(mFileNames!!, settings.searchCaseSensitivity)
+        fzfSearchAction = FzfSearchAction(mFileNames!!, settings.common.searchCaseSensitivity)
     }
 
     fun getSortedFileList(query: String) : List<PopupInstanceItem> {
         if (query.isNotEmpty()) {
             val filteredFiles = fzfSearchAction!!.search(query)
-            val visibleList = filteredFiles.subList(0, min(filteredFiles.size, settings.numberOfFilesInSearchView))
+            val visibleList = filteredFiles.subList(0, min(filteredFiles.size, settings.file.numberOfFilesInSearchView))
             val visibleFiles = visibleList
                 .map { file -> mFileNames!!.indexOfFirst{ name  -> name == file } }
                 .map { index ->
@@ -68,7 +68,7 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
             return visibleFiles
         }
         else {
-            return mFiles.subList(0, min(mFiles.size, settings.numberOfFilesInSearchView))
+            return mFiles.subList(0, min(mFiles.size, settings.file.numberOfFilesInSearchView))
         }
     }
 

@@ -98,7 +98,9 @@ fun getCurrentEditorColorScheme(): EditorColorsScheme {
     return EditorColorsManager.getInstance().globalScheme
 }
 
-fun highlightText(project: Project, doc: StyledDocument, startOffset: Int, text: String, extension: String) {
+fun highlightText(project: Project, doc: StyledDocument, startOffset: Int, text: String, extension: String?) {
+    extension ?: return
+    
     val syntaxHighlighter = getSyntaxHighlighterByExtension(project, extension)
     if (syntaxHighlighter == null) {
         println("Error! Syntax highlighter not found for extension type: $text")

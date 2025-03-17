@@ -53,7 +53,7 @@ fun registerOpenRelativeFileActions(actions: Array<Array<String>>, settings: Glo
             registerAction(
                 OpenRelativeFileAction.getActionName(action),
                 OpenRelativeFileAction.getActionShortcut(action),
-                OpenRelativeFileAction(action, settings.excludedDirs)
+                OpenRelativeFileAction(action, settings.common.excludedDirs)
             )
         }
     }

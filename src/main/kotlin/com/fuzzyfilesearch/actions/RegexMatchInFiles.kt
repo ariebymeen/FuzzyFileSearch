@@ -19,10 +19,6 @@ import kotlin.io.path.Path
 import kotlin.math.min
 import kotlin.system.measureTimeMillis
 
-//class RegexMatch(val result: MatchResult, val file: VirtualFile)
-//class GrepInstanceItem(val match: RegexMatch,
-//                       val shownString: String,
-//                       var panel: VerticallyCenteredTextPane? = null)
 class GrepInstanceItem(val vf: VirtualFile,
                        val start: Int,
                        val end: Int,
@@ -66,8 +62,8 @@ class GrepInFiles(val action: Array<String>,
                 searchPath = curFile.parent.path + "/" + location
             }
             val vfPath = getVirtualFileFromPath(searchPath)?: return
-            val changeListManager = if (settings.searchOnlyFilesInVersionControl) ChangeListManager.getInstance(project) else null
-            val allFiles = getAllFilesInRoot(vfPath, settings.excludedDirs, emptyList(), changeListManager)
+            val changeListManager = if (settings.common.searchOnlyFilesTrackedByVersionControl) ChangeListManager.getInstance(project) else null
+            val allFiles = getAllFilesInRoot(vfPath, settings.common.excludedDirs, emptyList(), changeListManager)
             mFileNames.addAll(allFiles.map { file -> file.vf })
         }
 
@@ -86,7 +82,6 @@ class GrepInFiles(val action: Array<String>,
                                          .replace("   " , " ")
                                          .replace("  "  , " ")
                     }
-//                    GrepInstanceItem(RegexMatch(match, vf), newText)
                     GrepInstanceItem(vf, match.range.first, match.range.last, newText)
                 })
             }
@@ -99,15 +94,15 @@ class GrepInFiles(val action: Array<String>,
 
         mPopup = SearchPopupInstance(SimpleStringCellRenderer(project, settings), ::getSortedResult, ::moveToLocation, ::getFileFromItem,
                                                                             settings, project, getActionExtension(action),
-                                                                            settings.showEditorPreviewStringSearch)
+                                                                            settings.string)
         mPopup!!.showPopupInstance()
-        fzfSearchAction = FzfSearchAction(mSearchItemStrings, settings.searchCaseSensitivity)
+        fzfSearchAction = FzfSearchAction(mSearchItemStrings, settings.common.searchCaseSensitivity)
     }
 
     fun getSortedResult(query: String) : List<GrepInstanceItem> {
         if (query.isNotEmpty()) {
             val filtered = fzfSearchAction!!.search(query)
-            val visibleList = filtered.subList(0, min(filtered.size, settings.numberOfFilesInSearchView))
+            val visibleList = filtered.subList(0, min(filtered.size, settings.string.numberOfFilesInSearchView))
             val visibleItems = visibleList
                 .map { file -> mSearchItemStrings.indexOfFirst{ name  -> name == file } }
                 .map { index ->
@@ -123,7 +118,7 @@ class GrepInFiles(val action: Array<String>,
             return visibleItems
         }
         else {
-            return mSearchItems.subList(0, min(mSearchItems.size, settings.numberOfFilesInSearchView))
+            return mSearchItems.subList(0, min(mSearchItems.size, settings.string.numberOfFilesInSearchView))
         }
     }
 
@@ -140,7 +135,7 @@ class GrepInFiles(val action: Array<String>,
         mEvent = null
     }
 
-    fun getFileFromItem(item: GrepInstanceItem): FileLocation? {
+    fun getFileFromItem(item: GrepInstanceItem): FileLocation {
         return FileLocation(item.vf, item.start)
     }
 

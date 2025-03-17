@@ -56,7 +56,12 @@
                 parentId="tools"
                 instance="com.fuzzyfilesearch.settings.GlobalSettingsConfigurable"
                 id="com.fuzzyfilesearch.settings.GlobalSettingsConfigurable"
-                displayName="FuzzyFileSearch Settings"/>
+                displayName="FuzzyFileSearch File Search"/>
+        <applicationConfigurable
+                parentId="tools"
+                instance="com.fuzzyfilesearch.settings.SearchSettingsConfigurable"
+                id="com.fuzzyfilesearch.settings.SearchSettingsConfigurable"
+                displayName="FuzzyFileSearch String Search"/>
         <notificationGroup id="FuzzyFileSearchGroup"
                            displayType="BALLOON"
                            toolWindowId="Event Log"
@@ -68,8 +73,7 @@
                 description="Opens a dialog with additional information about the FuzzyFileSearch plugin">
                 <keyboard-shortcut keymap="Default for GNOME" first-keystroke="shift alt H"/>
         </action>
-        <action id="com.example.TabKeyHandler" class="com.fuzzyfilesearch.actions.ShortcutAction" text="Vertical split" description="Custom handler for TAB key">
-            <keyboard-shortcut keymap="$default" first-keystroke="ctrl V"/>
+        <action id="com.example.TabKeyHandler" class="com.fuzzyfilesearch.actions.ShortcutAction" text="HandleTab" description="Custom handler for TAB key">
         </action>
     </actions>
 </idea-plugin>

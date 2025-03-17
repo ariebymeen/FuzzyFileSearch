@@ -9,18 +9,18 @@ import kotlin.reflect.KMutableProperty0
 class ActionsTableComponent(private var setting: KMutableProperty0<Array<Array<String>>>,
                             header: Array<String>,
                             default: Array<String>,
+                            weights: Array<Int>,
                             private val nameIndex: Int,
                             private val shortcutIndex: Int,
                             private val createActionCb: (Array<Array<String>>, GlobalSettings.SettingsState) -> Unit,
                             private val settings: GlobalSettings.SettingsState): SettingsComponent {
-    val table = ActionsTable(header, default)
+    val table = ActionsTable(header, default, weights)
 
     override fun initialize() {
         table.setData(setting.get())
     }
 
     override fun modified(): Boolean {
-        println("Setting: ${setting.get()}, data: ${table.getData()}")
         return !isEqual(setting.get(), table.getData())
     }
 

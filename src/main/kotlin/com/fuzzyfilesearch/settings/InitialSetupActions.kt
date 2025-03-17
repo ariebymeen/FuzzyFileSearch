@@ -29,12 +29,12 @@ class ApplicationStartupSetup : ProjectActivity {
         registerSearchFileMatchingPatternActions(globalSettings.state.searchFilesMatchingPatterActions, globalSettings.state)
         registerGrepInFilesActions(globalSettings.state.searchStringMatchingPatternActions, globalSettings.state)
 
-        if (globalSettings.state.fontSize == 0) {
+        if (globalSettings.state.common.fontSize == 0) {
             val scheme = EditorColorsManager.getInstance().globalScheme
-            globalSettings.state.fontSize = scheme.editorFontSize
+            globalSettings.state.common.fontSize = scheme.editorFontSize
         }
-        if (globalSettings.state.selectedColor.isEmpty()) {
-            globalSettings.state.selectedColor = colorToHexWithAlpha(UIManager.getColor("List.selectionBackground"))
+        if (globalSettings.state.common.selectedColor.isEmpty()) {
+            globalSettings.state.common.selectedColor = colorToHexWithAlpha(UIManager.getColor("List.selectionBackground"))
         }
 
         project.service<RecentFilesKeeper>()    // Initialize project service

@@ -9,7 +9,6 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.fuzzyfilesearch.*
 import com.fuzzyfilesearch.searchbox.PopupInstanceItem
 import com.fuzzyfilesearch.searchbox.getAllFilesInRoot
-import com.fuzzyfilesearch.searchbox.getParentSatisfyingRegex
 import com.intellij.openapi.vfs.VfsUtil
 import kotlin.io.path.Path
 
@@ -32,7 +31,7 @@ class SearchFilesWithPatternAction(val action: Array<String>,
         } else { // Search from current file
             val currentFile = e.getData(com.intellij.openapi.actionSystem.CommonDataKeys.VIRTUAL_FILE)
             if (currentFile == null) {
-                showTimedNotification("$name No open file", "Cannot perform action when no file is opened");
+                showTimedNotification("$name No open file", "Cannot perform action when no file is opened")
                 return
             }
             searchPath = currentFile.parent.path + "/" + location
@@ -40,12 +39,12 @@ class SearchFilesWithPatternAction(val action: Array<String>,
 
         val vfPath = getVirtualFileFromPath(searchPath)
         if (vfPath == null) {
-            showTimedNotification("$name path not found", "Trying to open path ${searchPath}, but this path does not exist");
+            showTimedNotification("$name path not found", "Trying to open path ${searchPath}, but this path does not exist")
             return
         }
 
-        val changeListManager = if (settings.searchOnlyFilesInVersionControl) ChangeListManager.getInstance(project) else null
-        val allFiles = getAllFilesInRoot(vfPath, settings.excludedDirs, emptyList(), changeListManager)
+        val changeListManager = if (settings.common.searchOnlyFilesTrackedByVersionControl) ChangeListManager.getInstance(project) else null
+        val allFiles = getAllFilesInRoot(vfPath, settings.common.excludedDirs, emptyList(), changeListManager)
         files = allFiles.filter { vf -> regex.matches(vf.vf.name) }
         files ?: return
         searchAction.doSearchForFiles(files!!, project, "", null)

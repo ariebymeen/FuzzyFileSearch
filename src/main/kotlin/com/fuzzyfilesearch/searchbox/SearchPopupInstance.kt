@@ -75,7 +75,7 @@ class SearchPopupInstance<ListItemType> (
     val mSettings: GlobalSettings.SettingsState,
     var mProject: Project,
     var mExtensions: List<String>? = null,
-    var mShowEditorPreview: Boolean,
+    var mPopupSettings: GlobalSettings.PopupSettings
 ) {
     val mSearchField: JTextField = JTextField()
     val mExtensionField: JTextField = TransparentTextField(1.0F)
@@ -101,42 +101,42 @@ class SearchPopupInstance<ListItemType> (
 
         var popupWidth: Int
         var popupHeight: Int
-        when (mSettings.popupSizePolicy) {
+        when (mPopupSettings.popupSizePolicy) {
             PopupSizePolicy.FIXED_SIZE -> {
-                popupWidth = mSettings.searchPopupWidthPx
-                popupHeight = mSettings.searchPopupHeightPx
+                popupWidth = mPopupSettings.searchPopupWidthPx
+                popupHeight = mPopupSettings.searchPopupHeightPx
             }
             PopupSizePolicy.SCALE_WITH_IDE -> {
-                popupWidth = (ideBounds!!.width * mSettings.searchPopupWidth).toInt()
-                popupHeight = (ideBounds.height * mSettings.searchPopupHeight).toInt()
+                popupWidth = (ideBounds!!.width * mPopupSettings.searchPopupWidth).toInt()
+                popupHeight = (ideBounds.height * mPopupSettings.searchPopupHeight).toInt()
             }
             PopupSizePolicy.SCALE_WITH_SCREEN -> {
                 val screenSize = Toolkit.getDefaultToolkit().screenSize
-                popupWidth = (screenSize.width * mSettings.searchPopupWidth).toInt()
-                popupHeight = (screenSize.height * mSettings.searchPopupHeight).toInt()
+                popupWidth = (screenSize.width * mPopupSettings.searchPopupWidth).toInt()
+                popupHeight = (screenSize.height * mPopupSettings.searchPopupHeight).toInt()
             }
         }
 
         mMaxPopupHeight = popupHeight
         mCellRenderer.maxWidth = popupWidth - mMaxCellRendererWidthOffset
 
-        if (mShowEditorPreview && mSettings.editorPreviewLocation == EditorLocation.EDITOR_RIGHT) {
-            popupWidth = (popupWidth.toDouble() / (1.0 - mSettings.editorSizeRatio)).toInt()
-        } else if (mShowEditorPreview && mSettings.editorPreviewLocation == EditorLocation.EDITOR_BELOW) {
-            popupHeight = (popupHeight.toDouble() / (1.0 - mSettings.editorSizeRatio)).toInt()
+        if (mPopupSettings.showEditorPreview && mPopupSettings.editorPreviewLocation == EditorLocation.EDITOR_RIGHT) {
+            popupWidth = (popupWidth.toDouble() / (1.0 - mPopupSettings.editorSizeRatio)).toInt()
+        } else if (mPopupSettings.showEditorPreview && mPopupSettings.editorPreviewLocation == EditorLocation.EDITOR_BELOW) {
+            popupHeight = (popupHeight.toDouble() / (1.0 - mPopupSettings.editorSizeRatio)).toInt()
         }
 
         // Set the position of the splitter between the search results list and the editor view
-        val splitPaneSizeAttr = if (mSettings.editorPreviewLocation == EditorLocation.EDITOR_BELOW) popupHeight else popupWidth
-        if (mShowEditorPreview) {
-            mSplitPane.dividerLocation = (splitPaneSizeAttr * (1.0 - mSettings.editorSizeRatio)).toInt()
-            if (mSettings.editorPreviewLocation == EditorLocation.EDITOR_RIGHT) {
-                mCellRenderer.maxWidth = (splitPaneSizeAttr * mSettings.editorSizeRatio).toInt() - mMaxCellRendererWidthOffset
+        val splitPaneSizeAttr = if (mPopupSettings.editorPreviewLocation == EditorLocation.EDITOR_BELOW) popupHeight else popupWidth
+        if (mPopupSettings.showEditorPreview) {
+            mSplitPane.dividerLocation = (splitPaneSizeAttr * (1.0 - mPopupSettings.editorSizeRatio)).toInt()
+            if (mPopupSettings.editorPreviewLocation == EditorLocation.EDITOR_RIGHT) {
+                mCellRenderer.maxWidth = (splitPaneSizeAttr * mPopupSettings.editorSizeRatio).toInt() - mMaxCellRendererWidthOffset
             }
         } else {
             mSplitPane.dividerLocation = splitPaneSizeAttr
         }
-        if (splitPaneSizeAttr * mSettings.editorSizeRatio < mSettings.minSizeEditorPx) {
+        if (splitPaneSizeAttr * mPopupSettings.editorSizeRatio < mPopupSettings.minSizeEditorPx) {
             mSplitPane.dividerLocation = splitPaneSizeAttr
 
         }
@@ -148,7 +148,7 @@ class SearchPopupInstance<ListItemType> (
             .createComponentPopupBuilder(mSplitPane, mSearchField)
             .setRequestFocus(true)
             .setShowBorder(false)
-            .setMinSize(Dimension(mSettings.searchBarHeight, 0))
+            .setMinSize(Dimension(mPopupSettings.searchBarHeight, 0))
             .createPopup()
 
         updateListedItems()
@@ -158,8 +158,8 @@ class SearchPopupInstance<ListItemType> (
             mPopup!!.showInFocusCenter()
             mPopup!!.size = Dimension(popupWidth, popupHeight)
         } else {
-            val posY = ideBounds.y + ideBounds.height * mSettings.verticalPositionOnScreen - popupHeight / 2
-            val posX = ideBounds.x + ideBounds.width * mSettings.horizontalPositionOnScreen - popupWidth / 2
+            val posY = ideBounds.y + ideBounds.height * mPopupSettings.verticalPositionOnScreen - popupHeight / 2
+            val posX = ideBounds.x + ideBounds.width * mPopupSettings.horizontalPositionOnScreen - popupWidth / 2
             val posYInBounds = min(ideBounds.y + ideBounds.height - popupHeight, max(ideBounds.y, posY.toInt()))
             val poxXInBounds = max(ideBounds.x, min(ideBounds.x + ideBounds.width - popupWidth, posX.toInt()))
 
@@ -206,13 +206,13 @@ class SearchPopupInstance<ListItemType> (
 
             mResultsList.selectedIndex = 0
             mResultsList.ensureIndexIsVisible(0)
-            if (mShowEditorPreview && mResultsList.selectedIndex >= 0) {
+            if (mPopupSettings.showEditorPreview && mResultsList.selectedIndex >= 0) {
                 val selectedFile = mGetFileAndLocationCallback(mResultsList.selectedValue as ListItemType)
                 if (selectedFile != null) mEditorView.updateFile(selectedFile.vf, selectedFile.caretOffset)
             }
 
-            if (mSettings.shrinkViewDynamically) {
-                mPopup!!.size = Dimension(mPopup!!.width, min(mMaxPopupHeight!!, mSettings.searchBarHeight + mListModel.size() * mSettings.searchItemHeight + 6))
+            if (mPopupSettings.shrinkViewDynamically) {
+                mPopup!!.size = Dimension(mPopup!!.width, min(mMaxPopupHeight!!, mPopupSettings.searchBarHeight + mListModel.size() * mPopupSettings.searchItemHeight + 6))
                 mResultsList.revalidate()
                 mResultsList.repaint()
             }
@@ -220,7 +220,7 @@ class SearchPopupInstance<ListItemType> (
     }
 
     private fun keyTypedEvent(e: KeyEvent) {
-        val isModifierPressed = if (this.mSettings.modifierKey == ModifierKey.CTRL) e.isControlDown else e.isAltDown
+        val isModifierPressed = if (this.mSettings.common.modifierKey == ModifierKey.CTRL) e.isControlDown else e.isAltDown
         if (Character.isDigit(e.keyChar) && isModifierPressed) {
             e.consume() // Consume the event to prevent the character from being added
             mResultsList.selectedIndex = e.keyChar.digitToInt()
@@ -238,7 +238,7 @@ class SearchPopupInstance<ListItemType> (
                  callOpenCallbackAndClosePopup(OpenLocation.MAIN_VIEW)
             }
         }
-        val isModifierPressed = if (this.mSettings.modifierKey == ModifierKey.CTRL) e.isControlDown else e.isAltDown
+        val isModifierPressed = if (this.mSettings.common.modifierKey == ModifierKey.CTRL) e.isControlDown else e.isAltDown
         if (isModifierPressed) {
             when (e.keyCode) {
                 KeyEvent.VK_K -> mResultsList.selectedIndex -= 1
@@ -261,7 +261,7 @@ class SearchPopupInstance<ListItemType> (
 
     private fun mouseClickedEvent() {
         if ((mResultsList.selectedIndex == mLastClickedIndex && mNofTimesClicked >= 1) ||
-                    mSettings.openWithSingleClick) {
+                    mSettings.common.openWithSingleClick) {
             callOpenCallbackAndClosePopup(OpenLocation.MAIN_VIEW)
         }
         mNofTimesClicked = 1
@@ -272,23 +272,23 @@ class SearchPopupInstance<ListItemType> (
         if (!extList.isNullOrEmpty()) {
             mExtensionField.text = extList.map{ ext -> ".$ext"}.joinToString(";")
             val width = mExtensionField.getFontMetrics(mExtensionField.font).stringWidth(mExtensionField.text)
-            mExtensionField.preferredSize = Dimension(width + 30, mSettings.searchBarHeight)
+            mExtensionField.preferredSize = Dimension(width + 30, mPopupSettings.searchBarHeight)
         }
     }
 
-    private fun setSearchBarHeigth(settings: GlobalSettings.SettingsState) {
-        mSearchField.preferredSize = Dimension(0, settings.searchBarHeight)
-        mExtensionField.preferredSize = Dimension(0, settings.searchBarHeight)
+    private fun setSearchBarHeight() {
+        mSearchField.preferredSize = Dimension(0, mPopupSettings.searchBarHeight)
+        mExtensionField.preferredSize = Dimension(0, mPopupSettings.searchBarHeight)
     }
 
     private fun getFont(settings: GlobalSettings.SettingsState): Font {
         var fontName = ""
-        if (settings.useDefaultFont) {
+        if (settings.common.useDefaultFont) {
             fontName = UIManager.getFont("Label.font").fontName
         } else  {
-            fontName = settings.selectedFontName
+            fontName = settings.common.selectedFontName
         }
-        return Font(fontName, Font.PLAIN, settings.fontSize)
+        return Font(fontName, Font.PLAIN, settings.common.fontSize)
     }
 
     private fun createPopupInstance() {
@@ -303,7 +303,7 @@ class SearchPopupInstance<ListItemType> (
         mExtensionField.toolTipText = ""
         mExtensionField.isEditable = false
         mExtensionField.font = font
-        setSearchBarHeigth(mSettings)
+        setSearchBarHeight()
         setExtensionsField(mExtensions)
 
         mSearchField.addKeyListener(object : KeyAdapter() {
@@ -320,7 +320,7 @@ class SearchPopupInstance<ListItemType> (
             override fun valueChanged(e: ListSelectionEvent?) {
                 if (e != null && !e.valueIsAdjusting) {
                     mResultsList.ensureIndexIsVisible(mResultsList.selectedIndex)
-                    if (mShowEditorPreview && mResultsList.selectedIndex >= 0) {
+                    if (mPopupSettings.showEditorPreview && mResultsList.selectedIndex >= 0) {
                         val selectedFile = mGetFileAndLocationCallback(mResultsList.selectedValue as ListItemType)
                         if (selectedFile != null) mEditorView.updateFile(selectedFile.vf, selectedFile.caretOffset)
                     }
@@ -345,7 +345,7 @@ class SearchPopupInstance<ListItemType> (
         scrollPanel.verticalScrollBar.preferredSize = Dimension(6, 0)
         mMainPanel.add(scrollPanel, BorderLayout.CENTER)
 
-        val splitType = if (mSettings.editorPreviewLocation == EditorLocation.EDITOR_BELOW) JSplitPane.VERTICAL_SPLIT else JSplitPane.HORIZONTAL_SPLIT
+        val splitType = if (mPopupSettings.editorPreviewLocation == EditorLocation.EDITOR_BELOW) JSplitPane.VERTICAL_SPLIT else JSplitPane.HORIZONTAL_SPLIT
         mSplitPane = JSplitPane(splitType, mMainPanel, mEditorView)
         mSplitPane.isContinuousLayout = false
         mSplitPane.dividerSize = 0
@@ -356,7 +356,7 @@ class SearchPopupInstance<ListItemType> (
             .setRequestFocus(true)
             .setShowBorder(false)
             .setCancelOnClickOutside(true) // Dismiss the popup if clicked outside
-            .setMinSize(Dimension(mSettings.searchBarHeight, 0))
+            .setMinSize(Dimension(mPopupSettings.searchBarHeight, 0))
             .createPopup()
 
         SwingUtilities.invokeLater {
@@ -371,35 +371,35 @@ class SearchPopupInstance<ListItemType> (
     }
 
     private fun getForegroundColor(settings: GlobalSettings.SettingsState): Color {
-        var color = hexToColorWithAlpha(settings.selectedColor)
-        if (settings.useDefaultHighlightColor || color == null) {
+        var color = hexToColorWithAlpha(settings.common.selectedColor)
+        if (settings.common.useDefaultHighlightColor || color == null) {
             color = UIManager.getColor("List.selectionBackground")
         }
         return color!!
     }
 
     private fun registerCustomShortcutActions() {
-        if (mSettings.openInHorizontalSplit.isNotEmpty()) {
+        if (mSettings.common.openInHorizontalSplit.isNotEmpty()) {
             val action = ShortcutAction("OpenInHorizontalSplit", ShortcutType.OPEN_FILE_IN_HORIZONTAL_SPLIT)
-            val tt = KeyStroke.getKeyStroke(mSettings.openInHorizontalSplit)
+            val tt = KeyStroke.getKeyStroke(mSettings.common.openInHorizontalSplit)
             if (tt == null) {
-                println("Invalid shortcut: ${mSettings.openInHorizontalSplit}")
+                println("Invalid shortcut: ${mSettings.common.openInHorizontalSplit}")
             }
-            val tabShortcut = CustomShortcutSet(KeyStroke.getKeyStroke(mSettings.openInHorizontalSplit))
+            val tabShortcut = CustomShortcutSet(KeyStroke.getKeyStroke(mSettings.common.openInHorizontalSplit))
             action.registerCustomShortcutSet(tabShortcut, mSearchField)
         }
-        if (mSettings.openInVerticalSplit.isNotEmpty()) {
+        if (mSettings.common.openInVerticalSplit.isNotEmpty()) {
             val action = ShortcutAction("OpenInVerticalSplit", ShortcutType.OPEN_FILE_IN_VERTICAL_SPLIT)
-            val tabShortcut = CustomShortcutSet(KeyStroke.getKeyStroke(mSettings.openInVerticalSplit))
+            val tabShortcut = CustomShortcutSet(KeyStroke.getKeyStroke(mSettings.common.openInVerticalSplit))
             action.registerCustomShortcutSet(tabShortcut, mSearchField)
         }
-        if (mSettings.openInActiveEditor.isNotEmpty()) {
+        if (mSettings.common.openInActiveEditor.isNotEmpty()) {
             val action = ShortcutAction("OpenInActiveEditor", ShortcutType.OPEN_FILE_IN_ACTIVE_EDITOR)
-            val tt = KeyStroke.getKeyStroke(mSettings.openInActiveEditor)
+            val tt = KeyStroke.getKeyStroke(mSettings.common.openInActiveEditor)
             if (tt == null) {
-                println("Invalid shortcut: ${mSettings.openInActiveEditor}")
+                println("Invalid shortcut: ${mSettings.common.openInActiveEditor}")
             }
-            val tabShortcut = CustomShortcutSet(KeyStroke.getKeyStroke(mSettings.openInActiveEditor))
+            val tabShortcut = CustomShortcutSet(KeyStroke.getKeyStroke(mSettings.common.openInActiveEditor))
             action.registerCustomShortcutSet(tabShortcut, mSearchField)
         }
     }

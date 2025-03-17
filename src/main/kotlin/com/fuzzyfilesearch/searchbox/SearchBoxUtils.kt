@@ -8,12 +8,12 @@ import javax.swing.UIManager
 
 fun getFont(settings: GlobalSettings.SettingsState): Font {
     var fontName = ""
-    if (settings.useDefaultFont) {
+    if (settings.common.useDefaultFont) {
         fontName = UIManager.getFont("Label.font").fontName
     } else  {
-        fontName = settings.selectedFontName
+        fontName = settings.common.selectedFontName
     }
-    return Font(fontName, Font.PLAIN, settings.fontSize)
+    return Font(fontName, Font.PLAIN, settings.common.fontSize)
 }
 
 fun colorToHexWithAlpha(color: Color?): String {

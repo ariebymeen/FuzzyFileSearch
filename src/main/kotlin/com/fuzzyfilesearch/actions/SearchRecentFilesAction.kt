@@ -24,7 +24,7 @@ class SearchRecentFilesAction(val action: Array<String>,
             history = action[1].toInt()
         } catch (e: Exception) {
             showErrorNotification("Not a valid number", "Trying to register $name, but the history field was not set with a valid number. Using the default of 10")
-            history = 10;
+            history = 10
         }
 
         extensions = extractExtensions(action[2])

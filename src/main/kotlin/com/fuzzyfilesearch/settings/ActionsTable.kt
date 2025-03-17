@@ -3,28 +3,25 @@ package com.fuzzyfilesearch.settings
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.fileChooser.FileChooser
-import com.intellij.openapi.fileChooser.FileChooserDescriptor
+import com.intellij.openapi.fileChooser.*
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.openapi.fileChooser.FileSaverDescriptor
-import com.intellij.openapi.fileChooser.FileSaverDialog
-import com.intellij.openapi.fileChooser.FileChooserFactory
 import com.intellij.openapi.vfs.VirtualFileWrapper
-import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.table.JBTable
 import com.intellij.ui.util.preferredHeight
 import java.awt.BorderLayout
+import java.awt.event.ComponentAdapter
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import java.io.IOException
-import javax.swing.BoxLayout
-import javax.swing.JButton
+import javax.swing.*
 import javax.swing.table.DefaultTableModel
 
-
 class ActionsTable(columnNames: Array<String>,
-                   private val emptyItem: Array<String>) : JBPanel<ActionsTable>() {
+                   private val emptyItem: Array<String>,
+                   private val weights: Array<Int>? = null) : JBPanel<ActionsTable>() {
 
                        // TODO: Resize according to content
                        // TODO: Double click for flyout that is editable
@@ -33,13 +30,37 @@ class ActionsTable(columnNames: Array<String>,
     private val mTable = JBTable(mTableModel)
     private val mTablePanel = JBPanel<JBPanel<*>>()
     private val rowHeight = 30
+    private var mColumnWeights = Array(columnNames.size) { 1 }
 
     init {
+        if (weights != null && weights.size == columnNames.size) {
+            mColumnWeights = weights
+        }
+
         layout = BorderLayout()
 
         // Table panel
         mTableModel.isCellEditable(0, 0)
         mTable.rowHeight = rowHeight
+        mTable.autoResizeMode = JTable.AUTO_RESIZE_OFF
+        mTable.addMouseListener(object : MouseAdapter() {
+            override fun mousePressed(e: MouseEvent) {
+                val row = mTable.rowAtPoint(e.point)
+                val column = mTable.columnAtPoint(e.point)
+
+                if (row != -1 && column != -1 && mTable.isCellEditable(row, column)) {
+                    mTable.editCellAt(row, column)
+                    val editorComponent = mTable.editorComponent
+                    editorComponent?.requestFocus()
+                }
+            }
+        })
+        // Listen for table resize events
+        mTablePanel.addComponentListener(object: ComponentAdapter() {
+            override fun componentResized(e: java.awt.event.ComponentEvent) {
+                resizeColumns()
+            }
+        })
         mTablePanel.apply {
             layout = BorderLayout()
             val scrollTable = JBScrollPane(mTable)
@@ -134,6 +155,21 @@ class ActionsTable(columnNames: Array<String>,
             mTableModel.addRow(row)
         }
         resize()
+    }
+
+    fun resizeColumns() {
+        val totalWeight = mColumnWeights.sum().toDouble()
+        val tableWidth = mTable.parent.width
+        println("Width: ${tableWidth}, ${System.currentTimeMillis()}")
+        for (i in 0 until mTable.columnCount) {
+            val column = mTable.columnModel.getColumn(i)
+            val weightRatio = mColumnWeights[i].toDouble() / totalWeight
+            val newWidth = (tableWidth * weightRatio).toInt()
+            column.preferredWidth = newWidth
+            column.width = newWidth
+        }
+        mTablePanel.revalidate()
+        mTablePanel.repaint()
     }
 
     fun exportToFile() {
