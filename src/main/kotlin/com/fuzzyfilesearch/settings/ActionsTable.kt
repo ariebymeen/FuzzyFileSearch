@@ -76,14 +76,14 @@ class ActionsTable(columnNames: Array<String>,
 
         val formPanel = JBPanel<JBPanel<*>>().apply {
             layout = BoxLayout(this, BoxLayout.X_AXIS)
-            val addButton = JButton("Add new action").apply {
+            val addButton = JButton("New").apply {
                 addActionListener {
                     mTableModel.addRow(emptyItem)
                     resize()
                 }
             }
             add(addButton)
-            val removeButton = JButton("Remove action").apply {
+            val removeButton = JButton("Delete").apply {
                 addActionListener {
                     if (mTable.selectedRow >= 0 && !mTable.isEditing) {
                         mTableModel.removeRow(mTable.selectedRow)
@@ -92,7 +92,7 @@ class ActionsTable(columnNames: Array<String>,
                 }
             }
             add(removeButton)
-            val duplicateButton = JButton("Duplicate action").apply {
+            val duplicateButton = JButton("Duplicate").apply {
                 addActionListener {
                     if (mTable.selectedRow >= 0) {
                         val row = getRowEntry(mTable.selectedRow) ?: return@addActionListener

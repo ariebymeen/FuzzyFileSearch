@@ -27,7 +27,8 @@ class ApplicationStartupSetup : ProjectActivity {
         registerSearchOpenFiles(globalSettings.state.searchOpenFilesActions, globalSettings.state)
         registerSearchAllFiles(globalSettings.state.searchAllFilesActions, globalSettings.state)
         registerSearchFileMatchingPatternActions(globalSettings.state.searchFilesMatchingPatterActions, globalSettings.state)
-        registerGrepInFilesActions(globalSettings.state.searchStringMatchingPatternActions, globalSettings.state)
+        registerSearchForRegexInFiles(globalSettings.state.searchStringMatchingPatternActions, globalSettings.state)
+        registerGrepInFilesActions(globalSettings.state.searchStringMatchingSubstringActions, globalSettings.state)
 
         if (globalSettings.state.common.fontSize == 0) {
             val scheme = EditorColorsManager.getInstance().globalScheme
@@ -41,10 +42,5 @@ class ApplicationStartupSetup : ProjectActivity {
         project.service<PopupMediator>()        // Initialize project service
         project.service<TabKeyPostProcessor>().registerProcessor()        // Initialize project service
         initFzf()
-
-        ActionManager.getInstance().registerAction("TEST", GrepInFiles(arrayOf("Name","",""), globalSettings.state))
-        val keyStroke = KeyStroke.getKeyStroke("shift alt Y")
-        val sc = KeyboardShortcut(keyStroke, null)
-        KeymapManager.getInstance().activeKeymap.addShortcut("TEST", sc)
     }
 }

@@ -2,23 +2,12 @@ package com.fuzzyfilesearch.settings
 
 import com.fuzzyfilesearch.actions.*
 import com.intellij.icons.AllIcons
-import com.intellij.ide.DataManager
-import com.intellij.openapi.actionSystem.ActionManager
-import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.Presentation
-import com.intellij.ui.ColorPanel
-import com.intellij.ui.FontComboBox
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.FormBuilder
-import javax.swing.JButton
 import javax.swing.JPanel
 
-// TODO: Create settings components that make this all a bit less manual
-// TODO: Make popup size independent between string search and file search
-
-class SearchSettingsComponent(val mSettings: GlobalSettings.SettingsState) {
+class StringSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState) {
     var panel: JPanel
     var keeper = SettingsComponentKeeper()
     var warningText = createWarningLabel()
@@ -73,6 +62,8 @@ class SearchSettingsComponent(val mSettings: GlobalSettings.SettingsState) {
                     The ratio of the preview editor size as a fraction of the total width or height of the popup. 
                     If the preview editor is shown below the search area, the fraction of the total height will be selected.
                     If the preview editor is shown to the right of the search area, the fraction of the total width will be selected""".trimIndent())
+        keeper.createJBIntSpinnerComponent(mSettings::grepRememberPreviousQuerySeconds, 5, 0, 100, 1, builder, "Remember previous query (seconds)", """
+                    Time (seconds) for which the previous query will be remembered. When zero, it is never remembered""".trimIndent())
 
             // Create Relative file opening actions
         builder.addSeparator()
@@ -80,11 +71,21 @@ class SearchSettingsComponent(val mSettings: GlobalSettings.SettingsState) {
 
         keeper.createCheckboxComponent(mSettings::applySyntaxHighlightingOnTextSearch, builder, "Apply syntax highlighting on text search", """
                     If checked, apply syntax highlighting on text search results. If false, plain text is used""".trimIndent())
+        keeper.createCheckboxComponent(mSettings::showFilenameForGrepInFiles, builder, "Show filename in front of the matched line", """
+                    Show filename in front of the matching string""".trimIndent())
+        keeper.createCheckboxComponent(mSettings::useSelectedTextForGrepInFiles, builder, "Use selected text as initial query", """
+                    If true, the selected text is used as initial query. If no text is selected, no query is set """.trimIndent())
         keeper.createActionsTableComponent(mSettings::searchStringMatchingPatternActions, builder, "Search for pattern in files", """
                     Search through all instances that match the pattern. If path starts with '/', search through all files. This may
                     be performance intensive if there are many files. If path is empty or '.' search only the current path. Else a relative path
                     is selected""".trimIndent(), arrayOf("Name", "Path", "Regex", "Shortcut", "Extension"),
-                    arrayOf("MySearchAction", "", "Enter regex", "", ""), arrayOf(2, 1, 6, 2, 1), mSettings, 0, 3, ::registerGrepInFilesActions)
+                    arrayOf("MySearchAction", "", "Enter regex", "", ""), arrayOf(2, 1, 6, 2, 1), mSettings, 0, 3, ::registerSearchForRegexInFiles)
+
+        keeper.createActionsTableComponent(mSettings::searchStringMatchingSubstringActions, builder, "Grep in files", """
+                    Search through all lines containing the substring. If path starts with '/', search through all files. This may
+                    be performance intensive if there are many files. If path is empty or '.' search only the current path. Else a relative path
+                    is selected""".trimIndent(), arrayOf("Name", "Path", "Extension", "Shortcut"),
+            arrayOf("MySearchAction", "/", "", ""), arrayOf(1, 1, 1, 1), mSettings, 0, 3, ::registerGrepInFilesActions)
 
         builder.addSeparator()
             .addComponentFillVertically(JPanel(), 0)

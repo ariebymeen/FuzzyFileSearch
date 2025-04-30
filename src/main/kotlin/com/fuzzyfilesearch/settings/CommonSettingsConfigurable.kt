@@ -5,12 +5,12 @@ import com.fuzzyfilesearch.searchbox.hexToColorWithAlpha
 import com.intellij.openapi.options.Configurable
 import javax.swing.JComponent
 
-class GlobalSettingsConfigurable : Configurable {
-    private lateinit var component: GlobalSettingsComponent
+class CommonSettingsConfigurable : Configurable {
+    private lateinit var component: CommonSettingsComponent
     private var settings = GlobalSettings().getInstance()
 
     override fun createComponent(): JComponent? {
-        component = GlobalSettingsComponent(settings.state)
+        component = CommonSettingsComponent(settings.state)
         component.keeper.components.forEach{component ->
             component.initialize()
         }
@@ -18,7 +18,6 @@ class GlobalSettingsConfigurable : Configurable {
         component.excludedDirs.text = settings.state.common.excludedDirs.joinToString("\n")
         component.fontSelectorDropdown.fontName = settings.state.common.selectedFontName
         component.colorSelectorElement.selectedColor = hexToColorWithAlpha(settings.state.common.selectedColor)
-//        component.setEditorScalingFields()
 
         return component.panel
     }
@@ -32,21 +31,9 @@ class GlobalSettingsConfigurable : Configurable {
         var modified = settings.state.common.excludedDirs != newSet
                 || settings.state.common.selectedFontName != component.fontSelectorDropdown.fontName
                 || settings.state.common.selectedColor != colorToHexWithAlpha(component.colorSelectorElement.selectedColor)
+
         component.keeper.components.forEach{component ->
             modified = modified || component.modified()
-        }
-
-        if (modified) {
-            val error = checkSettings(component.keeper.components)
-            if (error != null) {
-                // show error message
-                component.warningText.text = error
-                component.warningText.isVisible = true
-                return false
-            } else {
-                component.warningText.isVisible = false
-//                component.setEditorScalingFields() // TODO
-            }
         }
 
         return modified
@@ -63,10 +50,6 @@ class GlobalSettingsConfigurable : Configurable {
         settings.state.common.selectedColor = colorToHexWithAlpha(component.colorSelectorElement.selectedColor)
 
         component.keeper.components.forEach{ component -> component.store() }
-
-        if (settings.state.file.showEditorPreview) {
-            settings.state.file.shrinkViewDynamically = false
-        }
     }
 
     override fun getDisplayName(): String {

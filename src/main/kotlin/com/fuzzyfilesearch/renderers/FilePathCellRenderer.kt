@@ -1,6 +1,5 @@
 package com.fuzzyfilesearch.renderers
 
-import com.fuzzyfilesearch.actions.GrepInstanceItem
 import com.fuzzyfilesearch.searchbox.CustomRenderer
 import com.fuzzyfilesearch.searchbox.PopupInstanceItem
 import com.fuzzyfilesearch.searchbox.getFont
@@ -13,12 +12,16 @@ import com.intellij.ui.util.preferredHeight
 import cutoffStringToMaxWidth
 import java.awt.*
 import javax.swing.JList
+import javax.swing.text.Style
 import javax.swing.text.StyleConstants
 
-class SearchDialogCellRenderer(val mProject: Project,
-                               val mSettings: GlobalSettings.SettingsState) : CustomRenderer<PopupInstanceItem>() {
+class FilePathCellRenderer(val mProject: Project,
+                           val mSettings: GlobalSettings.SettingsState) : CustomRenderer<PopupInstanceItem>() {
     val basePath = mProject.basePath!!
     val font = getFont(mSettings)
+    lateinit var tinyStyle: Style
+    lateinit var boldStyle: Style
+    lateinit var italicStyle: Style
 
     override fun getListCellRendererComponent(
         list: JList<out PopupInstanceItem>,
@@ -28,12 +31,23 @@ class SearchDialogCellRenderer(val mProject: Project,
         cellHasFocus: Boolean
     ): Component {
         if (value.panel == null) {
-            value.panel = VerticallyCenteredTextPane()
+            value.p
+            anel = VerticallyCenteredTextPane()
             value.panel!!.text = ""
             value.panel!!.isOpaque = true
             value.panel?.preferredHeight = mSettings.file.searchItemHeight
             value.panel?.maximumHeight = mSettings.file.searchItemHeight
             value.panel?.font = font
+            italicStyle = value.panel!!.addStyle("Italic", null).apply {
+                StyleConstants.setItalic(this, true)
+            }
+            boldStyle = value.panel!!.addStyle("Bold", null).apply {
+                StyleConstants.setBold(this, true)
+            }
+            tinyStyle = value.panel!!.addStyle("Tiny", null).apply {
+                StyleConstants.setItalic(this, false)
+                StyleConstants.setFontSize(this, StyleConstants.getFontSize(boldStyle) - 1)
+            }
             setText(value, index)
         } else if (mSettings.file.showNumberInSearchView) {
              val formattedNumber = String.format(" %02d - ", index)
@@ -48,16 +62,6 @@ class SearchDialogCellRenderer(val mProject: Project,
     }
 
     fun setText(item: PopupInstanceItem, index: Int) {
-        val italicStyle = item.panel!!.addStyle("Italic", null).apply {
-            StyleConstants.setItalic(this, true)
-        }
-        val boldStyle = item.panel!!.addStyle("Bold", null).apply {
-            StyleConstants.setBold(this, true)
-        }
-        val tinyStyle = item.panel!!.addStyle("Tiny", null).apply {
-            StyleConstants.setItalic(this, false)
-            StyleConstants.setFontSize(this, StyleConstants.getFontSize(boldStyle) - 1)
-        }
 
         val doc = item.panel!!.styledDocument
         if (mSettings.file.showNumberInSearchView) {

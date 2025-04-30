@@ -48,20 +48,29 @@
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
     <extensions defaultExtensionNs="com.intellij">
         <postStartupActivity implementation="com.fuzzyfilesearch.settings.ApplicationStartupSetup"/>
-<!--        <applicationStartupActivity implementation="com.example.MyApplicationStartupActivity"/>-->
         <projectService
                 serviceInterface="com.fuzzyfilesearch.services.RecentFilesKeeper"
                 serviceImplementation="com.fuzzyfilesearch.services.RecentFilesKeeper"/>
         <applicationConfigurable
                 parentId="tools"
-                instance="com.fuzzyfilesearch.settings.GlobalSettingsConfigurable"
-                id="com.fuzzyfilesearch.settings.GlobalSettingsConfigurable"
-                displayName="FuzzyFileSearch File Search"/>
+                instance="com.fuzzyfilesearch.settings.CommonSettingsConfigurable"
+                id="com.fuzzyfilesearch.settings.FuzzyFileSearchParent"
+                displayName="FuzzyFileSearch Settings"/>
         <applicationConfigurable
-                parentId="tools"
-                instance="com.fuzzyfilesearch.settings.SearchSettingsConfigurable"
-                id="com.fuzzyfilesearch.settings.SearchSettingsConfigurable"
-                displayName="FuzzyFileSearch String Search"/>
+                parentId="com.fuzzyfilesearch.settings.FuzzyFileSearchParent"
+                instance="com.fuzzyfilesearch.settings.CommonSettingsConfigurable"
+                id="com.fuzzyfilesearch.settings.SettingsParent"
+                displayName="Common Settings"/>
+        <applicationConfigurable
+                parentId="com.fuzzyfilesearch.settings.FuzzyFileSearchParent"
+                instance="com.fuzzyfilesearch.settings.FileSearchSettingsConfigurable"
+                id="com.fuzzyfilesearch.settings.FileSearchSettingsConfigurable"
+                displayName="File Search Settings"/>
+        <applicationConfigurable
+                parentId="com.fuzzyfilesearch.settings.FuzzyFileSearchParent"
+                instance="com.fuzzyfilesearch.settings.StringSearchSettingsConfigurable"
+                id="com.fuzzyfilesearch.settings.StringSearchSettingsConfigurable"
+                displayName="String Search Settings"/>
         <notificationGroup id="FuzzyFileSearchGroup"
                            displayType="BALLOON"
                            toolWindowId="Event Log"

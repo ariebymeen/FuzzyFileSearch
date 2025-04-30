@@ -93,7 +93,7 @@ class SearchBoxEditor(project: Project?) : EditorTextField(project, PlainTextFil
                 } else {
                     document = EditorFactory.getInstance().createDocument("Cannot preview file")
                 }
-                this.fileType = fileType
+                if (fileType != null) this.fileType = fileType
             }
         }
     }

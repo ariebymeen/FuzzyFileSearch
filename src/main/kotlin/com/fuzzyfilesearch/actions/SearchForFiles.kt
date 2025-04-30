@@ -1,12 +1,11 @@
 package com.fuzzyfilesearch.actions
 
-import com.fuzzyfilesearch.renderers.SearchDialogCellRenderer
+import com.fuzzyfilesearch.renderers.FilePathCellRenderer
 import com.fuzzyfilesearch.searchbox.*
 import com.intellij.openapi.project.Project
 import com.fuzzyfilesearch.settings.GlobalSettings
 import com.fuzzyfilesearch.settings.PathDisplayType
 import com.fuzzyfilesearch.showErrorNotification
-import com.intellij.openapi.vfs.VirtualFile
 import kotlin.math.min
 
 class SearchForFiles(val settings: GlobalSettings.SettingsState) {
@@ -42,9 +41,10 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
             mFileNames = mFiles.map { file -> file.vf.name }
         }
 
-        mPopup = SearchPopupInstance(SearchDialogCellRenderer(project, settings), ::getSortedFileList, ::openFile,
+        mPopup = SearchPopupInstance(FilePathCellRenderer(project, settings), ::getSortedFileList, ::openFile,
                                                                     ::getFileFromItem, settings,  project, extensions,
-                                                                            settings.file)
+                                                                            settings.file,
+                                                                            "File search")
         mPopup!!.showPopupInstance()
         fzfSearchAction = FzfSearchAction(mFileNames!!, settings.common.searchCaseSensitivity)
     }

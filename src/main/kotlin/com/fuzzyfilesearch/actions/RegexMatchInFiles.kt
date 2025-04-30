@@ -19,22 +19,16 @@ import kotlin.io.path.Path
 import kotlin.math.min
 import kotlin.system.measureTimeMillis
 
-class GrepInstanceItem(val vf: VirtualFile,
-                       val start: Int,
-                       val end: Int,
-                       val text: String,
-                       var panel: VerticallyCenteredTextPane? = null)
-
-class GrepInFiles(val action: Array<String>,
-                  val settings: GlobalSettings.SettingsState) : AnAction(getActionName(action)) {
+class RegexMatchInFiles(val action: Array<String>,
+                        val settings: GlobalSettings.SettingsState) : AnAction(getActionName(action)) {
 
     /* List of files to search in. For now only support the current file */
     var mFileNames: MutableList<VirtualFile> = mutableListOf()
-    var mPopup: SearchPopupInstance<GrepInstanceItem>? = null
+    var mPopup: SearchPopupInstance<StringMatchInstanceItem>? = null
     var mEvent: AnActionEvent? = null
 
     /* List with instance items that matched the regex */
-    var mSearchItems = mutableListOf<GrepInstanceItem>()
+    var mSearchItems = mutableListOf<StringMatchInstanceItem>()
     /* The same list but only the matching string. Is used in the search action to search */
     var mSearchItemStrings = emptyList<String>()
     var mRegex = Regex(getActionRegex(action))
@@ -49,23 +43,7 @@ class GrepInFiles(val action: Array<String>,
         mSearchItems.clear()
 
         mProject = project
-
-        val searchPath: String
-        val location = getActionPath(action)
-        if (location.isEmpty() || (location[0] == '.' && location.length == 1)) {
-            // Search only current file
-            mFileNames.add(curFile)
-        } else {
-            if (location[0] == '/') { // Search from project root
-                searchPath = project.basePath + location
-            } else { // Search from current file
-                searchPath = curFile.parent.path + "/" + location
-            }
-            val vfPath = getVirtualFileFromPath(searchPath)?: return
-            val changeListManager = if (settings.common.searchOnlyFilesTrackedByVersionControl) ChangeListManager.getInstance(project) else null
-            val allFiles = getAllFilesInRoot(vfPath, settings.common.excludedDirs, emptyList(), changeListManager)
-            mFileNames.addAll(allFiles.map { file -> file.vf })
-        }
+        mFileNames = getAllFilesInLocation(curFile, project, getActionPath(action), settings, getActionExtension(action))
 
         val timeTaken = measureTimeMillis {
             // Loop over all files and find regex matches. Store result into class variable to use in search
@@ -75,6 +53,8 @@ class GrepInFiles(val action: Array<String>,
                     // Remove newlines and indenting for to make the view single line
                     // TODO: This may not be the most efficient way to do any of this
                     var oldText = match.value.replace('\n', ' ')
+//                    val newText = match.value.split('\n').map { line -> line.trim() }.joinToString(" ")
+//                    println("old: ${match.value}, new: ${newText}")
                     var newText = oldText.replace("  ", " ")
                     while (newText != oldText) {
                         oldText = newText
@@ -82,7 +62,7 @@ class GrepInFiles(val action: Array<String>,
                                          .replace("   " , " ")
                                          .replace("  "  , " ")
                     }
-                    GrepInstanceItem(vf, match.range.first, match.range.last, newText)
+                    StringMatchInstanceItem(vf, match.range.first, match.range.last, newText)
                 })
             }
             mSearchItemStrings = mSearchItems.map { item -> item.text }
@@ -90,16 +70,17 @@ class GrepInFiles(val action: Array<String>,
 
         // TODO: Remove debug prints
         println("Elapsed time: $timeTaken ms")
-        println("GrepInFiles: ${mSearchItems.size}. Nof files to search: ${mFileNames.size}, regex: ${getActionRegex(action)}")
+        println("GrepInFiles: ${mSearchItems.size}. Nof files to search: ${mFileNames.size}, regex: ${getActionRegex(action)}, action: ${action.joinToString(",")}")
 
         mPopup = SearchPopupInstance(SimpleStringCellRenderer(project, settings), ::getSortedResult, ::moveToLocation, ::getFileFromItem,
                                                                             settings, project, getActionExtension(action),
-                                                                            settings.string)
+                                                                            settings.string,
+                                                                            "Regex search")
         mPopup!!.showPopupInstance()
         fzfSearchAction = FzfSearchAction(mSearchItemStrings, settings.common.searchCaseSensitivity)
     }
 
-    fun getSortedResult(query: String) : List<GrepInstanceItem> {
+    fun getSortedResult(query: String) : List<StringMatchInstanceItem> {
         if (query.isNotEmpty()) {
             val filtered = fzfSearchAction!!.search(query)
             val visibleList = filtered.subList(0, min(filtered.size, settings.string.numberOfFilesInSearchView))
@@ -122,7 +103,7 @@ class GrepInFiles(val action: Array<String>,
         }
     }
 
-    fun moveToLocation(item: GrepInstanceItem, location: OpenLocation) {
+    fun moveToLocation(item: StringMatchInstanceItem, location: OpenLocation) {
         val event = mEvent?: return
         if (item.vf != getCurrentFile(event)) {
             openFileWithLocation(item.vf, location, mProject!!)
@@ -135,18 +116,13 @@ class GrepInFiles(val action: Array<String>,
         mEvent = null
     }
 
-    fun getFileFromItem(item: GrepInstanceItem): FileLocation {
+    fun getFileFromItem(item: StringMatchInstanceItem): FileLocation {
         return FileLocation(item.vf, item.start)
     }
 
     private fun getCurrentFile(e: AnActionEvent) : VirtualFile? {
         val editor = e.getData(CommonDataKeys.EDITOR)
         return editor?.virtualFile
-    }
-
-    private fun getVirtualFileFromPath(filePath: String): VirtualFile? {
-        val virtualFile = VfsUtil.findFile(Path(filePath), true)
-        return virtualFile
     }
 
     private fun readFileContents(virtualFile: VirtualFile): String {

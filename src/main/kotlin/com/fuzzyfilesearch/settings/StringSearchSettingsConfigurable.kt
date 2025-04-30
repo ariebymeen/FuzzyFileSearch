@@ -3,12 +3,12 @@ package com.fuzzyfilesearch.settings
 import com.intellij.openapi.options.Configurable
 import javax.swing.JComponent
 
-class SearchSettingsConfigurable : Configurable {
-    private lateinit var component: SearchSettingsComponent
+class StringSearchSettingsConfigurable : Configurable {
+    private lateinit var component: StringSearchSettingsComponent
     private var settings = GlobalSettings().getInstance()
 
     override fun createComponent(): JComponent? {
-        component = SearchSettingsComponent(settings.state)
+        component = StringSearchSettingsComponent(settings.state)
         component.keeper.components.forEach{component ->
             component.initialize()
         }

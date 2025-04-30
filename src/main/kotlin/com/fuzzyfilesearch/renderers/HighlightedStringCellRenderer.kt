@@ -1,6 +1,6 @@
 package com.fuzzyfilesearch.renderers
 
-import com.fuzzyfilesearch.actions.GrepInstanceItem
+import com.fuzzyfilesearch.actions.StringMatchInstanceItem
 import com.fuzzyfilesearch.searchbox.CustomRenderer
 import com.fuzzyfilesearch.searchbox.getFont
 import com.intellij.openapi.project.Project
@@ -12,14 +12,18 @@ import javax.swing.*
 import javax.swing.text.StyleConstants
 import cutoffStringToMaxWidth
 import highlightText
+import java.text.NumberFormat
+import javax.swing.text.Style
 
 class SimpleStringCellRenderer(val mProject: Project,
-                               val mSettings: GlobalSettings.SettingsState) : CustomRenderer<GrepInstanceItem>() {
+                               val mSettings: GlobalSettings.SettingsState) : CustomRenderer<StringMatchInstanceItem>() {
     val font = getFont(mSettings)
+    lateinit var normalStyle: Style
+    lateinit var tinyStyle: Style
 
     override fun getListCellRendererComponent(
-        list: JList<out GrepInstanceItem>,
-        value: GrepInstanceItem,
+        list: JList<out StringMatchInstanceItem>,
+        value: StringMatchInstanceItem,
         index: Int,
         isSelected: Boolean,
         cellHasFocus: Boolean
@@ -31,6 +35,11 @@ class SimpleStringCellRenderer(val mProject: Project,
             value.panel?.preferredHeight = mSettings.string.searchItemHeight
             value.panel?.maximumHeight = mSettings.string.searchItemHeight
             value.panel?.font = font
+            normalStyle = value.panel!!.addStyle("Normal", null).apply {}
+            tinyStyle = value.panel!!.addStyle("Tiny", null).apply {
+                StyleConstants.setItalic(this, false)
+                StyleConstants.setFontSize(this, StyleConstants.getFontSize(normalStyle) - 1)
+            }
             setText(value, index)
         } else if (mSettings.string.showNumberInSearchView) {
             val formattedNumber = String.format(" %02d - ", index)
@@ -44,12 +53,7 @@ class SimpleStringCellRenderer(val mProject: Project,
         return value.panel!!
     }
 
-    fun setText(item: GrepInstanceItem, index: Int) {
-        val normalStyle = item.panel!!.addStyle("Normal", null).apply {}
-        val tinyStyle = item.panel!!.addStyle("Tiny", null).apply {
-            StyleConstants.setItalic(this, false)
-            StyleConstants.setFontSize(this, StyleConstants.getFontSize(normalStyle) - 1)
-        }
+    fun setText(item: StringMatchInstanceItem, index: Int) {
 
         val doc = item.panel!!.styledDocument
 
@@ -61,13 +65,14 @@ class SimpleStringCellRenderer(val mProject: Project,
         }
 
         val offset = doc.length
-        doc.insertString(doc.length, "${item.text}", normalStyle)
-        if (mSettings.applySyntaxHighlightingOnTextSearch) {
-            highlightText(mProject, doc, offset, item.text, item.vf.extension)
-        }
+        doc.insertString(doc.length, item.text, normalStyle)
 
         // If text is too wide for the view, remove and place ... at the end
         cutoffStringToMaxWidth(item.panel!!, doc, maxWidth)
+
+        if (mSettings.applySyntaxHighlightingOnTextSearch) {
+            highlightText(mProject, doc, offset, item.text, item.vf.extension)
+        }
     }
 
 }

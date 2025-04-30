@@ -13,6 +13,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupFactory
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.ui.components.JBScrollPane
@@ -28,9 +29,9 @@ import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 import javax.swing.event.ListSelectionEvent
 import javax.swing.event.ListSelectionListener
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
-import com.intellij.openapi.util.Disposer
 
 abstract class CustomRenderer<T> : ListCellRenderer<T> {
     var maxWidth = 0
@@ -75,7 +76,8 @@ class SearchPopupInstance<ListItemType> (
     val mSettings: GlobalSettings.SettingsState,
     var mProject: Project,
     var mExtensions: List<String>? = null,
-    var mPopupSettings: GlobalSettings.PopupSettings
+    var mPopupSettings: GlobalSettings.PopupSettings,
+    var mTitle: String,
 ) {
     val mSearchField: JTextField = JTextField()
     val mExtensionField: JTextField = TransparentTextField(1.0F)
@@ -89,7 +91,7 @@ class SearchPopupInstance<ListItemType> (
     val mMainPanel: JPanel = JPanel(BorderLayout())
     var mNofTimesClicked = 0
     var mLastClickedIndex: Int = -1
-    var mMaxCellRendererWidthOffset = 30
+    var mMaxCellRendererWidthOffset = 24
 
     init {
         createPopupInstance()
@@ -209,6 +211,8 @@ class SearchPopupInstance<ListItemType> (
             if (mPopupSettings.showEditorPreview && mResultsList.selectedIndex >= 0) {
                 val selectedFile = mGetFileAndLocationCallback(mResultsList.selectedValue as ListItemType)
                 if (selectedFile != null) mEditorView.updateFile(selectedFile.vf, selectedFile.caretOffset)
+            } else {
+                mEditorView.updateFile(null, 0)
             }
 
             if (mPopupSettings.shrinkViewDynamically) {
@@ -323,16 +327,43 @@ class SearchPopupInstance<ListItemType> (
                     if (mPopupSettings.showEditorPreview && mResultsList.selectedIndex >= 0) {
                         val selectedFile = mGetFileAndLocationCallback(mResultsList.selectedValue as ListItemType)
                         if (selectedFile != null) mEditorView.updateFile(selectedFile.vf, selectedFile.caretOffset)
+                        else mEditorView.updateFile(null, 0)
                     }
                 }
             }
         })
 
+        // Total header, showing title (optional) and search bar
+        val headerBar = JPanel(BorderLayout())
+        if (mSettings.common.showTileInSearchView) {
+            val title = JTextField(mTitle)
+            title.horizontalAlignment = JTextField.CENTER
+            title.alignmentY
+            val titleFont = Font(font.name, Font.PLAIN, font.size - 3)
+            title.font = titleFont
+            title.background = mResultsList.background
+//            title.background = Color.CYAN
+            // Set the height of the text field to exactly fit the text
+            val metrics: FontMetrics = title.getFontMetrics(font)
+            val height = metrics.height
+            title.preferredSize = Dimension(title.preferredSize.width, floor(height * 1.2).toInt())
+            title.border = JBUI.Borders.empty()
+            headerBar.add(title, BorderLayout.NORTH)
+        }
+
+
         // Field with text header
         val searchBar = JPanel(BorderLayout())
+
+        // TODO: Should this be the same background
+        mSearchField.background = mResultsList.background
+        searchBar.background = mResultsList.background
+
         searchBar.add(mSearchField, BorderLayout.CENTER)
         searchBar.add(mExtensionField, BorderLayout.EAST)
-        mMainPanel.add(searchBar, BorderLayout.NORTH)
+
+        headerBar.add(searchBar, BorderLayout.SOUTH)
+        mMainPanel.add(headerBar, BorderLayout.NORTH)
 
         mResultsList.cellRenderer = mCellRenderer
         mResultsList.selectionBackground = getForegroundColor(mSettings)

@@ -49,6 +49,7 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         var fontSize = 0
         var useDefaultHighlightColor = true
         var selectedColor = ""
+        var showTileInSearchView = true
     }
 
     class PopupSettings {
@@ -60,6 +61,7 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         var minSizeEditorPx = 200
         var numberOfFilesInSearchView = 99
         var showNumberInSearchView = true
+        var showFileIcon = true
         var verticalPositionOnScreen = 0.5
         var horizontalPositionOnScreen = 0.5
         var shrinkViewDynamically = false
@@ -79,7 +81,7 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         // File search settings
         var filePathDisplayType: PathDisplayType = PathDisplayType.FILENAME_RELATIVE_PATH
         var openRelativeFileActions: Array<Array<String>> = emptyArray()
-        var openRelatedFileAction: Array<Array<String>> = emptyArray() // TODO
+//        var openRelatedFileAction: Array<Array<String>> = emptyArray() // TODO
         var searchRelativeFileActions: Array<Array<String>> = emptyArray()
         var searchPathActions: Array<Array<String>> = emptyArray()
         var searchFilesMatchingPatterActions: Array<Array<String>> = emptyArray()
@@ -89,7 +91,11 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
 
         // String search settings
         var applySyntaxHighlightingOnTextSearch = true
+        var showFilenameForGrepInFiles          = true
+        var useSelectedTextForGrepInFiles       = true
+        var grepRememberPreviousQuerySeconds: Int = 6
         var searchStringMatchingPatternActions: Array<Array<String>> = emptyArray()
+        var searchStringMatchingSubstringActions: Array<Array<String>> = emptyArray()
     }
 
     fun getInstance() : GlobalSettings {

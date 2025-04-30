@@ -9,10 +9,7 @@ import com.intellij.openapi.project.Project
 import java.awt.Font
 import java.awt.FontMetrics
 import javax.swing.JTextPane
-import javax.swing.text.AttributeSet
-import javax.swing.text.SimpleAttributeSet
-import javax.swing.text.StyleConstants
-import javax.swing.text.StyledDocument
+import javax.swing.text.*
 
 fun computeNofCharsToRemove(textPane: JTextPane, maxWidth: Int): Pair<Int, Int> {
     val doc = textPane.styledDocument
@@ -29,6 +26,7 @@ fun computeNofCharsToRemove(textPane: JTextPane, maxWidth: Int): Pair<Int, Int> 
         val fontMetrics: FontMetrics = textPane.getFontMetrics(fontStyle)
         var segmentText = doc.getText(elem.startOffset, elem.endOffset - elem.startOffset)
         var segmentWidth = fontMetrics.stringWidth(segmentText)
+//        println("0: Segment text: ${segmentText} has width $segmentWidth")
         if (totalWidth > maxWidth) {
             charsToRemove += segmentText.length
             break
@@ -36,15 +34,22 @@ fun computeNofCharsToRemove(textPane: JTextPane, maxWidth: Int): Pair<Int, Int> 
         if (totalWidth + segmentWidth > maxWidth) {
             // Compute the nof chars to remove. Start with initial guess from mean char width
             dotsTextWidth = fontMetrics.stringWidth(".")
-            var nofRemovedChars: Int = (Math.max(segmentWidth + totalWidth - maxWidth, 1)) / segmentText.length
+            var nofRemovedChars: Int = Math.min(segmentText.length, (Math.max(segmentWidth + totalWidth - maxWidth, 1)) / segmentText.length)
             val segmentLen = segmentText.length
-//            println("Test: ${elem.startOffset}, ${elem.endOffset}, text len: ${doc.length}, nof removed chars: ${nofRemovedChars}") // TODO: REMOVE
-            segmentText = doc.getText(elem.startOffset, elem.endOffset - elem.startOffset - nofRemovedChars)
-            segmentWidth = fontMetrics.stringWidth(segmentText)
+            try {
+//                segmentText = doc.getText(elem.startOffset, elem.endOffset - elem.startOffset)
+                segmentText = doc.getText(elem.startOffset, elem.endOffset - elem.startOffset - nofRemovedChars)
+//                segmentText = doc.getText(elem.startOffset, Math.max(0, elem.endOffset - elem.startOffset - nofRemovedChars))
+                segmentWidth = fontMetrics.stringWidth(segmentText)
+//                println("1: Segment text: ${segmentText} has width $segmentWidth")
+            } catch (e: BadLocationException) {
+                println("Exception thrown: ${e.toString()}, segment text: ${segmentText}, elem start: ${elem.startOffset}, elem emd: ${elem.endOffset}, text: ${doc.getText(0, doc.length)}")
+            }
             while (totalWidth + segmentWidth + dotsTextWidth * 2 > maxWidth && nofRemovedChars < segmentLen) {
                 // Iteratively move to the chars until the text including '...' fits into the max width
                 segmentWidth -= fontMetrics.stringWidth(segmentText.get(segmentLen - nofRemovedChars - 1).toString())
                 ++nofRemovedChars
+//                println("1: Segment text: ${segmentText} has width $segmentWidth. WL: ${totalWidth + segmentWidth + dotsTextWidth * 2}, nof rem cha: $nofRemovedChars, seg len: $segmentLen")
             }
             charsToRemove += nofRemovedChars
         }
@@ -54,9 +59,10 @@ fun computeNofCharsToRemove(textPane: JTextPane, maxWidth: Int): Pair<Int, Int> 
     }
 
     // Now we can compute the number of dots that fit into the remaining space
-    val spaceLeft = maxWidth - totalWidth
+    val spaceLeft = Math.max(0, maxWidth - totalWidth)
     val nofDots = Math.floor(spaceLeft / dotsTextWidth.toDouble()).toInt()
 
+//    println("Text: ${doc.getText(0, doc.length)}, max width: ${maxWidth} space left: $spaceLeft, nof dots: $nofDots, dot w: $dotsTextWidth, nof chars to remove: $charsToRemove")
     return Pair(charsToRemove, nofDots)
 }
 
@@ -100,10 +106,10 @@ fun getCurrentEditorColorScheme(): EditorColorsScheme {
 
 fun highlightText(project: Project, doc: StyledDocument, startOffset: Int, text: String, extension: String?) {
     extension ?: return
-    
+
     val syntaxHighlighter = getSyntaxHighlighterByExtension(project, extension)
     if (syntaxHighlighter == null) {
-        println("Error! Syntax highlighter not found for extension type: $text")
+//        println("Error! Syntax highlighter not found for extension type: $text")
         return
     }
 

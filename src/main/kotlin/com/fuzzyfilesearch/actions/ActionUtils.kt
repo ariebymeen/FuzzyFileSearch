@@ -1,12 +1,19 @@
 package com.fuzzyfilesearch.actions
 
+import com.fuzzyfilesearch.actions.GrepInFiles.Companion.getActionPath
+import com.fuzzyfilesearch.searchbox.getAllFilesInRoot
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.KeyboardShortcut
 import com.intellij.openapi.keymap.KeymapManager
 import com.fuzzyfilesearch.settings.*
 import com.fuzzyfilesearch.showErrorNotification
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.vcs.changes.ChangeListManager
+import com.intellij.openapi.vfs.VfsUtil
+import com.intellij.openapi.vfs.VirtualFile
 import javax.swing.KeyStroke
+import kotlin.io.path.Path
 
 fun extractExtensions(extension: String): List<String> {
     if (extension.isNotEmpty()) {
@@ -128,6 +135,17 @@ fun registerSearchFileMatchingPatternActions(actions: Array<Array<String>>, sett
     }
 }
 
+fun registerSearchForRegexInFiles(actions: Array<Array<String>>, settings: GlobalSettings.SettingsState) {
+    actions.forEach { action ->
+        run {
+            registerAction(
+                RegexMatchInFiles.getActionName(action),
+                RegexMatchInFiles.getActionShortcut(action),
+                RegexMatchInFiles(action, settings)
+            )
+        }
+    }
+}
 
 fun registerGrepInFilesActions(actions: Array<Array<String>>, settings: GlobalSettings.SettingsState) {
     actions.forEach { action ->
@@ -162,4 +180,29 @@ fun printAction(actions: Array<Array<String>>) {
     actions.forEach { subArray ->
         println(subArray.joinToString(" - "))
     }
+}
+
+fun getVirtualFileFromPath(filePath: String): VirtualFile? {
+    val virtualFile = VfsUtil.findFile(Path(filePath), true)
+    return virtualFile
+}
+
+fun getAllFilesInLocation(curFile: VirtualFile, project: Project, location: String, settings: GlobalSettings.SettingsState, extensions: List<String>): MutableList<VirtualFile> {
+    val searchPath: String
+    val files = mutableListOf<VirtualFile>()
+    if (location.isEmpty() || (location[0] == '.' && location.length == 1)) {
+        // Search only current file
+        files.add(curFile)
+    } else {
+        if (location[0] == '/') { // Search from project root
+            searchPath = project.basePath + location
+        } else { // Search from current file
+            searchPath = curFile.parent.path + "/" + location
+        }
+        val vfPath = getVirtualFileFromPath(searchPath) ?: return mutableListOf()
+        val changeListManager = if (settings.common.searchOnlyFilesTrackedByVersionControl) ChangeListManager.getInstance(project) else null
+        val allFiles = getAllFilesInRoot(vfPath, settings.common.excludedDirs, extensions, changeListManager)
+        files.addAll(allFiles.map { file -> file.vf })
+    }
+    return files
 }
