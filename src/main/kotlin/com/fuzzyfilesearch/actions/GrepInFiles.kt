@@ -47,9 +47,7 @@ class GrepInFiles(val action: Array<String>,
 
         mFileNames = getAllFilesInLocation(curFile, project, getActionPath(action), settings, getActionExtension(action))
         mFileNames = mFileNames.filter { file -> isTextOrCodeFile(file) }.toMutableList()
-        mMatches   = mFileNames
-
-
+        mMatches   = mFileNames.deepClonePolymorphic()
 
         mPopup = SearchPopupInstance(SimpleStringCellRenderer(project, settings), ::getSortedResult, ::moveToLocation, ::getFileFromItem,
                                                                             settings, project, getActionExtension(action),
@@ -90,6 +88,8 @@ class GrepInFiles(val action: Array<String>,
     }
 
     private fun grepForString(query: String): List<StringMatchInstanceItem> {
+        // TODO: Allow using ripgrep
+
         val result = mutableListOf<StringMatchInstanceItem>()
         val nofFilesToSearch = mMatches.size
         val timeTaken = measureTimeMillis {
@@ -118,7 +118,7 @@ class GrepInFiles(val action: Array<String>,
 
         // TODO: Remove debug prints
         println("Elapsed time: $timeTaken ms")
-        println("GrepInFiles: ${result.size}. Nof files to search: ${nofFilesToSearch}, total nof files: ${mFileNames.size}")
+        println("GrepInFiles: ${result.size}. Nof files to search: ${nofFilesToSearch} (${(timeTaken * 1000) / nofFilesToSearch} us/file), total nof files: ${mFileNames.size}")
 
         return result
     }

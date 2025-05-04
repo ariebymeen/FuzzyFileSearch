@@ -20,7 +20,7 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
                          project: Project,
                          directory: String?,
                          extensions: List<String>?) {
-        if (files.size > 40000) {
+        if (files.size > 100000) {
             showErrorNotification("Too many files", "Found ${files.size} files fir searching, " +
                     "please limit the number of files by searching for files" +
                     "with a extension, change the position you search or exclude directories from your search")

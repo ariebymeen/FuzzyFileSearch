@@ -7,11 +7,15 @@ import com.fuzzyfilesearch.searchbox.isFileInProject
 import com.fuzzyfilesearch.settings.GlobalSettings
 import com.fuzzyfilesearch.settings.PathDisplayType
 import com.intellij.openapi.project.Project
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.util.maximumHeight
 import com.intellij.ui.util.preferredHeight
+import com.intellij.ui.util.preferredWidth
 import cutoffStringToMaxWidth
 import java.awt.*
 import javax.swing.JList
+import javax.swing.JPanel
+import javax.swing.border.EmptyBorder
 import javax.swing.text.Style
 import javax.swing.text.StyleConstants
 
@@ -30,40 +34,51 @@ class FilePathCellRenderer(val mProject: Project,
         isSelected: Boolean,
         cellHasFocus: Boolean
     ): Component {
-        if (value.panel == null) {
-            value.p
-            anel = VerticallyCenteredTextPane()
-            value.panel!!.text = ""
-            value.panel!!.isOpaque = true
-            value.panel?.preferredHeight = mSettings.file.searchItemHeight
-            value.panel?.maximumHeight = mSettings.file.searchItemHeight
-            value.panel?.font = font
-            italicStyle = value.panel!!.addStyle("Italic", null).apply {
+        if (value.textPane == null) {
+            value.mainPanel = JPanel(BorderLayout())
+            if (mSettings.file.showFileIcon) {
+                value.iconLabel = JBLabel()
+                value.iconLabel!!.border = EmptyBorder(0, 5, 0, 0)
+                value.iconLabel!!.icon = value.vf.fileType.icon
+                value.mainPanel?.add(value.iconLabel, BorderLayout.WEST)
+            }
+            value.textPane = VerticallyCenteredTextPane()
+            value.textPane!!.text = ""
+            value.textPane!!.isOpaque = false
+            value.textPane?.preferredHeight = mSettings.file.searchItemHeight
+            value.textPane?.maximumHeight = mSettings.file.searchItemHeight
+            value.textPane?.font = font
+            italicStyle = value.textPane!!.addStyle("Italic", null).apply {
                 StyleConstants.setItalic(this, true)
             }
-            boldStyle = value.panel!!.addStyle("Bold", null).apply {
+            boldStyle = value.textPane!!.addStyle("Bold", null).apply {
                 StyleConstants.setBold(this, true)
             }
-            tinyStyle = value.panel!!.addStyle("Tiny", null).apply {
+            tinyStyle = value.textPane!!.addStyle("Tiny", null).apply {
                 StyleConstants.setItalic(this, false)
                 StyleConstants.setFontSize(this, StyleConstants.getFontSize(boldStyle) - 1)
             }
             setText(value, index)
+            value.mainPanel?.add(value.textPane) // TODO: REMOVE
         } else if (mSettings.file.showNumberInSearchView) {
              val formattedNumber = String.format(" %02d - ", index)
-             value.panel!!.styledDocument.remove(0, formattedNumber.length)
-             value.panel!!.styledDocument.insertString(0, formattedNumber, value.panel!!.getStyle("Tiny"))
+             value.textPane!!.styledDocument.remove(0, formattedNumber.length)
+             value.textPane!!.styledDocument.insertString(0, formattedNumber, value.textPane!!.getStyle("Tiny"))
         }
 
-        value.panel!!.background = if (isSelected) list.selectionBackground else list.background
-        value.panel!!.foreground = if (isSelected) list.selectionForeground else list.foreground
+//        value.panel!!.background = if (isSelected) list.selectionBackground else list.background
+//        value.panel!!.foreground = if (isSelected) list.selectionForeground else list.foreground
+        value.mainPanel!!.background = if (isSelected) list.selectionBackground else list.background
+        value.mainPanel!!.foreground = if (isSelected) list.selectionForeground else list.foreground
 
-        return value.panel!!
+
+//        return value.panel!!
+        return value.mainPanel!!
     }
 
     fun setText(item: PopupInstanceItem, index: Int) {
 
-        val doc = item.panel!!.styledDocument
+        val doc = item.textPane!!.styledDocument
         if (mSettings.file.showNumberInSearchView) {
             val formattedNumber = String.format(" %02d - ", index)
             doc.insertString(doc.length, formattedNumber, tinyStyle)
@@ -107,6 +122,7 @@ class FilePathCellRenderer(val mProject: Project,
             }
         }
 
-        cutoffStringToMaxWidth(item.panel!!, doc, maxWidth)
+        val iconW = item.iconLabel?.preferredWidth ?: 0
+        cutoffStringToMaxWidth(item.textPane!!, doc, maxWidth - iconW)
     }
 }

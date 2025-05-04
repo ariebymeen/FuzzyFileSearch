@@ -45,6 +45,8 @@ class StringSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState)
                 "Height of the search bar in pixels", """""".trimIndent())
         keeper.createJBIntSpinnerComponent(mSettings.string::searchItemHeight, 30, 10, 100, 1, builder,
             "Height of the search items in pixels", """""".trimIndent())
+        keeper.createCheckboxComponent(mSettings.string::showFileIcon, builder, "Show file icon",
+            """""".trimIndent())
         keeper.createCheckboxComponent(mSettings.string::showNumberInSearchView, builder, "Show the index of each item in search view",
                 """If checked show the number (index) of the item in the view as a number in front of the result """.trimIndent())
         keeper.createCheckboxComponent(mSettings.string::shrinkViewDynamically, builder, "Shrink the search area to only the found results",

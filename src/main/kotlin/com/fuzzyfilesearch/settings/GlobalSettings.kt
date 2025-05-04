@@ -60,7 +60,7 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         var searchPopupHeightPx = 500
         var minSizeEditorPx = 200
         var numberOfFilesInSearchView = 99
-        var showNumberInSearchView = true
+        var showNumberInSearchView = false
         var showFileIcon = true
         var verticalPositionOnScreen = 0.5
         var horizontalPositionOnScreen = 0.5

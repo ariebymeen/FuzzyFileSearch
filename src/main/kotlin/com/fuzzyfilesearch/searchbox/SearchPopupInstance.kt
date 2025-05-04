@@ -44,7 +44,9 @@ enum class OpenLocation {
 }
 
 class PopupInstanceItem(val vf: VirtualFile,
-                        var panel: VerticallyCenteredTextPane? = null)
+                        var mainPanel: JPanel? = null,
+                        var iconLabel: JLabel? = null,
+                        var textPane: VerticallyCenteredTextPane? = null)
 
 class TransparentTextField(private val opacity: Float) : JTextField() {
     override fun paintComponent(g: Graphics) {
