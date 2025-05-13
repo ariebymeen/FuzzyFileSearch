@@ -1,4 +1,4 @@
-package com.fuzzyfilesearch.renderers
+package com.fuzzyfilesearch.components
 
 import com.intellij.util.ui.JBUI
 import java.awt.Graphics

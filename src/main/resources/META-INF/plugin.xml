@@ -31,11 +31,10 @@
     <change-notes>
         <![CDATA[
         <ul>
-            <li>Add TAB action listener to scroll through the list of results</li>
-            <li>Add ability to open a file in horizontal and vertical split using shortcuts</li>
-            <li>Add ability to open a file in active editor using shortcut</li>
-            <li>Fix issue with incorrect text clipping</li>
-            <li>Fix small issue with search algo</li>
+            <li>Add icon showing the file extension</li>
+            <li>Add regex match search</li>
+            <li>Add live grep</li>
+            <li>Split settings</li>
         </ul>
         ]]>
     </change-notes>

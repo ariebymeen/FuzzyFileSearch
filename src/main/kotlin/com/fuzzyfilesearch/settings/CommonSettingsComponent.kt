@@ -59,6 +59,7 @@ class CommonSettingsComponent(val mSettings: GlobalSettings.SettingsState) {
                     using the keyboard. If not clicked, the item must be double clicked to open the file""".trimIndent())
         keeper.createCheckboxComponent(mSettings.common::showTileInSearchView, builder, "Show tile in search view", """
                     If checked show the title at the top of the search view to signify the action that is done in the search view""".trimIndent())
+        keeper.createJBIntSpinnerComponent(mSettings.common::titleFontSize, 9, 1, 30, 1, builder, "Popup title font size", """Choose the font size""")
         builder.addComponentFillVertically(JPanel(), 0)
 
         panel = builder.panel

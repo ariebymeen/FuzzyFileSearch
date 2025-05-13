@@ -2,7 +2,8 @@ package com.fuzzyfilesearch.searchbox
 
 import com.fuzzyfilesearch.actions.ShortcutAction
 import com.fuzzyfilesearch.actions.ShortcutType
-import com.fuzzyfilesearch.renderers.VerticallyCenteredTextPane
+import com.fuzzyfilesearch.components.TransparentTextField
+import com.fuzzyfilesearch.components.VerticallyCenteredTextPane
 import com.fuzzyfilesearch.services.PopupMediator
 import com.fuzzyfilesearch.settings.EditorLocation
 import com.fuzzyfilesearch.settings.GlobalSettings
@@ -41,19 +42,6 @@ enum class OpenLocation {
     SPLIT_VIEW_VERTICAL,
     SPLIT_VIEW_HORIZONTAL,
     MAIN_VIEW
-}
-
-class PopupInstanceItem(val vf: VirtualFile,
-                        var mainPanel: JPanel? = null,
-                        var iconLabel: JLabel? = null,
-                        var textPane: VerticallyCenteredTextPane? = null)
-
-class TransparentTextField(private val opacity: Float) : JTextField() {
-    override fun paintComponent(g: Graphics) {
-        val g2 = g as Graphics2D
-        g2.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, opacity)
-        super.paintComponent(g2)
-    }
 }
 
 // Debounce function
@@ -277,6 +265,9 @@ class SearchPopupInstance<ListItemType> (
     private fun setExtensionsField(extList: List<String>? = null) {
         if (!extList.isNullOrEmpty()) {
             mExtensionField.text = extList.map{ ext -> ".$ext"}.joinToString(";")
+            if (mExtensionField.text.length > 13) {
+                mExtensionField.text = mExtensionField.text.substring(0, 13)
+            }
             val width = mExtensionField.getFontMetrics(mExtensionField.font).stringWidth(mExtensionField.text)
             mExtensionField.preferredSize = Dimension(width + 30, mPopupSettings.searchBarHeight)
         }
@@ -341,10 +332,9 @@ class SearchPopupInstance<ListItemType> (
             val title = JTextField(mTitle)
             title.horizontalAlignment = JTextField.CENTER
             title.alignmentY
-            val titleFont = Font(font.name, Font.PLAIN, font.size - 3)
+            val titleFont = Font(font.name, Font.PLAIN, mSettings.common.titleFontSize)
             title.font = titleFont
             title.background = mResultsList.background
-//            title.background = Color.CYAN
             // Set the height of the text field to exactly fit the text
             val metrics: FontMetrics = title.getFontMetrics(font)
             val height = metrics.height
@@ -353,13 +343,13 @@ class SearchPopupInstance<ListItemType> (
             headerBar.add(title, BorderLayout.NORTH)
         }
 
-
         // Field with text header
         val searchBar = JPanel(BorderLayout())
 
-        // TODO: Should this be the same background
-        mSearchField.background = mResultsList.background
-        searchBar.background = mResultsList.background
+        // Search field has the same background color as the result list
+        mSearchField.background     = mResultsList.background
+        mExtensionField.background  = mResultsList.background
+        searchBar.background        = mResultsList.background
 
         searchBar.add(mSearchField, BorderLayout.CENTER)
         searchBar.add(mExtensionField, BorderLayout.EAST)
@@ -367,8 +357,8 @@ class SearchPopupInstance<ListItemType> (
         headerBar.add(searchBar, BorderLayout.SOUTH)
         mMainPanel.add(headerBar, BorderLayout.NORTH)
 
-        mResultsList.cellRenderer = mCellRenderer
-        mResultsList.selectionBackground = getForegroundColor(mSettings)
+        mResultsList.cellRenderer           = mCellRenderer
+        mResultsList.selectionBackground    = getForegroundColor(mSettings)
         mResultsList.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent?) { mouseClickedEvent() }
         })

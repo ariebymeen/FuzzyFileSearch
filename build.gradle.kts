@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.fuzzyfilesearch"
-version = "0.1.8"
+version = "0.1.9"
 
 repositories {
     mavenCentral()
@@ -13,6 +13,8 @@ repositories {
 
 dependencies {
     implementation(kotlin("test"))
+    implementation("org.junit.jupiter:junit-jupiter:5.8.2") // For JUnit 5
+//    testImplementation("junit:junit:4.13.2")
 }
 
 // Configure Gradle IntelliJ Plugin
@@ -36,7 +38,7 @@ tasks {
 
     patchPluginXml {
         sinceBuild.set("232")
-        untilBuild.set("243.*")
+        untilBuild.set("251.*")
     }
 
     signPlugin {

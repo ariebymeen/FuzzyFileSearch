@@ -6,7 +6,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vcs.changes.ChangeListManager
 import com.fuzzyfilesearch.*
-import com.fuzzyfilesearch.searchbox.PopupInstanceItem
+import com.fuzzyfilesearch.renderers.FileInstanceItem
 import com.fuzzyfilesearch.searchbox.getAllFilesInRoot
 import com.fuzzyfilesearch.searchbox.getParentSatisfyingRegex
 
@@ -15,7 +15,7 @@ class SearchRelativeFileAction(val action: Array<String>,
 {
     val regex = Regex(pattern = action[1], options = setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
     val name = getActionName(action)
-    var files: List<PopupInstanceItem>? = null
+    var files: List<FileInstanceItem>? = null
     var project: Project? = null
     var searchAction = SearchForFiles(settings)
     val extensions: List<String> = extractExtensions(action[2])

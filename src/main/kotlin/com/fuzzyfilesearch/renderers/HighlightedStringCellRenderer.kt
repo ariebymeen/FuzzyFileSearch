@@ -1,6 +1,6 @@
 package com.fuzzyfilesearch.renderers
 
-import com.fuzzyfilesearch.actions.StringMatchInstanceItem
+import com.fuzzyfilesearch.components.VerticallyCenteredTextPane
 import com.fuzzyfilesearch.searchbox.CustomRenderer
 import com.fuzzyfilesearch.searchbox.getFont
 import com.intellij.openapi.project.Project
@@ -8,6 +8,7 @@ import com.intellij.ui.util.preferredHeight
 import com.fuzzyfilesearch.settings.GlobalSettings
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.util.maximumHeight
+import com.intellij.ui.util.minimumHeight
 import com.intellij.ui.util.preferredWidth
 import java.awt.*
 import javax.swing.*
@@ -17,8 +18,9 @@ import highlightText
 import javax.swing.border.EmptyBorder
 import javax.swing.text.Style
 
-class SimpleStringCellRenderer(val mProject: Project,
-                               val mSettings: GlobalSettings.SettingsState) : CustomRenderer<StringMatchInstanceItem>() {
+class HighlightedStringCellRenderer(val mProject: Project,
+                                    val mSettings: GlobalSettings.SettingsState,
+                                    val mShowFileName: Boolean) : CustomRenderer<StringMatchInstanceItem>() {
     val font = getFont(mSettings)
     lateinit var normalStyle: Style
     lateinit var tinyStyle: Style
@@ -49,8 +51,23 @@ class SimpleStringCellRenderer(val mProject: Project,
                 StyleConstants.setItalic(this, false)
                 StyleConstants.setFontSize(this, StyleConstants.getFontSize(normalStyle) - 1)
             }
+
+            if (mShowFileName) {
+                value.fileNameTextPane = VerticallyCenteredTextPane()
+                value.fileNameTextPane!!.text = ""
+                value.fileNameTextPane!!.isOpaque = false
+//                value.fileNameTextPane?.preferredHeight = mSettings.string.searchItemHeight
+                value.fileNameTextPane?.minimumHeight   = mSettings.string.searchItemHeight
+                value.fileNameTextPane?.maximumHeight = mSettings.string.searchItemHeight
+                value.fileNameTextPane!!.styledDocument.insertString(0, value.vf.name, tinyStyle)
+                value.mainPanel?.add(value.fileNameTextPane!!, BorderLayout.EAST)
+                val fontMetrics: FontMetrics = value.fileNameTextPane!!.getFontMetrics(Font(font.family, Font.PLAIN, StyleConstants.getFontSize(tinyStyle)))
+                value.fileNameWidth = fontMetrics.stringWidth(value.vf.name)
+            }
+
             setText(value, index)
-            value.mainPanel?.add(value.textPane)
+            value.mainPanel?.add(value.textPane, BorderLayout.CENTER)
+
         } else if (mSettings.string.showNumberInSearchView) {
             val formattedNumber = String.format(" %02d - ", index)
             value.textPane!!.styledDocument.remove(0, formattedNumber.length)
@@ -78,8 +95,9 @@ class SimpleStringCellRenderer(val mProject: Project,
         doc.insertString(doc.length, item.text, normalStyle)
 
         // If text is too wide for the view, remove and place ... at the end
-        val iconW = item.iconLabel?.preferredWidth ?: 0
-        cutoffStringToMaxWidth(item.textPane!!, doc, maxWidth - iconW)
+        val iconW       = item.iconLabel?.preferredWidth ?: 0
+        val fileNameW   = item.fileNameTextPane?.preferredWidth ?: 0
+        cutoffStringToMaxWidth(item.textPane!!, doc, maxWidth - iconW - fileNameW)
 
         if (mSettings.applySyntaxHighlightingOnTextSearch) {
             highlightText(mProject, doc, offset, item.text, item.vf.extension)

@@ -1,7 +1,7 @@
 package com.fuzzyfilesearch.renderers
 
+import com.fuzzyfilesearch.components.VerticallyCenteredTextPane
 import com.fuzzyfilesearch.searchbox.CustomRenderer
-import com.fuzzyfilesearch.searchbox.PopupInstanceItem
 import com.fuzzyfilesearch.searchbox.getFont
 import com.fuzzyfilesearch.searchbox.isFileInProject
 import com.fuzzyfilesearch.settings.GlobalSettings
@@ -9,6 +9,7 @@ import com.fuzzyfilesearch.settings.PathDisplayType
 import com.intellij.openapi.project.Project
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.util.maximumHeight
+import com.intellij.ui.util.maximumWidth
 import com.intellij.ui.util.preferredHeight
 import com.intellij.ui.util.preferredWidth
 import cutoffStringToMaxWidth
@@ -20,7 +21,7 @@ import javax.swing.text.Style
 import javax.swing.text.StyleConstants
 
 class FilePathCellRenderer(val mProject: Project,
-                           val mSettings: GlobalSettings.SettingsState) : CustomRenderer<PopupInstanceItem>() {
+                           val mSettings: GlobalSettings.SettingsState) : CustomRenderer<FileInstanceItem>() {
     val basePath = mProject.basePath!!
     val font = getFont(mSettings)
     lateinit var tinyStyle: Style
@@ -28,14 +29,15 @@ class FilePathCellRenderer(val mProject: Project,
     lateinit var italicStyle: Style
 
     override fun getListCellRendererComponent(
-        list: JList<out PopupInstanceItem>,
-        value: PopupInstanceItem,
+        list: JList<out FileInstanceItem>,
+        value: FileInstanceItem,
         index: Int,
         isSelected: Boolean,
         cellHasFocus: Boolean
     ): Component {
         if (value.textPane == null) {
             value.mainPanel = JPanel(BorderLayout())
+            value.mainPanel?.maximumWidth = maxWidth
             if (mSettings.file.showFileIcon) {
                 value.iconLabel = JBLabel()
                 value.iconLabel!!.border = EmptyBorder(0, 5, 0, 0)
@@ -76,7 +78,7 @@ class FilePathCellRenderer(val mProject: Project,
         return value.mainPanel!!
     }
 
-    fun setText(item: PopupInstanceItem, index: Int) {
+    fun setText(item: FileInstanceItem, index: Int) {
 
         val doc = item.textPane!!.styledDocument
         if (mSettings.file.showNumberInSearchView) {

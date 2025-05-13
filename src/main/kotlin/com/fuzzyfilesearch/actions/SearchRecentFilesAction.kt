@@ -8,7 +8,7 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.fuzzyfilesearch.*
-import com.fuzzyfilesearch.searchbox.PopupInstanceItem
+import com.fuzzyfilesearch.renderers.FileInstanceItem
 import com.fuzzyfilesearch.services.RecentFilesKeeper
 
 class SearchRecentFilesAction(val action: Array<String>,
@@ -41,7 +41,7 @@ class SearchRecentFilesAction(val action: Array<String>,
             }
         }
         val filteredFiles = recentFiles.filter { file -> extensions.isEmpty() || extensions.contains(file.extension) }
-                                        .map{ file -> PopupInstanceItem(file) }
+                                        .map{ file -> FileInstanceItem(file) }
         searchAction.doSearchForFiles(filteredFiles, project, null, extensions)
     }
 

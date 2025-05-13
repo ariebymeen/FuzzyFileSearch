@@ -1,18 +1,18 @@
 package com.fuzzyfilesearch.actions
 
+import com.fuzzyfilesearch.renderers.FileInstanceItem
 import com.fuzzyfilesearch.settings.GlobalSettings
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
-import com.fuzzyfilesearch.searchbox.PopupInstanceItem
 
 class SearchOpenFilesAction(val action: Array<String>,
                             val settings: GlobalSettings.SettingsState) : AnAction(getActionName(action))
 {
     val name = action[0]
     private val extensions: List<String> = extractExtensions(action[1])
-    lateinit var files: List<PopupInstanceItem>
+    lateinit var files: List<FileInstanceItem>
     private var searchAction = SearchForFiles(settings)
 
     override fun actionPerformed(e: AnActionEvent) {
@@ -30,9 +30,9 @@ class SearchOpenFilesAction(val action: Array<String>,
         }
     }
 
-    private fun getAllOpenFiles(project: Project): List<PopupInstanceItem> {
+    private fun getAllOpenFiles(project: Project): List<FileInstanceItem> {
         val fileEditorManager = FileEditorManager.getInstance(project)
         return fileEditorManager.openFiles.toList().filter { file -> extensions.isEmpty() || extensions.contains(file.extension) }
-            .map{ file -> PopupInstanceItem(file) }
+            .map{ file -> FileInstanceItem(file) }
     }
 }

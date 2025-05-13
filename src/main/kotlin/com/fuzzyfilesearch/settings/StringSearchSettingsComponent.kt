@@ -73,16 +73,19 @@ class StringSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState)
 
         keeper.createCheckboxComponent(mSettings::applySyntaxHighlightingOnTextSearch, builder, "Apply syntax highlighting on text search", """
                     If checked, apply syntax highlighting on text search results. If false, plain text is used""".trimIndent())
-        keeper.createCheckboxComponent(mSettings::showFilenameForGrepInFiles, builder, "Show filename in front of the matched line", """
+        keeper.createComboboxComponent(mSettings::showFilenameForRegexMatch, ShowFilenamePolicy.values(), builder,
+             "Show filename in regex search", """
                     Show filename in front of the matching string""".trimIndent())
         keeper.createCheckboxComponent(mSettings::useSelectedTextForGrepInFiles, builder, "Use selected text as initial query", """
                     If true, the selected text is used as initial query. If no text is selected, no query is set """.trimIndent())
-        keeper.createActionsTableComponent(mSettings::searchStringMatchingPatternActions, builder, "Search for pattern in files", """
+        keeper.createActionsTableComponent(mSettings::searchStringMatchingPatternActions, builder, "Search for regex pattern in files", """
                     Search through all instances that match the pattern. If path starts with '/', search through all files. This may
                     be performance intensive if there are many files. If path is empty or '.' search only the current path. Else a relative path
                     is selected""".trimIndent(), arrayOf("Name", "Path", "Regex", "Shortcut", "Extension"),
                     arrayOf("MySearchAction", "", "Enter regex", "", ""), arrayOf(2, 1, 6, 2, 1), mSettings, 0, 3, ::registerSearchForRegexInFiles)
 
+        keeper.createCheckboxComponent(mSettings::showFilenameForGrepInFiles, builder, "Show filename in grep result", """
+                    Show filename in front of the matching string""".trimIndent())
         keeper.createActionsTableComponent(mSettings::searchStringMatchingSubstringActions, builder, "Grep in files", """
                     Search through all lines containing the substring. If path starts with '/', search through all files. This may
                     be performance intensive if there are many files. If path is empty or '.' search only the current path. Else a relative path

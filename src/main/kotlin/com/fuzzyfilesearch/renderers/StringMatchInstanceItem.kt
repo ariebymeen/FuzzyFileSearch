@@ -1,6 +1,6 @@
-package com.fuzzyfilesearch.actions
+package com.fuzzyfilesearch.renderers
 
-import com.fuzzyfilesearch.renderers.VerticallyCenteredTextPane
+import com.fuzzyfilesearch.components.VerticallyCenteredTextPane
 import com.intellij.openapi.vfs.VirtualFile
 import javax.swing.JLabel
 import javax.swing.JPanel
@@ -11,5 +11,6 @@ class StringMatchInstanceItem(val vf: VirtualFile,
                               val text: String,
                               var mainPanel: JPanel? = null,
                               var iconLabel: JLabel? = null,
-                              var textPane: VerticallyCenteredTextPane? = null)
-
+                              var textPane: VerticallyCenteredTextPane? = null,
+                              var fileNameTextPane: VerticallyCenteredTextPane? = null,
+                              var fileNameWidth: Int = 0)

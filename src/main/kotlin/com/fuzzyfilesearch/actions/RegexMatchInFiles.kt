@@ -1,10 +1,10 @@
 package com.fuzzyfilesearch.actions
 
-//import com.fuzzyfilesearch.searchbox.*
-import com.fuzzyfilesearch.renderers.SimpleStringCellRenderer
-import com.fuzzyfilesearch.renderers.VerticallyCenteredTextPane
+import com.fuzzyfilesearch.renderers.HighlightedStringCellRenderer
+import com.fuzzyfilesearch.renderers.StringMatchInstanceItem
 import com.fuzzyfilesearch.searchbox.*
 import com.fuzzyfilesearch.settings.GlobalSettings
+import com.fuzzyfilesearch.settings.ShowFilenamePolicy
 import com.fuzzyfilesearch.showErrorNotification
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -12,10 +12,8 @@ import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.editor.ScrollType
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vcs.changes.ChangeListManager
-import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
-import kotlin.io.path.Path
+import java.util.regex.PatternSyntaxException
 import kotlin.math.min
 import kotlin.system.measureTimeMillis
 
@@ -29,13 +27,25 @@ class RegexMatchInFiles(val action: Array<String>,
 
     /* List with instance items that matched the regex */
     var mSearchItems = mutableListOf<StringMatchInstanceItem>()
+    var mRegex: Regex? = null
     /* The same list but only the matching string. Is used in the search action to search */
     var mSearchItemStrings = emptyList<String>()
-    var mRegex = Regex(getActionRegex(action))
     var mProject: Project? = null
     var fzfSearchAction: FzfSearchAction? = null
 
+    init {
+        try {
+            mRegex = Regex(getActionRegex(action))
+        } catch (e: PatternSyntaxException) {
+            showErrorNotification("Invalid regex", "Regex ${getActionRegex(action)} is invalid: ${e.message}")
+        }
+    }
+
     override fun actionPerformed(e: AnActionEvent) {
+        if (mRegex == null) {
+            showErrorNotification("Invalid regex", "Regex ${getActionRegex(action)} is invalid")
+            return
+        }
         val project = e.project?: return
         val curFile = getCurrentFile(e)?: return
         mEvent = e
@@ -48,7 +58,7 @@ class RegexMatchInFiles(val action: Array<String>,
         val timeTaken = measureTimeMillis {
             // Loop over all files and find regex matches. Store result into class variable to use in search
             mFileNames.forEach{ vf ->
-                val matches = mRegex.findAll(readFileContents(vf)).toList()
+                val matches = mRegex!!.findAll(readFileContents(vf)).toList()
                 mSearchItems.addAll(matches.map { match ->
                     // Remove newlines and indenting for to make the view single line
                     // TODO: This may not be the most efficient way to do any of this
@@ -72,7 +82,8 @@ class RegexMatchInFiles(val action: Array<String>,
         println("Elapsed time: $timeTaken ms")
         println("GrepInFiles: ${mSearchItems.size}. Nof files to search: ${mFileNames.size}, regex: ${getActionRegex(action)}, action: ${action.joinToString(",")}")
 
-        mPopup = SearchPopupInstance(SimpleStringCellRenderer(project, settings), ::getSortedResult, ::moveToLocation, ::getFileFromItem,
+        val showFileName = settings.showFilenameForRegexMatch == ShowFilenamePolicy.ALWAYS || (settings.showFilenameForRegexMatch == ShowFilenamePolicy.WHEN_SEARCHING_MULTIPLE_FILES && mFileNames.size > 1)
+        mPopup = SearchPopupInstance(HighlightedStringCellRenderer(project, settings, showFileName), ::getSortedResult, ::moveToLocation, ::getFileFromItem,
                                                                             settings, project, getActionExtension(action),
                                                                             settings.string,
                                                                             "Regex search")

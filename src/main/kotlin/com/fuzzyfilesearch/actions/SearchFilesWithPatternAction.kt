@@ -7,7 +7,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vcs.changes.ChangeListManager
 import com.intellij.openapi.vfs.VirtualFile
 import com.fuzzyfilesearch.*
-import com.fuzzyfilesearch.searchbox.PopupInstanceItem
+import com.fuzzyfilesearch.renderers.FileInstanceItem
 import com.fuzzyfilesearch.searchbox.getAllFilesInRoot
 import com.intellij.openapi.vfs.VfsUtil
 import kotlin.io.path.Path
@@ -18,7 +18,7 @@ class SearchFilesWithPatternAction(val action: Array<String>,
     val regex = Regex(pattern = action[2], options = setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
     val location = action[1]
     val name = getActionName(action)
-    var files: List<PopupInstanceItem>? = null
+    var files: List<FileInstanceItem>? = null
     var project: Project? = null
     var searchAction = SearchForFiles(settings)
 

@@ -1,6 +1,7 @@
 package com.fuzzyfilesearch.searchbox
 
 import ai.grazie.text.find
+import com.fuzzyfilesearch.renderers.FileInstanceItem
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx
 import com.intellij.openapi.project.Project
@@ -134,15 +135,15 @@ fun isFileInProject(project: Project, file: VirtualFile): Boolean {
 fun getAllFilesInRoot(root: VirtualFile,
                       excludedDirectoryList: Set<String>? = null,
                       extensions: List<String>,
-                      vcsManager: ChangeListManager? = null) : ArrayList<PopupInstanceItem> {
-    val files: ArrayList<PopupInstanceItem> = ArrayList()
-    if (!root.isDirectory) files.add(PopupInstanceItem(root))
+                      vcsManager: ChangeListManager? = null) : ArrayList<FileInstanceItem> {
+    val files: ArrayList<FileInstanceItem> = ArrayList()
+    if (!root.isDirectory) files.add(FileInstanceItem(root))
 
     for (child in root.children!!) {
         if (vcsManager != null && vcsManager.isIgnoredFile(child)) continue
 
         if (child.isFile && (extensions.isEmpty() || extensions.contains(child.extension))) {
-            files.add(PopupInstanceItem(child))
+            files.add(FileInstanceItem(child))
         }
         if (child.isDirectory) {
             if (excludedDirectoryList != null && excludedDirectoryList.contains(child.name)) continue

@@ -1,6 +1,7 @@
 package com.fuzzyfilesearch.actions
 
-import com.fuzzyfilesearch.renderers.SimpleStringCellRenderer
+import com.fuzzyfilesearch.renderers.HighlightedStringCellRenderer
+import com.fuzzyfilesearch.renderers.StringMatchInstanceItem
 import com.fuzzyfilesearch.searchbox.*
 import com.fuzzyfilesearch.settings.GlobalSettings
 import com.intellij.openapi.actionSystem.AnAction
@@ -29,8 +30,6 @@ class GrepInFiles(val action: Array<String>,
     var mEvent: AnActionEvent? = null
     var mHistory: History? = null
 
-    /* List with instance items that matched the regex */
-//    var mSearchItems = mutableListOf<StringMatchInstanceItem>()
     /* Keep track of the latest search query */
     var mSearchQuery: String = ""
     /* The same list but only the matching string. Is used in the search action to search */
@@ -49,7 +48,8 @@ class GrepInFiles(val action: Array<String>,
         mFileNames = mFileNames.filter { file -> isTextOrCodeFile(file) }.toMutableList()
         mMatches   = mFileNames.deepClonePolymorphic()
 
-        mPopup = SearchPopupInstance(SimpleStringCellRenderer(project, settings), ::getSortedResult, ::moveToLocation, ::getFileFromItem,
+        mPopup = SearchPopupInstance(
+            HighlightedStringCellRenderer(project, settings, settings.showFilenameForGrepInFiles), ::getSortedResult, ::moveToLocation, ::getFileFromItem,
                                                                             settings, project, getActionExtension(action),
                                                                             settings.string,
                                                                             "Live grep")
@@ -103,11 +103,7 @@ class GrepInFiles(val action: Array<String>,
                 }
                 while (match >= 0 && result.size < settings.string.numberOfFilesInSearchView) {
                     val text = findTextBetweenNewlines(contents, match)
-                    if (settings.showFilenameForGrepInFiles) {
-                        result.add(StringMatchInstanceItem(vf, text.second, text.third, vf.name + ": " + text.first.trim()))
-                    } else {
-                        result.add(StringMatchInstanceItem(vf, text.second, text.third, text.first.trim()))
-                    }
+                    result.add(StringMatchInstanceItem(vf, text.second, text.third, text.first.trim()))
                     match = contents.indexOf(query, text.third, !settings.common.searchCaseSensitivity)
 
                     if (result.size >= settings.string.numberOfFilesInSearchView) break
@@ -118,7 +114,9 @@ class GrepInFiles(val action: Array<String>,
 
         // TODO: Remove debug prints
         println("Elapsed time: $timeTaken ms")
-        println("GrepInFiles: ${result.size}. Nof files to search: ${nofFilesToSearch} (${(timeTaken * 1000) / nofFilesToSearch} us/file), total nof files: ${mFileNames.size}")
+        if (nofFilesToSearch > 0) {
+            println("GrepInFiles: ${result.size}. Nof files to search: ${nofFilesToSearch} (${(timeTaken * 1000) / nofFilesToSearch} us/file), total nof files: ${mFileNames.size}")
+        }
 
         return result
     }

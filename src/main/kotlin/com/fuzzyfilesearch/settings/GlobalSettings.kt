@@ -27,6 +27,12 @@ enum class ModifierKey {
     ALT
 }
 
+enum class ShowFilenamePolicy {
+    WHEN_SEARCHING_MULTIPLE_FILES,
+    ALWAYS,
+    NEVER,
+}
+
 @State(
     name = "com.fuzzyfilesearch.settings.GlobalSettings",
     storages = [Storage(StoragePathMacros.NON_ROAMABLE_FILE)]
@@ -50,6 +56,7 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         var useDefaultHighlightColor = true
         var selectedColor = ""
         var showTileInSearchView = true
+        var titleFontSize = 10 // Font size of the title (showing the action)
     }
 
     class PopupSettings {
@@ -92,6 +99,7 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         // String search settings
         var applySyntaxHighlightingOnTextSearch = true
         var showFilenameForGrepInFiles          = true
+        var showFilenameForRegexMatch           = ShowFilenamePolicy.WHEN_SEARCHING_MULTIPLE_FILES
         var useSelectedTextForGrepInFiles       = true
         var grepRememberPreviousQuerySeconds: Int = 6
         var searchStringMatchingPatternActions: Array<Array<String>> = emptyArray()

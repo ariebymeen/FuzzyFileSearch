@@ -1,6 +1,6 @@
 package com.fuzzyfilesearch.renderers
 import computeNofCharsToRemove
-import org.junit.Test
+import org.junit.jupiter.api.Test
 import javax.swing.JTextPane
 import javax.swing.text.StyleConstants
 

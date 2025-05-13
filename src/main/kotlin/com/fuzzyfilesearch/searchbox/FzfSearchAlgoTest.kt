@@ -1,5 +1,6 @@
 package com.fuzzyfilesearch.searchbox
-import org.junit.Test
+import org.junit.jupiter.api.Test
+
 
 class FzfSearchAlgoTest {
     @Test

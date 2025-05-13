@@ -1,5 +1,6 @@
 package com.fuzzyfilesearch.actions
 
+import com.fuzzyfilesearch.renderers.FileInstanceItem
 import com.fuzzyfilesearch.renderers.FilePathCellRenderer
 import com.fuzzyfilesearch.searchbox.*
 import com.intellij.openapi.project.Project
@@ -11,12 +12,12 @@ import kotlin.math.min
 class SearchForFiles(val settings: GlobalSettings.SettingsState) {
 
     var mFileNames: List<String>? = null
-    var mPopup: SearchPopupInstance<PopupInstanceItem>? = null
-    var mFiles = emptyList<PopupInstanceItem>()
+    var mPopup: SearchPopupInstance<FileInstanceItem>? = null
+    var mFiles = emptyList<FileInstanceItem>()
     var mProject: Project? = null
     var fzfSearchAction: FzfSearchAction? = null
 
-    fun doSearchForFiles(files: List<PopupInstanceItem>,
+    fun doSearchForFiles(files: List<FileInstanceItem>,
                          project: Project,
                          directory: String?,
                          extensions: List<String>?) {
@@ -49,7 +50,7 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
         fzfSearchAction = FzfSearchAction(mFileNames!!, settings.common.searchCaseSensitivity)
     }
 
-    fun getSortedFileList(query: String) : List<PopupInstanceItem> {
+    fun getSortedFileList(query: String) : List<FileInstanceItem> {
         if (query.isNotEmpty()) {
             val filteredFiles = fzfSearchAction!!.search(query)
             val visibleList = filteredFiles.subList(0, min(filteredFiles.size, settings.file.numberOfFilesInSearchView))
@@ -72,11 +73,11 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
         }
     }
 
-    fun openFile(item: PopupInstanceItem, location: OpenLocation) {
+    fun openFile(item: FileInstanceItem, location: OpenLocation) {
         openFileWithLocation(item.vf, location, mProject!!)
     }
 
-    fun getFileFromItem(item: PopupInstanceItem): FileLocation? {
+    fun getFileFromItem(item: FileInstanceItem): FileLocation? {
         return FileLocation(item.vf, 0)
     }
 }

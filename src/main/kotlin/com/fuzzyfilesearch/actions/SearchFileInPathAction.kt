@@ -8,7 +8,7 @@ import com.intellij.openapi.vcs.changes.ChangeListManager
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.fuzzyfilesearch.*
-import com.fuzzyfilesearch.searchbox.PopupInstanceItem
+import com.fuzzyfilesearch.renderers.FileInstanceItem
 import com.fuzzyfilesearch.searchbox.getAllFilesInRoot
 import kotlin.io.path.Path
 
@@ -20,7 +20,7 @@ class SearchFileInPathAction(val action: Array<String>,
     val location = action[1]
     val extensions: List<String>
 
-    var files: List<PopupInstanceItem>? = null
+    var files: List<FileInstanceItem>? = null
     var project: Project? = null
     var searchAction = SearchForFiles(settings)
 

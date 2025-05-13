@@ -1,6 +1,6 @@
 package com.fuzzyfilesearch.services
 
-import com.fuzzyfilesearch.searchbox.PopupInstanceItem
+import com.fuzzyfilesearch.renderers.FileInstanceItem
 import com.fuzzyfilesearch.searchbox.SearchPopupInstance
 import com.fuzzyfilesearch.settings.GlobalSettings
 import com.intellij.openapi.components.Service
