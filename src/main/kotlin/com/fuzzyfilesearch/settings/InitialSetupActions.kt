@@ -1,20 +1,17 @@
 package com.fuzzyfilesearch.settings
 
-import com.intellij.openapi.components.service
-import com.intellij.openapi.project.Project
-import com.intellij.openapi.startup.ProjectActivity
 import com.fuzzyfilesearch.actions.*
 import com.fuzzyfilesearch.searchbox.colorToHexWithAlpha
+import com.fuzzyfilesearch.searchbox.initFzf
+import com.fuzzyfilesearch.services.MyAsyncFileWatcher
 import com.fuzzyfilesearch.services.PopupMediator
 import com.fuzzyfilesearch.services.RecentFilesKeeper
 import com.fuzzyfilesearch.services.TabKeyPostProcessor
-import com.intellij.openapi.actionSystem.ActionManager
-import com.intellij.openapi.actionSystem.KeyboardShortcut
+import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.colors.EditorColorsManager
-import com.intellij.openapi.keymap.KeymapManager
-import javax.swing.KeyStroke
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.startup.ProjectActivity
 import javax.swing.UIManager
-import com.fuzzyfilesearch.searchbox.*
 
 class ApplicationStartupSetup : ProjectActivity {
 
@@ -41,6 +38,10 @@ class ApplicationStartupSetup : ProjectActivity {
         project.service<RecentFilesKeeper>()    // Initialize project service
         project.service<PopupMediator>()        // Initialize project service
         project.service<TabKeyPostProcessor>().registerProcessor()        // Initialize project service
+//        project.service<FileWatcherService>()        // Initialize project service
+        project.service<MyAsyncFileWatcher>()
+
+
         initFzf()
     }
 }

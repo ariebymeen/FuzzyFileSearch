@@ -8,6 +8,7 @@ import com.fuzzyfilesearch.settings.GlobalSettings
 import com.fuzzyfilesearch.settings.PathDisplayType
 import com.fuzzyfilesearch.showErrorNotification
 import kotlin.math.min
+import kotlin.system.measureTimeMillis
 
 class SearchForFiles(val settings: GlobalSettings.SettingsState) {
 
@@ -52,19 +53,37 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
 
     fun getSortedFileList(query: String) : List<FileInstanceItem> {
         if (query.isNotEmpty()) {
-            val filteredFiles = fzfSearchAction!!.search(query)
-            val visibleList = filteredFiles.subList(0, min(filteredFiles.size, settings.file.numberOfFilesInSearchView))
-            val visibleFiles = visibleList
-                .map { file -> mFileNames!!.indexOfFirst{ name  -> name == file } }
-                .map { index ->
-                    if (index >= 0) {
-                        mFiles[index]
-                    } else {
-                        println("Error, unexpected index $index. Filtered files size: ${filteredFiles.size}, file size: ${mFiles.size}")
-                        showErrorNotification("Something went wrong searching", "Error searching mFiles: $visibleList, invalidating caches now")
-                        mFiles[0]
-                    }
+            val visibleFiles: List<FileInstanceItem>
+            val timeTaken = measureTimeMillis {
+                val timeTaken2 = measureTimeMillis {
+                    val filteredFiles = fzfSearchAction!!.search(query)
                 }
+                println("Searching took ${timeTaken2} ms")
+                val filteredFiles = fzfSearchAction!!.search(query)
+                val timeTaken3 = measureTimeMillis {
+                    val visibleList = filteredFiles.subList(0, min(filteredFiles.size, settings.file.numberOfFilesInSearchView))
+                }
+                println("Creating sublist took ${timeTaken3} ms")
+                val visibleList = filteredFiles.subList(0, min(filteredFiles.size, settings.file.numberOfFilesInSearchView))
+                val timeTaken4 = measureTimeMillis {
+                    visibleFiles = visibleList
+                        .map { file -> mFileNames!!.indexOfFirst { name -> name == file } }
+                        .map { index ->
+                            if (index >= 0) {
+                                mFiles[index]
+                            } else {
+                                println("Error, unexpected index $index. Filtered files size: ${filteredFiles.size}, file size: ${mFiles.size}")
+                                showErrorNotification(
+                                    "Something went wrong searching",
+                                    "Error searching mFiles: $visibleList, invalidating caches now"
+                                )
+                                mFiles[0]
+                            }
+                        }
+                }
+                println("Sorting list took ${timeTaken4} ms")
+            }
+            println("Searching and sorting files took ${timeTaken} ms")
 
             return visibleFiles
         }

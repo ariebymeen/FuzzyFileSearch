@@ -160,7 +160,6 @@ class ActionsTable(columnNames: Array<String>,
     fun resizeColumns() {
         val totalWeight = mColumnWeights.sum().toDouble()
         val tableWidth = mTable.parent.width
-        println("Width: ${tableWidth}, ${System.currentTimeMillis()}")
         for (i in 0 until mTable.columnCount) {
             val column = mTable.columnModel.getColumn(i)
             val weightRatio = mColumnWeights[i].toDouble() / totalWeight

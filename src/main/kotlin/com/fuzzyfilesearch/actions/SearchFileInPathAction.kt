@@ -11,6 +11,7 @@ import com.fuzzyfilesearch.*
 import com.fuzzyfilesearch.renderers.FileInstanceItem
 import com.fuzzyfilesearch.searchbox.getAllFilesInRoot
 import kotlin.io.path.Path
+import kotlin.system.measureTimeMillis
 
 class SearchFileInPathAction(val action: Array<String>,
                              val settings: GlobalSettings.SettingsState,
@@ -50,7 +51,11 @@ class SearchFileInPathAction(val action: Array<String>,
         }
 
         val changeListManager = if (settings.common.searchOnlyFilesTrackedByVersionControl && !overrideVscIgnore) ChangeListManager.getInstance(project) else null
-        files = getAllFilesInRoot(vfPath, settings.common.excludedDirs, extensions, changeListManager)
+
+        val timeTaken = measureTimeMillis {
+            files = getAllFilesInRoot(vfPath, settings.common.excludedDirs, extensions, changeListManager)
+        }
+        println("Found ${files?.size} files in ${timeTaken} ms")
         searchAction.doSearchForFiles(files!!, project, searchPath, extensions)
     }
 
