@@ -4,12 +4,12 @@ import com.fuzzyfilesearch.settings.GlobalSettings
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vcs.changes.ChangeListManager
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.fuzzyfilesearch.*
 import com.fuzzyfilesearch.renderers.FileInstanceItem
-import com.fuzzyfilesearch.searchbox.getAllFilesInRoot
+import com.fuzzyfilesearch.services.FileWatcher
+import com.intellij.openapi.components.service
 import kotlin.io.path.Path
 import kotlin.system.measureTimeMillis
 
@@ -50,18 +50,28 @@ class SearchFileInPathAction(val action: Array<String>,
             return
         }
 
-        val changeListManager = if (settings.common.searchOnlyFilesTrackedByVersionControl && !overrideVscIgnore) ChangeListManager.getInstance(project) else null
+//        val timeTaken = measureTimeMillis {
+//            val changeListManager = if (settings.common.searchOnlyFilesTrackedByVersionControl && !overrideVscIgnore) ChangeListManager.getInstance(project) else null
+//            files = getAllFilesInRoot(vfPath, settings.common.excludedDirs, extensions, changeListManager)
+//            println("Found ${files?.size} files in ${timeTaken} ms")
+//        }
 
-        val timeTaken = measureTimeMillis {
-            files = getAllFilesInRoot(vfPath, settings.common.excludedDirs, extensions, changeListManager)
+        val time2 = measureTimeMillis {
+            files = project.service<FileWatcher>().getListOfFiles(vfPath,
+                settings.common.searchOnlyFilesTrackedByVersionControl && !overrideVscIgnore,
+                ::isFileIncluded)
         }
-        println("Found ${files?.size} files in ${timeTaken} ms")
+        println("Retrieved ${files?.size} files in ${time2} ms")
         searchAction.doSearchForFiles(files!!, project, searchPath, extensions)
     }
 
     fun getVirtualFileFromPath(filePath: String): VirtualFile? {
         val virtualFile = VfsUtil.findFile(Path(filePath), true)
         return virtualFile
+    }
+
+    fun isFileIncluded(vf: VirtualFile): Boolean {
+        return extensions.isEmpty() || extensions.contains(vf.extension)
     }
 
     companion object {

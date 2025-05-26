@@ -74,6 +74,7 @@ class FileSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState) {
                     The ratio of the preview editor size as a fraction of the total width or height of the popup. 
                     If the preview editor is shown below the search area, the fraction of the total height will be selected.
                     If the preview editor is shown to the right of the search area, the fraction of the total width will be selected""".trimIndent())
+        keeper.createCheckboxComponent(mSettings.file::searchMultiThreaded, builder, "Testoption, search multithreaded","")
 
             // Create Relative file opening actions
         builder.addSeparator()
@@ -113,7 +114,7 @@ class FileSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState) {
                Search in a path. Use / as first character searches in the folder that is open in the editor. 
                Start with . to create a relative path (./ searches in directory of currently open file ../ in its parent etc.)
                Specify the extensions you want to search for, if empty all are included.
-                """.trimIndent(), arrayOf("Name", "Path", "Pattern (Regex)", "Shortcut"), arrayOf("Name", "Reference file", "Extensions", "Shortcut"),
+                """.trimIndent(), arrayOf("Name", "Path", "Extensions", "Shortcut"), arrayOf("ActionName", "/", ".cc,.cpp", "alt shift V"),
                 arrayOf(2, 1, 3, 2), mSettings, 0, 3, ::registerSearchFileInPathActions)
 
         keeper.createActionsTableComponent(mSettings::searchRecentFilesActions, builder, "Search in most recently opened files", """

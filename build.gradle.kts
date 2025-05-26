@@ -1,6 +1,7 @@
 plugins {
     id("java")
-    id("org.jetbrains.kotlin.jvm") version "1.9.24"
+//    id("org.jetbrains.kotlin.jvm") version "1.9.24"
+    id("org.jetbrains.kotlin.jvm") version "2.1.0"
     id("org.jetbrains.intellij") version "1.17.3"
 }
 
@@ -22,6 +23,8 @@ dependencies {
 intellij {
     version.set("2023.2.6")
     type.set("IC") // Target IDE Platform
+//    version.set("2025.1.1.1")
+//    type.set("IU")
 
     plugins.set(listOf(/* Plugin Dependencies */))
 }
@@ -32,9 +35,9 @@ tasks {
         sourceCompatibility = "17"
         targetCompatibility = "17"
     }
-    withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-        kotlinOptions.jvmTarget = "17"
-    }
+//    withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+//        kotlinOptions.jvmTarget = "17"
+//    }
 
     patchPluginXml {
         sinceBuild.set("232")

@@ -2,17 +2,23 @@ package com.fuzzyfilesearch.searchbox
 
 import kotlinx.coroutines.*
 import ai.grazie.text.find
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicIntegerArray
 import kotlin.system.measureTimeMillis
 
 class FzfSearchAction(val files: List<String>,
-                      val caseSensitive: Boolean = false) {
-    var previousResult: List<CharArray>? = null
+                      val caseSensitive: Boolean = false,
+                      val multithreaded: Boolean = false) {
+    var previousResult: List<String>? = null
     var previousQuery: String? = null
-    val mFiles = files.map { file -> file.toCharArray() }
+    val mFiles = files
+
+    val cpuDispatcher = Executors.newFixedThreadPool(
+        Runtime.getRuntime().availableProcessors()
+    ).asCoroutineDispatcher()
 
     fun search(query: String) : List<String> {
-        val result : List<CharArray>
+        val result : List<String>
         if (previousQuery != null
             && previousResult != null
             && query.find(previousQuery!!)?.start == 0) {
@@ -24,59 +30,55 @@ class FzfSearchAction(val files: List<String>,
 
         previousQuery = query
         previousResult = result
-        return result.map { it.joinToString(separator = "") }
+        return result
     }
 
-    fun filterAndSort(ints: Array<Int>, strings: List<CharArray>): List<CharArray>
+    fun filterAndSort(ints: Array<Int>, strings: List<String>): List<String>
     {
         require(ints.size == strings.size) { "Arrays must be of equal length" }
 
         // Pair each int with its corresponding string, filter out zeros
         val filtered = ints.zip(strings.asIterable())
-            .filter { (num, _) -> num != 0 }
+                           .filter { (num, _) -> num != 0 }
 
         // Sort by the integer values while keeping strings paired
         val sorted = filtered.sortedBy { (num, _) -> num }
 
         // Unzip back into separate arrays
-        val (sortedInts, sortedStrings) = sorted.unzip()
+        val (_, sortedStrings) = sorted.unzip()
 
         return sortedStrings
     }
 
-    private fun searchFzf(searchFiles: List<CharArray>, query: String) : List<CharArray> {
+    private fun searchFzf(searchFiles: List<String>, query: String) : List<String> {
         var searchFunc = ::FuzzyMatchV2
         if (searchFiles.size > 200) {
             searchFunc = ::FuzzyMatchV1
         }
 
-        val queryChars = if (!caseSensitive) query.toCharArray() else query.lowercase().toCharArray()
+        val queryNorm = if (!caseSensitive) query else query.lowercase()
 
-        val result: List<CharArray>
         val scores = Array<Int>(searchFiles.size) { 0 }
-
         val timeTaken = measureTimeMillis {
-        val indices = searchFiles.indices.toList()
-        indices.parallelStream().forEach { index ->
-            // This handles concurrency internally
-            scores[index] = searchFunc(caseSensitive, searchFiles[index], queryChars).score
+           // Process chunks in parallel but collect results in chunk order
+            if (multithreaded) {
+                runBlocking {
+                    searchFiles.indices.chunked(30).map { chunk ->
+                        async(cpuDispatcher) {
+                            for (index in chunk) {
+                                scores[index] = searchFunc(caseSensitive, searchFiles[index], queryNorm).score
+                            }
+                        }
+                    }.awaitAll()
+                }
+            } else {
+                for (index in searchFiles.indices) {
+                    scores[index] = searchFunc(caseSensitive, searchFiles[index], queryNorm).score
+                }
+            }
         }
-        }
-        println("Sorting files took ${timeTaken} ms")
 
-//        indices.forEach { index -> scores[index] = searchFunc(caseSensitive, searchFiles[index], queryChars).score }
-
-
-        val timeTaken1 = measureTimeMillis {
-            result = filterAndSort(scores, searchFiles)
-        }
-        println("Sorting files took ${timeTaken1} ms")
-
-        return result
-
-//        val sortedMatchIndices = scores.indices.sortedByDescending { scores[it] }
-//        val sortedCandidates = sortedMatchIndices.map { results[it] }.toList()
-
-//        return sortedCandidates
+        println("Searching ${searchFiles.size} files took ${timeTaken} ms. Mutlithreaded: ${multithreaded}")
+        return filterAndSort(scores, searchFiles)
     }
 }

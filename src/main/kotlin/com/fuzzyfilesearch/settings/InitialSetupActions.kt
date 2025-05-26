@@ -3,7 +3,7 @@ package com.fuzzyfilesearch.settings
 import com.fuzzyfilesearch.actions.*
 import com.fuzzyfilesearch.searchbox.colorToHexWithAlpha
 import com.fuzzyfilesearch.searchbox.initFzf
-import com.fuzzyfilesearch.services.MyAsyncFileWatcher
+import com.fuzzyfilesearch.services.FileWatcher
 import com.fuzzyfilesearch.services.PopupMediator
 import com.fuzzyfilesearch.services.RecentFilesKeeper
 import com.fuzzyfilesearch.services.TabKeyPostProcessor
@@ -39,7 +39,7 @@ class ApplicationStartupSetup : ProjectActivity {
         project.service<PopupMediator>()        // Initialize project service
         project.service<TabKeyPostProcessor>().registerProcessor()        // Initialize project service
 //        project.service<FileWatcherService>()        // Initialize project service
-        project.service<MyAsyncFileWatcher>()
+        project.service<FileWatcher>().setSettings(globalSettings.state)
 
 
         initFzf()

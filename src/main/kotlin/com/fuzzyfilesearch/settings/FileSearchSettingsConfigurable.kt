@@ -13,7 +13,6 @@ class FileSearchSettingsConfigurable : Configurable {
             component.initialize()
         }
 
-
         return component.panel
     }
 

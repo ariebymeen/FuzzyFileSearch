@@ -17,6 +17,14 @@ import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.project.Project
 import com.jetbrains.rd.framework.base.deepClonePolymorphic
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
+import java.util.Collections
+import java.util.concurrent.Executors
+import kotlin.collections.chunked
 
 class History(val query: String, val timeMs: Long)
 
@@ -36,6 +44,10 @@ class GrepInFiles(val action: Array<String>,
     var mSearchItemStrings = emptyList<String>()
     var mProject: Project? = null
     var fzfSearchAction: FzfSearchAction? = null
+
+    val cpuDispatcher = Executors.newFixedThreadPool(
+        Runtime.getRuntime().availableProcessors()
+    ).asCoroutineDispatcher()
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project?: return
@@ -88,34 +100,36 @@ class GrepInFiles(val action: Array<String>,
     }
 
     private fun grepForString(query: String): List<StringMatchInstanceItem> {
-        // TODO: Allow using ripgrep
-
-        val result = mutableListOf<StringMatchInstanceItem>()
+        // TODO: Support wildcards
+        val result = Collections.synchronizedList(mutableListOf<StringMatchInstanceItem>())
+        val itemsToRemove = Collections.synchronizedList(mutableListOf<VirtualFile>())
         val nofFilesToSearch = mMatches.size
         val timeTaken = measureTimeMillis {
             // Loop over all files and find regex matches. Store result into class variable to use in search
-            val itemsToRemove = mutableListOf<VirtualFile>()
-            mMatches.forEach{ vf ->
-                val contents = readFileContents(vf)
-                var match = contents.indexOf(query, 0, !settings.common.searchCaseSensitivity)
-                if (match < 0) {
-                    itemsToRemove.add(vf)
+            if (settings.string.searchMultiThreaded) {
+                runBlocking {
+                    mMatches.indices.chunked(10).map { chunk ->
+                        async(cpuDispatcher) {
+                            for (index in chunk) {
+                                if (!findMatchesInFile(mMatches[index], query, result, itemsToRemove)) {
+                                    break
+                                }
+                            }
+                        }
+                    }.awaitAll()
                 }
-                while (match >= 0 && result.size < settings.string.numberOfFilesInSearchView) {
-                    val text = findTextBetweenNewlines(contents, match)
-                    result.add(StringMatchInstanceItem(vf, text.second, text.third, text.first.trim()))
-                    match = contents.indexOf(query, text.third, !settings.common.searchCaseSensitivity)
-
-                    if (result.size >= settings.string.numberOfFilesInSearchView) break
-                }
+            } else {
+                for (index in mMatches.indices)
+                    if (!findMatchesInFile(mMatches[index], query, result, itemsToRemove)) {
+                        break
+                    }
             }
             mMatches.removeAll(itemsToRemove) // If no matches are found in a file, this file does not need to be searched for the next query (if query grows)
         }
 
-        // TODO: Remove debug prints
-        println("Elapsed time: $timeTaken ms")
         if (nofFilesToSearch > 0) {
-            println("GrepInFiles: ${result.size}. Nof files to search: ${nofFilesToSearch} (${(timeTaken * 1000) / nofFilesToSearch} us/file), total nof files: ${mFileNames.size}")
+            // TODO: Remove debug prints
+            println("GrepInFiles: ${result.size} in $timeTaken ms. Nof files to search: ${nofFilesToSearch} (${(timeTaken * 1000) / nofFilesToSearch} us/file), total nof files: ${mFileNames.size}")
         }
 
         return result
@@ -126,6 +140,27 @@ class GrepInFiles(val action: Array<String>,
 
         val fileType = FileTypeManager.getInstance().getFileTypeByFile(file)
         return fileType is PlainTextFileType || fileType.isBinary.not()
+    }
+
+    fun findMatchesInFile(vf: VirtualFile,
+                          query: String,
+                          matches: MutableList<StringMatchInstanceItem>,
+                          nonMatches: MutableList<VirtualFile>): Boolean {
+        val contents = readFileContents(vf)
+        var match = contents.indexOf(query, 0, !settings.common.searchCaseSensitivity)
+        if (match < 0) {
+            nonMatches.add(vf)
+        }
+        while (match >= 0 && matches.size < settings.string.numberOfFilesInSearchView) {
+            val text = findTextBetweenNewlines(contents, match)
+            matches.add(StringMatchInstanceItem(vf, text.second, text.third, text.first.trim()))
+            match = contents.indexOf(query, text.third, !settings.common.searchCaseSensitivity)
+
+            if (matches.size >= settings.string.numberOfFilesInSearchView) {
+                return false
+            }
+        }
+        return true
     }
 
     fun moveToLocation(item: StringMatchInstanceItem, location: OpenLocation) {

@@ -75,9 +75,9 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         var searchBarHeight = 40
         var searchItemHeight = 30
         var showEditorPreview = true
-        var editorPreviewLocation = EditorLocation.EDITOR_RIGHT
+        var editorPreviewLocation = EditorLocation.EDITOR_BELOW
         var editorSizeRatio = 0.5
-
+        var searchMultiThreaded = false
     }
 
     class SettingsState {

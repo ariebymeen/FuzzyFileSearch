@@ -5,9 +5,9 @@ import org.junit.jupiter.api.Test
 class FzfSearchAlgoTest {
     @Test
     fun `test_fzf_search_algo`() {
-        val input1 = "/gradle/wrapper/gradle-wrapper.properties".toCharArray()
-        val input2 = "/src/main/kotlin/com/fuzzyfilesearch/actions/SearchFileInPathAction.kt".toCharArray()
-        val query = "pat".toCharArray()
+        val input1 = "/gradle/wrapper/gradle-wrapper.properties"
+        val input2 = "/src/main/kotlin/com/fuzzyfilesearch/actions/SearchFileInPathAction.kt"
+        val query = "pat"
         val result1 = FuzzyMatchV1(false, input1, query)
         val result2 = FuzzyMatchV1(false, input2, query)
 
@@ -15,8 +15,8 @@ class FzfSearchAlgoTest {
         println("Result 1 score: ${result1.score}, result score 2: ${result2.score}")
 
         val result3 = FuzzyMatchV2(false,
-            "/src/main/kotlin/com/fuzzyfilesearch/actions/OpenRelativeFileAction.kt".toCharArray(),
-            "keeper".toCharArray())
+            "/src/main/kotlin/com/fuzzyfilesearch/actions/OpenRelativeFileAction.kt",
+            "keeper")
         println("Result 3 score: ${result3.score}")
     }
 }

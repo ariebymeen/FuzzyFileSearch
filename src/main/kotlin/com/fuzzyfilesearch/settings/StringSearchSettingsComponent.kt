@@ -66,6 +66,7 @@ class StringSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState)
                     If the preview editor is shown to the right of the search area, the fraction of the total width will be selected""".trimIndent())
         keeper.createJBIntSpinnerComponent(mSettings::grepRememberPreviousQuerySeconds, 5, 0, 100, 1, builder, "Remember previous query (seconds)", """
                     Time (seconds) for which the previous query will be remembered. When zero, it is never remembered""".trimIndent())
+        keeper.createCheckboxComponent(mSettings.string::searchMultiThreaded, builder, "Testoption, search multithreaded","")
 
             // Create Relative file opening actions
         builder.addSeparator()

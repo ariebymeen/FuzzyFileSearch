@@ -148,9 +148,8 @@ fun charClassOf(char: Char): CharClass {
 
 fun calculateScore(
     caseSensitive: Boolean,
-//    normalize: Boolean,
-    text: CharArray, // Assuming this is a Kotlin equivalent of util.Chars
-    pattern: CharArray, // Use CharArray to represent the slice of runes
+    text: String, // Assuming this is a Kotlin equivalent of util.Chars
+    pattern: String, // Use CharArray to represent the slice of runes
     sidx: Int,
     eidx: Int,
 //    withPos: Boolean
@@ -208,7 +207,7 @@ fun calculateScore(
             inGap = false
             consecutive++
             pidx++
-            if (pidx == pattern.size) {
+            if (pidx == pattern.length) {
                 break
             }
         } else {
@@ -227,23 +226,23 @@ fun calculateScore(
     return Pair(score, pos) // Return the score and positions as a Pair
 }
 
-fun bonusAt(input: CharArray,
-            idx: Int) : Short {
-    if (idx == 0) {
-        return bonusBoundaryWhite.toShort()
-    }
-    return bonusMatrix[charClassOf(input[idx-1])][charClassOf(input[idx])]
-}
+//fun bonusAt(input: CharArray,
+//            idx: Int) : Short {
+//    if (idx == 0) {
+//        return bonusBoundaryWhite.toShort()
+//    }
+//    return bonusMatrix[charClassOf(input[idx-1])][charClassOf(input[idx])]
+//}
+//
+//fun posArray(withPos: Boolean,
+//             len: Int): IntArray? {
+//    if (withPos) {
+//        return IntArray(len) {0}
+//    }
+//    return null
+//}
 
-fun posArray(withPos: Boolean,
-             len: Int): IntArray? {
-    if (withPos) {
-        return IntArray(len) {0}
-    }
-    return null
-}
-
-fun asBytes(input: CharArray, from: Int = 0) : ByteArray {
+fun asBytes(input: String, from: Int = 0) : ByteArray {
     val charBuffer = CharBuffer.wrap(input)
     val byteBuffer = Charsets.UTF_8.encode(charBuffer)
     val bytes = byteBuffer.toByteArray(isClear = false)
@@ -251,7 +250,7 @@ fun asBytes(input: CharArray, from: Int = 0) : ByteArray {
     return byteArray
 }
 
-fun trySkip(input: CharArray,
+fun trySkip(input: String,
             caseSensitive: Boolean,
             b: Byte,
             from: Int): Int {
@@ -281,18 +280,9 @@ fun trySkip(input: CharArray,
     return from + idx
 }
 
-fun asciiFuzzyIndex(input: CharArray,
-                    pattern: CharArray,
+fun asciiFuzzyIndex(input: String,
+                    pattern: String,
                     caseSensitive: Boolean): Pair<Int, Int> {
-//     Can't determine
-//    if (!input.isBytes()) {
-//        return Pair(0, input.length())
-//    }
-
-    // Not possible
-//    if (!isAscii(pattern)) {
-//        return Pair(-1, -1)
-//    }
 
     var firstIdx = 0
     var idx = 0
@@ -330,22 +320,22 @@ fun asciiFuzzyIndex(input: CharArray,
 
 fun FuzzyMatchV2(
     caseSensitive: Boolean,
-    input: CharArray,
-    pattern: CharArray,
+    input: String,
+    pattern: String,
 ): Result {
     // Assume that pattern is given in lowercase if case-insensitive.
-    val M = pattern.size
+    val M = pattern.length
     if (M == 0) {
         return Result(0, 0, 0)
     }
-    var N = input.size
+    var N = input.length
     if (M > N) {
         return Result(-1, -1, 0)
     }
 
     // Since O(nm) algorithm can be prohibitively expensive for large input,
     // we fall back to the greedy algorithm.
-    if (input.size > 200) {
+    if (input.length > 200) {
         return FuzzyMatchV1(caseSensitive, input, pattern)
     }
 
@@ -447,7 +437,8 @@ fun FuzzyMatchV2(
     System.arraycopy(C0, f0, C, 0, lastIdx - f0 + 1)
 
     val Fsub = F.copyOfRange(1, F.size)
-    val Psub = pattern.copyOfRange(1, min(1 + Fsub.size, pattern.size))
+//    val Psub = pattern.copyOfRange(1, min(1 + Fsub.size, pattern.size))
+    val Psub = pattern.substring(1,  min(1 + Fsub.size, pattern.length))
 
     for (off in Fsub.indices) {
         val f = Fsub[off]
@@ -522,8 +513,8 @@ fun FuzzyMatchV2(
 
 fun FuzzyMatchV1(
     caseSensitive: Boolean,
-    text: CharArray,
-    pattern: CharArray, // Using CharArray for rune equivalent in Kotlin
+    text: String,
+    pattern: String, // Using CharArray for rune equivalent in Kotlin
 ): Result {
     if (pattern.isEmpty()) {
         return Result(0, 0, 0)
@@ -538,8 +529,8 @@ fun FuzzyMatchV1(
     var sidx = -1
     var eidx = -1
 
-    val lenRunes = text.size
-    val lenPattern = pattern.size
+    val lenRunes = text.length
+    val lenPattern = pattern.length
 
     for (index in 0 until lenRunes) {
         var char = text.get(index)
