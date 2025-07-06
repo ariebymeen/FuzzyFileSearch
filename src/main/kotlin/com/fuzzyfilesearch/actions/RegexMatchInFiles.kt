@@ -74,6 +74,7 @@ class RegexMatchInFiles(val action: Array<String>,
                     }
                     StringMatchInstanceItem(vf, match.range.first, match.range.last, newText)
                 })
+
             }
             mSearchItemStrings = mSearchItems.map { item -> item.text }
         }
@@ -106,7 +107,10 @@ class RegexMatchInFiles(val action: Array<String>,
                         mSearchItems[0]
                     }
                 }
-
+            // We do this here to prevent doing this on the UI thread even though this is horrible and ugly
+            visibleItems.forEach {
+                if (settings.string.showFileIcon && it.icon == null) it.icon = it.vf.fileType.icon
+            }
             return visibleItems
         }
         else {

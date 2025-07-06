@@ -10,6 +10,7 @@ import com.fuzzyfilesearch.settings.GlobalSettings
 import com.fuzzyfilesearch.settings.ModifierKey
 import com.fuzzyfilesearch.settings.PopupSizePolicy
 import com.intellij.openapi.actionSystem.CustomShortcutSet
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopup
@@ -17,6 +18,7 @@ import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.WindowManager
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.util.width
 import com.intellij.util.ui.JBUI
@@ -87,7 +89,7 @@ class SearchPopupInstance<ListItemType> (
         createPopupInstance()
     }
 
-    fun showPopupInstance() {
+    fun showPopupInstance(initialQuery: String = "") {
         val ideFrame = WindowManager.getInstance().getIdeFrame(mProject)
         val ideBounds = WindowManager.getInstance().getFrame(mProject)
 
@@ -135,6 +137,7 @@ class SearchPopupInstance<ListItemType> (
 
 
         mResultsList.cellRenderer = mCellRenderer
+        mSearchField.text = initialQuery
 
         mPopup = JBPopupFactory.getInstance()
             .createComponentPopupBuilder(mSplitPane, mSearchField)
@@ -156,6 +159,8 @@ class SearchPopupInstance<ListItemType> (
             val poxXInBounds = max(ideBounds.x, min(ideBounds.x + ideBounds.width - popupWidth, posX.toInt()))
 
             mPopup!!.size = Dimension(popupWidth, popupHeight)
+
+            // TODO: Somehow this crashes sometimes
             mPopup!!.showInScreenCoordinates(ideFrame.component, Point(poxXInBounds, posYInBounds))
         }
 
@@ -176,39 +181,47 @@ class SearchPopupInstance<ListItemType> (
 
     private fun updateListedItems() {
         // TODO: Add indication that not all files are listed
-        SwingUtilities.invokeLater {
+        ApplicationManager.getApplication().executeOnPooledThread {
             mNofTimesClicked = 0 // Reset nof times clicked counter
             val items = mGetSearchResultCallback.invoke(mSearchField.text)
 
-            // update list items. This is optimized for performance as clearing the list model gives problems
-            val commonCount = min(items.size, mListModel.size())
-            for (idx in 0 until commonCount) {
-                mListModel[idx] = items[idx]
-            }
+            SwingUtilities.invokeLater {
+                // update list items. This is optimized for performance as clearing the list model gives problems
+                val commonCount = min(items.size, mListModel.size())
+                for (idx in 0 until commonCount) {
+                    mListModel[idx] = items[idx]
+                }
 
-            val itemsToAddCount = if (items.size > commonCount) items.size - commonCount else 0
-            if (itemsToAddCount > 0) {
-                mListModel.addAll(items.slice(commonCount until commonCount + itemsToAddCount))
-            }
+                val itemsToAddCount = if (items.size > commonCount) items.size - commonCount else 0
+                if (itemsToAddCount > 0) {
+                    mListModel.addAll(items.slice(commonCount until commonCount + itemsToAddCount))
+                }
 
-            val itemsToRemoveCount = if (items.size < mListModel.size) mListModel.size() - items.size else 0
-            if (itemsToRemoveCount > 0) {
-                mListModel.removeRange(items.size, items.size + itemsToRemoveCount - 1)
-            }
+                val itemsToRemoveCount = if (items.size < mListModel.size) mListModel.size() - items.size else 0
+                if (itemsToRemoveCount > 0) {
+                    mListModel.removeRange(items.size, items.size + itemsToRemoveCount - 1)
+                }
 
-            mResultsList.selectedIndex = 0
-            mResultsList.ensureIndexIsVisible(0)
-            if (mPopupSettings.showEditorPreview && mResultsList.selectedIndex >= 0) {
-                val selectedFile = mGetFileAndLocationCallback(mResultsList.selectedValue as ListItemType)
-                if (selectedFile != null) mEditorView.updateFile(selectedFile.vf, selectedFile.caretOffset)
-            } else {
-                mEditorView.updateFile(null, 0)
-            }
+                mResultsList.selectedIndex = 0
+                mResultsList.ensureIndexIsVisible(0)
+                if (mPopupSettings.showEditorPreview && mResultsList.selectedIndex >= 0) {
+                    val selectedFile = mGetFileAndLocationCallback(mResultsList.selectedValue as ListItemType)
+                    if (selectedFile != null) mEditorView.updateFile(selectedFile.vf, selectedFile.caretOffset)
+                } else {
+                    mEditorView.updateFile(null, 0)
+                }
 
-            if (mPopupSettings.shrinkViewDynamically) {
-                mPopup!!.size = Dimension(mPopup!!.width, min(mMaxPopupHeight!!, mPopupSettings.searchBarHeight + mListModel.size() * mPopupSettings.searchItemHeight + 6))
-                mResultsList.revalidate()
-                mResultsList.repaint()
+                if (mPopupSettings.shrinkViewDynamically) {
+                    mPopup!!.size = Dimension(
+                        mPopup!!.width,
+                        min(
+                            mMaxPopupHeight!!,
+                            mPopupSettings.searchBarHeight + mListModel.size() * mPopupSettings.searchItemHeight + 6
+                        )
+                    )
+                    mResultsList.revalidate()
+                    mResultsList.repaint()
+                }
             }
         }
     }
@@ -279,7 +292,7 @@ class SearchPopupInstance<ListItemType> (
     }
 
     private fun getFont(settings: GlobalSettings.SettingsState): Font {
-        var fontName = ""
+        var fontName: String
         if (settings.common.useDefaultFont) {
             fontName = UIManager.getFont("Label.font").fontName
         } else  {
@@ -331,8 +344,9 @@ class SearchPopupInstance<ListItemType> (
         if (mSettings.common.showTileInSearchView) {
             val title = JTextField(mTitle)
             title.horizontalAlignment = JTextField.CENTER
-            title.alignmentY
+//            title.alignmentY
             val titleFont = Font(font.name, Font.PLAIN, mSettings.common.titleFontSize)
+            title.isEditable = false
             title.font = titleFont
             title.background = mResultsList.background
             // Set the height of the text field to exactly fit the text
@@ -382,15 +396,14 @@ class SearchPopupInstance<ListItemType> (
             .setMinSize(Dimension(mPopupSettings.searchBarHeight, 0))
             .createPopup()
 
-        SwingUtilities.invokeLater {
+        ApplicationManager.getApplication().executeOnPooledThread {
             registerCustomShortcutActions()
-        }
-        Disposer.register(mPopup!!) {
-            for (listener in mSearchField.keyListeners) {
-                mSearchField.removeKeyListener(listener)
+            Disposer.register(mPopup!!) {
+                for (listener in mSearchField.keyListeners) {
+                    mSearchField.removeKeyListener(listener)
+                }
             }
         }
-
     }
 
     private fun getForegroundColor(settings: GlobalSettings.SettingsState): Color {

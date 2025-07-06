@@ -11,7 +11,9 @@ import com.intellij.ui.components.JBPanel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.table.JBTable
 import com.intellij.ui.util.preferredHeight
+import com.intellij.ui.util.preferredWidth
 import java.awt.BorderLayout
+import java.awt.Dimension
 import java.awt.event.ComponentAdapter
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -71,7 +73,7 @@ class ActionsTable(columnNames: Array<String>,
 
             add(scrollTable, BorderLayout.CENTER)
         }
-        mTablePanel.preferredHeight = rowHeight * 5
+        mTablePanel.preferredSize = Dimension(mTablePanel.preferredWidth, rowHeight * 5)
         add(mTablePanel, BorderLayout.CENTER)
 
         val formPanel = JBPanel<JBPanel<*>>().apply {

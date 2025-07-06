@@ -42,7 +42,7 @@ class FzfSearchAction(val files: List<String>,
                            .filter { (num, _) -> num != 0 }
 
         // Sort by the integer values while keeping strings paired
-        val sorted = filtered.sortedBy { (num, _) -> num }
+        val sorted = filtered.sortedByDescending{ (num, _) -> num }
 
         // Unzip back into separate arrays
         val (_, sortedStrings) = sorted.unzip()
@@ -78,7 +78,7 @@ class FzfSearchAction(val files: List<String>,
             }
         }
 
-        println("Searching ${searchFiles.size} files took ${timeTaken} ms. Mutlithreaded: ${multithreaded}")
+        println("Searching ${searchFiles.size} files took ${timeTaken} ms. Multithreaded: ${multithreaded}")
         return filterAndSort(scores, searchFiles)
     }
 }

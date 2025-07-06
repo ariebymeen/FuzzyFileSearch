@@ -1,14 +1,13 @@
 package com.fuzzyfilesearch.renderers
 
 import com.fuzzyfilesearch.components.VerticallyCenteredTextPane
+import com.fuzzyfilesearch.components.ShrunkVerticallyCenteredTextPane
 import com.fuzzyfilesearch.searchbox.CustomRenderer
 import com.fuzzyfilesearch.searchbox.getFont
 import com.intellij.openapi.project.Project
-import com.intellij.ui.util.preferredHeight
 import com.fuzzyfilesearch.settings.GlobalSettings
+import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
-import com.intellij.ui.util.maximumHeight
-import com.intellij.ui.util.minimumHeight
 import com.intellij.ui.util.preferredWidth
 import java.awt.*
 import javax.swing.*
@@ -40,11 +39,11 @@ class HighlightedStringCellRenderer(val mProject: Project,
                 value.iconLabel!!.icon = value.vf.fileType.icon
                 value.mainPanel?.add(value.iconLabel, BorderLayout.WEST)
             }
-            value.textPane = VerticallyCenteredTextPane()
+            value.textPane = VerticallyCenteredTextPane(mSettings.string.searchItemHeight)
             value.textPane!!.text = ""
             value.textPane!!.isOpaque = false
-            value.textPane?.preferredHeight = mSettings.string.searchItemHeight
-            value.textPane?.maximumHeight = mSettings.string.searchItemHeight
+//            value.textPane?.preferredHeight = mSettings.string.searchItemHeight
+//            value.textPane?.maximumHeight = mSettings.string.searchItemHeight
             value.textPane?.font = font
             normalStyle = value.textPane!!.addStyle("Normal", null).apply {}
             tinyStyle = value.textPane!!.addStyle("Tiny", null).apply {
@@ -52,17 +51,16 @@ class HighlightedStringCellRenderer(val mProject: Project,
                 StyleConstants.setFontSize(this, StyleConstants.getFontSize(normalStyle) - 1)
             }
 
+            val mShowFileName = true
             if (mShowFileName) {
-                value.fileNameTextPane = VerticallyCenteredTextPane()
+                value.fileNameTextPane = ShrunkVerticallyCenteredTextPane(mSettings.string.searchItemHeight)
                 value.fileNameTextPane!!.text = ""
                 value.fileNameTextPane!!.isOpaque = false
-//                value.fileNameTextPane?.preferredHeight = mSettings.string.searchItemHeight
-                value.fileNameTextPane?.minimumHeight   = mSettings.string.searchItemHeight
-                value.fileNameTextPane?.maximumHeight = mSettings.string.searchItemHeight
                 value.fileNameTextPane!!.styledDocument.insertString(0, value.vf.name, tinyStyle)
                 value.mainPanel?.add(value.fileNameTextPane!!, BorderLayout.EAST)
                 val fontMetrics: FontMetrics = value.fileNameTextPane!!.getFontMetrics(Font(font.family, Font.PLAIN, StyleConstants.getFontSize(tinyStyle)))
                 value.fileNameWidth = fontMetrics.stringWidth(value.vf.name)
+                value.fileNameTextPane!!.setWidth(value.fileNameWidth)
             }
 
             setText(value, index)
@@ -91,7 +89,6 @@ class HighlightedStringCellRenderer(val mProject: Project,
             doc.insertString(doc.length, " ", tinyStyle)
         }
 
-        val offset = doc.length
         doc.insertString(doc.length, item.text, normalStyle)
 
         // If text is too wide for the view, remove and place ... at the end
@@ -100,7 +97,7 @@ class HighlightedStringCellRenderer(val mProject: Project,
         cutoffStringToMaxWidth(item.textPane!!, doc, maxWidth - iconW - fileNameW)
 
         if (mSettings.applySyntaxHighlightingOnTextSearch) {
-            highlightText(mProject, doc, offset, item.text, item.vf.extension)
+            highlightText(mProject, doc, doc.length, item.text, item.vf.extension)
         }
     }
 

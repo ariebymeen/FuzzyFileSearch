@@ -65,25 +65,29 @@ class GrepInFiles(val action: Array<String>,
                                                                             settings, project, getActionExtension(action),
                                                                             settings.string,
                                                                             "Live grep")
-        mPopup!!.showPopupInstance()
-        fzfSearchAction = FzfSearchAction(mSearchItemStrings, settings.common.searchCaseSensitivity)
 
+        // Get search history and select from history or selected text (or empty)
+        var initialQuery = ""
         val time = if (mHistory == null) 0 else mHistory!!.timeMs
         val historyWithinTimeout = (System.currentTimeMillis() - time) < (settings.grepRememberPreviousQuerySeconds * 1000)
-        if (historyWithinTimeout) {
-            mPopup?.mSearchField?.text = mHistory!!.query
+        if (historyWithinTimeout && mHistory!!.query.isNotEmpty()) {
+            initialQuery = mHistory!!.query
         } else {
             val selectedText = getSelectedText(e)
             if (selectedText != null) {
-                mPopup?.mSearchField?.text = selectedText
+                initialQuery = selectedText
             }
         }
-    }
 
+        mPopup!!.showPopupInstance(initialQuery)
+        fzfSearchAction = FzfSearchAction(mSearchItemStrings, settings.common.searchCaseSensitivity)
+    }
 
     fun getSortedResult(query: String) : List<StringMatchInstanceItem> {
         val trimmedQuery = query.trim().lowercase()
+
         mHistory = History(trimmedQuery, timeMs = System.currentTimeMillis())
+        println("Trimmed query: ${trimmedQuery}")
 
         if (trimmedQuery.isEmpty()) {
             mMatches = mFileNames.deepClonePolymorphic()
@@ -125,6 +129,11 @@ class GrepInFiles(val action: Array<String>,
                     }
             }
             mMatches.removeAll(itemsToRemove) // If no matches are found in a file, this file does not need to be searched for the next query (if query grows)
+
+            // We do this here to prevent doing this on the UI thread even though this is horrible and ugly
+            result.forEach {
+                if (settings.string.showFileIcon && it.icon == null) it.icon = it.vf.fileType.icon
+            }
         }
 
         if (nofFilesToSearch > 0) {
@@ -213,7 +222,7 @@ class GrepInFiles(val action: Array<String>,
         val beforeIndex = text.lastIndexOf('\n', index - 1).takeIf { it != -1 } ?: 0
         val afterIndex = text.indexOf('\n', index).takeIf { it != -1 } ?: text.length
 
-        return Triple(text.substring(beforeIndex, afterIndex).trim(), beforeIndex, afterIndex)
+        return Triple(text.substring(beforeIndex, afterIndex).trim(), beforeIndex + 1, afterIndex)
     }
 
     companion object {

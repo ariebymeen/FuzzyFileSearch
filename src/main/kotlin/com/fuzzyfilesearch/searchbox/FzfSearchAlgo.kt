@@ -416,9 +416,9 @@ fun FuzzyMatchV2(
         prevH0 = H0[off]
     }
 
-    if (pidx != M) {
-        return Result(-1, -1, 0)
-    }
+//    if (pidx != M) {
+//        return Result(-1, -1, 0)
+//    }
 
     if (M == 1) {
         val result = Result(minIdx + maxScorePos, minIdx + maxScorePos + 1, maxScore.toInt())

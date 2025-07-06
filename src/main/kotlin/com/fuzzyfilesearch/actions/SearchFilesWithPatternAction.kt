@@ -50,6 +50,7 @@ class SearchFilesWithPatternAction(val action: Array<String>,
 
         files = project.service<FileWatcher>().getListOfFiles(
             vfPath,
+            project,
             settings.common.searchOnlyFilesTrackedByVersionControl,
             ::isFileIncluded)
 

@@ -57,7 +57,7 @@ class SearchFileInPathAction(val action: Array<String>,
 //        }
 
         val time2 = measureTimeMillis {
-            files = project.service<FileWatcher>().getListOfFiles(vfPath,
+            files = project.service<FileWatcher>().getListOfFiles(vfPath, project,
                 settings.common.searchOnlyFilesTrackedByVersionControl && !overrideVscIgnore,
                 ::isFileIncluded)
         }

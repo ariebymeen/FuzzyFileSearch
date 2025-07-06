@@ -68,13 +68,21 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
                                 mFiles[0]
                             }
                     }
+                // We do this here to prevent doing this on the UI thread even though this is horrible and ugly
+                visibleFiles.forEach {
+                    if (settings.file.showFileIcon && it.icon == null) it.icon = it.vf.fileType.icon
+                }
             }
             println("Searching and sorting files took ${timeTaken} ms")
-
             return visibleFiles
         }
         else {
-            return mFiles.subList(0, min(mFiles.size, settings.file.numberOfFilesInSearchView))
+            val visibleFiles = mFiles.subList(0, min(mFiles.size, settings.file.numberOfFilesInSearchView))
+            // We do this here to prevent doing this on the UI thread even though this is horrible and ugly
+            visibleFiles.forEach {
+                if (settings.file.showFileIcon && it.icon == null) it.icon = it.vf.fileType.icon
+            }
+            return visibleFiles
         }
     }
 

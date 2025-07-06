@@ -38,6 +38,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.EditorTextField
 import javax.swing.BorderFactory
+import javax.swing.SwingUtilities
 
 class SearchBoxEditor(project: Project?) : EditorTextField(project, PlainTextFileType.INSTANCE) {
     private var currentFile: VirtualFile? = null
@@ -83,24 +84,26 @@ class SearchBoxEditor(project: Project?) : EditorTextField(project, PlainTextFil
             }
             val fileType = virtualFile?.let { FileTypeManager.getInstance().getFileTypeByFile(virtualFile) }
 
-            ApplicationManager.getApplication().invokeLater {
-                if (sourceDocument != null) {
-                    WriteCommandAction.runWriteCommandAction(project) {
-                        // Use the actual document to enable full highlighting in the preview
-                        document = sourceDocument
-                        ApplicationManager.getApplication().invokeLater { moveToOffset(caretOffset) }
+            ApplicationManager.getApplication().executeOnPooledThread {
+                SwingUtilities.invokeLater {
+                    if (sourceDocument != null) {
+                        WriteCommandAction.runWriteCommandAction(project) {
+                            // Use the actual document to enable full highlighting in the preview
+                            document = sourceDocument
+                            moveToOffset(caretOffset)
+                        }
+                    } else {
+                        document = EditorFactory.getInstance().createDocument("Cannot preview file")
                     }
-                } else {
-                    document = EditorFactory.getInstance().createDocument("Cannot preview file")
+                    if (fileType != null) this.fileType = fileType
                 }
-                if (fileType != null) this.fileType = fileType
             }
         }
     }
 
     fun moveToOffset(offset: Int) {
         val editor = this.editor as? EditorEx ?: return
-        editor.caretModel.moveToOffset(offset)
+        editor.caretModel.moveToOffset(offset + 1)
         editor.scrollingModel.scrollToCaret(com.intellij.openapi.editor.ScrollType.CENTER_UP)
     }
 

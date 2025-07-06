@@ -8,6 +8,7 @@ import com.fuzzyfilesearch.settings.GlobalSettings
 import com.fuzzyfilesearch.settings.PathDisplayType
 import com.intellij.openapi.project.Project
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBPanel
 import com.intellij.ui.util.maximumHeight
 import com.intellij.ui.util.maximumWidth
 import com.intellij.ui.util.preferredHeight
@@ -37,18 +38,19 @@ class FilePathCellRenderer(val mProject: Project,
     ): Component {
         if (value.textPane == null) {
             value.mainPanel = JPanel(BorderLayout())
-            value.mainPanel?.maximumWidth = maxWidth
+//            value.mainPanel?.maximumWidth = maxWidth
             if (mSettings.file.showFileIcon) {
                 value.iconLabel = JBLabel()
                 value.iconLabel!!.border = EmptyBorder(0, 5, 0, 0)
-                value.iconLabel!!.icon = value.vf.fileType.icon
+//                value.iconLabel!!.icon = value.vf.fileType.icon // TODO: This action is very slow and should not happen on EDT (UI) Thread
+                value.iconLabel!!.icon = value.icon // TODO: This action is very slow and should not happen on EDT (UI) Thread
                 value.mainPanel?.add(value.iconLabel, BorderLayout.WEST)
             }
-            value.textPane = VerticallyCenteredTextPane()
+            value.textPane = VerticallyCenteredTextPane(mSettings.file.searchItemHeight)
             value.textPane!!.text = ""
             value.textPane!!.isOpaque = false
-            value.textPane?.preferredHeight = mSettings.file.searchItemHeight
-            value.textPane?.maximumHeight = mSettings.file.searchItemHeight
+//            value.textPane?.preferredHeight = mSettings.file.searchItemHeight
+//            value.textPane?.maximumHeight = mSettings.file.searchItemHeight
             value.textPane?.font = font
             italicStyle = value.textPane!!.addStyle("Italic", null).apply {
                 StyleConstants.setItalic(this, true)
@@ -68,13 +70,9 @@ class FilePathCellRenderer(val mProject: Project,
              value.textPane!!.styledDocument.insertString(0, formattedNumber, value.textPane!!.getStyle("Tiny"))
         }
 
-//        value.panel!!.background = if (isSelected) list.selectionBackground else list.background
-//        value.panel!!.foreground = if (isSelected) list.selectionForeground else list.foreground
         value.mainPanel!!.background = if (isSelected) list.selectionBackground else list.background
         value.mainPanel!!.foreground = if (isSelected) list.selectionForeground else list.foreground
 
-
-//        return value.panel!!
         return value.mainPanel!!
     }
 
@@ -95,7 +93,8 @@ class FilePathCellRenderer(val mProject: Project,
             PathDisplayType.FILENAME_RELATIVE_PATH -> {
                 doc.insertString(doc.length, "${item.vf.name} ", boldStyle)
                 val path = item.vf.parent!!.path
-                if (isFileInProject(mProject, item.vf)) {
+//                if (isFileInProject(mProject, item.vf)) { // This gives problems in the newest version
+                if (path.length > basePath.length) {
                     doc.insertString(doc.length, path.subSequence(basePath.length, path.length).toString(), italicStyle)
                 } else {
                     doc.insertString(doc.length, path, italicStyle)
@@ -114,7 +113,8 @@ class FilePathCellRenderer(val mProject: Project,
 
             PathDisplayType.RELATIVE_PATH_WITH_FILENAME -> {
                 val path = item.vf.parent!!.path
-                if (isFileInProject(mProject, item.vf)) {
+//                if (isFileInProject(mProject, item.vf)) {
+                if (path.length > basePath.length) {
                     doc.insertString(doc.length, path.subSequence(basePath.length, path.length).toString(), italicStyle)
                 } else {
                     doc.insertString(doc.length, path, italicStyle)

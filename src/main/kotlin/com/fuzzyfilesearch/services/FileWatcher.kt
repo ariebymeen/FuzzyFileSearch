@@ -2,10 +2,12 @@ package com.fuzzyfilesearch.services
 
 import com.fuzzyfilesearch.renderers.FileInstanceItem
 import com.fuzzyfilesearch.searchbox.getAllFilesInRoot
+import com.fuzzyfilesearch.searchbox.isFileInProject
 import com.fuzzyfilesearch.settings.GlobalSettings
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vcs.changes.ChangeListManager
 import com.intellij.openapi.vfs.VfsUtil
@@ -21,13 +23,18 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.io.path.Path
+import com.intellij.openapi.startup.ProjectActivity
 
 @Service(Service.Level.PROJECT)
-class FileWatcher(val mProject: Project) : Disposable {
+class FileWatcher(var mProject: Project) : Disposable {
 
     private val mVcsTrackedMutex = Mutex()
     private val mVcsUntrackedMutex = Mutex()
     private var mSettings = GlobalSettings.SettingsState()
+    private var changeListManager = ChangeListManager.getInstance(mProject)
+
+    // TODO: This list now keeps references of items between search settings, so changing the height of a file
+    //       might not work as expected (keeps the old heigth as the JPanel item is already created
     private var mVcsTrackedFiles   : ArrayList<FileInstanceItem> = ArrayList<FileInstanceItem>()
     private var mVcsUntrackedFiles : ArrayList<FileInstanceItem> = ArrayList<FileInstanceItem>()
     private val mConnection = ApplicationManager.getApplication().messageBus.connect(this)
@@ -44,14 +51,14 @@ class FileWatcher(val mProject: Project) : Disposable {
 
         mConnection.subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
             override fun after(events: List<VFileEvent>) {
-                val isInterestedIn = events.any { event ->
+                val events = events.filter{ event ->
                     when (event) {
-                        is VFileDeleteEvent -> true
-                        is VFileCopyEvent -> true
-                        is VFileCreateEvent -> true
-                        is VFileMoveEvent -> true
+                        is VFileDeleteEvent -> isFileInProject(mProject, event.file)
+                        is VFileCopyEvent -> isFileInProject(mProject, event.file)
+                        is VFileCreateEvent -> isFileInProject(mProject, event.file!!)
+                        is VFileMoveEvent -> isFileInProject(mProject, event.file)
                         is VFilePropertyChangeEvent -> {
-                            if (event.propertyName == VirtualFile.PROP_NAME) {
+                            if (event.propertyName == VirtualFile.PROP_NAME && isFileInProject(mProject, event.file)) {
                                 true
                             }
                             else false
@@ -59,11 +66,26 @@ class FileWatcher(val mProject: Project) : Disposable {
                         else -> false
                     }
                 }
-                println("File changed event: is interested in: ${isInterestedIn}")
 
-                if (isInterestedIn) {
+                if (events.isNotEmpty()) {
                     AppExecutorUtil.getAppExecutorService().execute {
                         runBlocking {
+                            val isTracked = events.any{
+                                if (it.file == null) {
+                                    false
+                                } else {
+                                    !changeListManager.isIgnoredFile(it.file!!)
+                                }
+                            }
+                            if (isTracked) {
+                                mVcsTrackedMutex.withLock {
+                                    mVcsTrackedFiles.clear()
+                                }
+                            }
+                            mVcsUntrackedMutex.withLock {
+                                mVcsUntrackedFiles.clear()
+                            }
+
                             launch(Dispatchers.Default) {
                                 refreshFileCache()
                             }
@@ -85,7 +107,6 @@ class FileWatcher(val mProject: Project) : Disposable {
         assert(virtualFile != null)
         virtualFile ?: return // TODO: This should really not be possible!
         mVcsTrackedMutex.withLock {
-            println("Refreshing file cache")
             mVcsTrackedFiles = getAllFilesInRoot(
                 virtualFile,
                 mSettings.common.excludedDirs,
@@ -93,6 +114,12 @@ class FileWatcher(val mProject: Project) : Disposable {
                 ChangeListManager.getInstance(mProject)
             )
         }
+    }
+
+    suspend fun refreshVcsUntrackedFiles() {
+        val virtualFile = VfsUtil.findFile(Path(mProject.basePath!!), true)
+        assert(virtualFile != null)
+        virtualFile ?: return
         mVcsUntrackedMutex.withLock {
             mVcsUntrackedFiles = getAllFilesInRoot(virtualFile,
                 mSettings.common.excludedDirs,
@@ -102,6 +129,8 @@ class FileWatcher(val mProject: Project) : Disposable {
     }
 
     fun getListOfFiles(parent: VirtualFile,
+                       project: Project, // TODO: This should not be needed! But I found that sometimes the change listener is not working,
+                                         // TODO: Seemingly due to the project not being set / loaded
                        onlyVcsTrackedFiles: Boolean,
                        isIncluded: ((VirtualFile) -> Boolean)?): List<FileInstanceItem> {
         var files: List<FileInstanceItem> = emptyList()
@@ -109,11 +138,23 @@ class FileWatcher(val mProject: Project) : Disposable {
             launch(Dispatchers.Default) {
                 if (onlyVcsTrackedFiles) {
                     mVcsTrackedMutex.withLock {
+                        mProject = project
+                        changeListManager = ChangeListManager.getInstance(mProject)
                         files = findIncludedChildFiles(parent, mVcsTrackedFiles, isIncluded)
                     }
                 }
                 else {
                     mVcsUntrackedMutex.withLock {
+                        // If no files are loaded yet, reload the files
+                        if (mVcsUntrackedFiles.isEmpty()) {
+                            AppExecutorUtil.getAppExecutorService().execute {
+                                runBlocking {
+                                    launch(Dispatchers.Default) {
+                                        refreshVcsUntrackedFiles()
+                                    }
+                                }
+                            }
+                        }
                         files = findIncludedChildFiles(parent, mVcsUntrackedFiles, isIncluded)
                     }
 
@@ -134,10 +175,17 @@ class FileWatcher(val mProject: Project) : Disposable {
                     (it.vf.path[parentPathLength] == '/'))
         }
     }
+}
 
-    // This is the most correct method. Choose this if there are edge cases
-    //fun findChildFiles(parent: VirtualFile, files: List<VirtualFile>): List<VirtualFile> {
-    //    return files.filter { VirtualFileManager.getInstance().isAncestor(parent, it) }
-    //}
-
+class ProjectLoadedOrChangedRefresh : ProjectActivity {
+    override suspend fun execute(project: Project) {
+        // On project load, refresh files, to ensure always correct state (Vcs could have changed)
+        AppExecutorUtil.getAppExecutorService().execute {
+            runBlocking {
+                launch(Dispatchers.Default) {
+                    project.service<FileWatcher>().refreshFileCache()
+                }
+            }
+        }
+    }
 }
