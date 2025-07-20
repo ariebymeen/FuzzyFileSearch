@@ -1,12 +1,14 @@
-package com.fuzzyfilesearch.renderers
+package com.fuzzyfilesearch
 import computeNofCharsToRemove
+import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import javax.swing.JTextPane
 import javax.swing.text.StyleConstants
 
 class RenderUtilsTest {
     @Test
-    fun `test_string_cutoff`() {
+    @DisplayName("Test cutoff point of string")
+    fun test_string_cutoff() {
         val text = "return extension.split('|', ',', ';', ':').map { ext -> ext.replace('.', ' ').trim().lowercase() }"
 //        val text = "import com.intellij.openapi.actionSystem.ActionManager"
         val maxW = 770

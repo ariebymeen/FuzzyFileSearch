@@ -1,56 +1,67 @@
 plugins {
     id("java")
-//    id("org.jetbrains.kotlin.jvm") version "1.9.24"
-    id("org.jetbrains.kotlin.jvm") version "2.1.0"
-    id("org.jetbrains.intellij") version "1.17.3"
+//    id("org.jetbrains.kotlin.jvm") version "1.9.25"
+    id("org.jetbrains.kotlin.jvm") version "2.2.0"
+    id("org.jetbrains.intellij.platform") version "2.3.0"
+//    id("org.jetbrains.intellij.migration") version "2.3.0"
 }
 
 group = "com.fuzzyfilesearch"
-version = "0.1.9"
+version = "0.1.12-SNAPSHOT"
 
 repositories {
     mavenCentral()
+    intellijPlatform {
+        defaultRepositories()
+    }
 }
 
 dependencies {
-    implementation(kotlin("test"))
-    implementation("org.junit.jupiter:junit-jupiter:5.8.2") // For JUnit 5
-//    testImplementation("junit:junit:4.13.2")
+    intellijPlatform {
+        create("IC", "2025.1.1")
+        testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
+
+        // Add necessary plugin dependencies for compilation here, example:
+        // bundledPlugin("com.intellij.java")
+    }
+
+    implementation(kotlin("stdlib"))
+    testImplementation("org.junit.jupiter:junit-jupiter:5.9.2")
+//    testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.2")
+//    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.2")
+//    implementation(kotlin("test"))
 }
 
-// Configure Gradle IntelliJ Plugin
-// Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
-intellij {
-    version.set("2023.2.6")
-    type.set("IC") // Target IDE Platform
-//    version.set("2025.1.1.1")
-//    type.set("IU")
+intellijPlatform {
+    pluginConfiguration {
+        ideaVersion {
+            sinceBuild = "242"
+        }
 
-    plugins.set(listOf(/* Plugin Dependencies */))
+        changeNotes = """
+      Initial version
+    """.trimIndent()
+    }
+}
+
+tasks.test {
+    useJUnitPlatform()
+}
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }
 }
 
 tasks {
     // Set the JVM compatibility versions
     withType<JavaCompile> {
-        sourceCompatibility = "17"
-        targetCompatibility = "17"
+        sourceCompatibility = "21"
+        targetCompatibility = "21"
     }
-//    withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-//        kotlinOptions.jvmTarget = "17"
-//    }
-
-    patchPluginXml {
-        sinceBuild.set("232")
-        untilBuild.set("251.*")
-    }
-
-    signPlugin {
-        certificateChain.set(System.getenv("CERTIFICATE_CHAIN"))
-        privateKey.set(System.getenv("PRIVATE_KEY"))
-        password.set(System.getenv("PRIVATE_KEY_PASSWORD"))
-    }
-
-    publishPlugin {
-        token.set(System.getenv("PUBLISH_TOKEN"))
+    withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
+//        kotlinOptions.compileKotlinJvm = "21"
+//        kotlinOptions.
     }
 }
