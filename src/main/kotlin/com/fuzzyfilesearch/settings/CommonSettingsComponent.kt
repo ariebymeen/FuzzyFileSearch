@@ -5,6 +5,10 @@ import com.intellij.ui.FontComboBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.ui.FormBuilder
+import com.intellij.util.ui.JBUI
+import java.awt.BorderLayout
+import javax.swing.BoxLayout
+import javax.swing.JButton
 import javax.swing.JPanel
 
 class CommonSettingsComponent(val mSettings: GlobalSettings.SettingsState) {
@@ -15,6 +19,22 @@ class CommonSettingsComponent(val mSettings: GlobalSettings.SettingsState) {
     var excludedDirs = JBTextArea()
     var fontSelectorDropdown = FontComboBox()
     var colorSelectorElement = ColorPanel()
+    val actionsCollectionPanel = JPanel().apply {
+        layout = BoxLayout(this, BoxLayout.Y_AXIS)
+    }
+    val rbPanel = JPanel(BorderLayout()).apply {
+        border = JBUI.Borders.empty()
+        val newButton = JButton("New").apply {
+            addActionListener {
+                val comp = FindInPathSettingsComponent(actionsCollectionPanel)
+                comp.initializeDefault()
+                actionsCollectionPanel.add(comp)
+                actionsCollectionPanel.revalidate()
+                actionsCollectionPanel.repaint()
+            }
+        }
+        add(newButton, BorderLayout.CENTER)
+    }
 
     init {
 
@@ -60,10 +80,20 @@ class CommonSettingsComponent(val mSettings: GlobalSettings.SettingsState) {
         keeper.createCheckboxComponent(mSettings.common::showTileInSearchView, builder, "Show tile in search view", """
                     If checked show the title at the top of the search view to signify the action that is done in the search view""".trimIndent())
         keeper.createJBIntSpinnerComponent(mSettings.common::titleFontSize, 9, 1, 30, 1, builder, "Popup title font size", """Choose the font size""")
+
+        builder.addSeparator()
+
+        mSettings.searchPathActions.forEach { action ->
+            println("Adding for action ${action[0]}")
+            val comp = FindInPathSettingsComponent(actionsCollectionPanel)
+            comp.initializeFromSettings(action, ActionType.SEARCH_FILE_IN_PATH, 0)
+            actionsCollectionPanel.add(comp)
+        }
+        builder.addComponent(actionsCollectionPanel)
+        builder.addComponent(rbPanel)
+
         builder.addComponentFillVertically(JPanel(), 0)
-
         panel = builder.panel
-
     }
 }
 

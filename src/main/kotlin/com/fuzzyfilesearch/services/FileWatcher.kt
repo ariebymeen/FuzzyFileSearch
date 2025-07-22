@@ -25,6 +25,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlin.io.path.Path
 import com.intellij.openapi.startup.ProjectActivity
 
+// TODO: This seems to work fine with my uses but on work machine does not work
 @Service(Service.Level.PROJECT)
 class FileWatcher(var mProject: Project) : Disposable {
 
@@ -44,13 +45,15 @@ class FileWatcher(var mProject: Project) : Disposable {
         AppExecutorUtil.getAppExecutorService().execute {
             runBlocking {
                 launch(Dispatchers.Default) {
-                    refreshFileCache()
+//                    refreshFileCache()
                 }
             }
         }
 
         mConnection.subscribe(VirtualFileManager.VFS_CHANGES, object : BulkFileListener {
             override fun after(events: List<VFileEvent>) {
+                return // TODO: Re-enable once tested
+
                 val events = events.filter{ event ->
                     when (event) {
                         is VFileDeleteEvent -> isFileInProject(mProject, event.file)

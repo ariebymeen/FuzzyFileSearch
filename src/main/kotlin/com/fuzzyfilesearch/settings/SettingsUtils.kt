@@ -1,5 +1,8 @@
 package com.fuzzyfilesearch.settings
 
+import com.fuzzyfilesearch.actions.getActionName
+import com.intellij.openapi.actionSystem.KeyboardShortcut
+import com.intellij.openapi.keymap.KeymapManager
 import javax.swing.KeyStroke
 
 // Check if settings are correct. If not, return a string with the error message
@@ -38,6 +41,13 @@ fun checkActionNames(components: MutableList<SettingsComponent>) : String? {
     return null
 }
 
+fun <T> List<T>.findDuplicateElements(): List<T> {
+    return this.groupBy { it } // Group by the element itself
+        .filter { it.value.size > 1 } // Keep only groups with more than one element
+        .keys // Get the keys (the duplicate elements) from these groups
+        .toList() // Convert the set of keys to a list
+}
+
 fun checkShortcuts(components: MutableList<SettingsComponent>) : String? {
     val actionSet = mutableSetOf<String>()
     val shortcuts = mutableListOf<String>()
@@ -46,6 +56,7 @@ fun checkShortcuts(components: MutableList<SettingsComponent>) : String? {
         shortcuts += tableComponent.table.getData().map{ action -> tableComponent.getActionShortcut(action) }
     }
 
+
     for (shortcut in shortcuts) {
         if (shortcut.trim().isNotEmpty() && actionSet.contains(shortcut)) {
             return "Shortcut $shortcut used multiple times. Action names must be unique"
@@ -53,10 +64,18 @@ fun checkShortcuts(components: MutableList<SettingsComponent>) : String? {
             actionSet += shortcut
         }
 
+
         if (shortcut.trim().isNotEmpty()) {
             val keyStroke = KeyStroke.getKeyStroke(shortcut.trim())
             if (keyStroke == null) {
                 return "Shortcut ${shortcut} is not valid"
+            }
+            val sc = KeyboardShortcut(keyStroke, null)
+            val actions = KeymapManager.getInstance().activeKeymap.getActionIdList(sc)
+            val error = actions.any { !it.startsWith("com.fuzzyfilesearch.") }
+            if (error) {
+                println("Error, shortcut $shortcut is already in use with $actions. Go to keymap settings to remove this shortcut")
+                return "Error, shortcut $shortcut is already in use with $actions. Go to keymap settings to remove this shortcut"
             }
         }
     }

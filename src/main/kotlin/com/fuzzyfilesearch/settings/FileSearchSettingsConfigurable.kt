@@ -1,5 +1,6 @@
 package com.fuzzyfilesearch.settings
 
+import com.fuzzyfilesearch.showErrorNotification
 import com.intellij.openapi.options.Configurable
 import javax.swing.JComponent
 

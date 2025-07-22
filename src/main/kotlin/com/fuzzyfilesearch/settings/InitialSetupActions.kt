@@ -22,7 +22,7 @@ class ApplicationStartupSetup : ProjectActivity {
         registerSearchFileInPathActions(globalSettings.state.searchPathActions, globalSettings.state)
         registerSearchRecentFiles(globalSettings.state.searchRecentFilesActions, globalSettings.state)
         registerSearchOpenFiles(globalSettings.state.searchOpenFilesActions, globalSettings.state)
-        registerSearchAllFiles(globalSettings.state.searchAllFilesActions, globalSettings.state)
+//        registerSearchAllFiles(globalSettings.state.searchAllFilesActions, globalSettings.state)
         registerSearchFileMatchingPatternActions(globalSettings.state.searchFilesMatchingPatterActions, globalSettings.state)
         registerSearchForRegexInFiles(globalSettings.state.searchStringMatchingPatternActions, globalSettings.state)
         registerGrepInFilesActions(globalSettings.state.searchStringMatchingSubstringActions, globalSettings.state)

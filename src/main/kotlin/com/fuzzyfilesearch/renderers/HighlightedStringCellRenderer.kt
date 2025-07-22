@@ -57,9 +57,14 @@ class HighlightedStringCellRenderer(val mProject: Project,
                 value.fileNameTextPane!!.text = ""
                 value.fileNameTextPane!!.isOpaque = false
                 value.fileNameTextPane!!.styledDocument.insertString(0, value.vf.name, tinyStyle)
+                if (mSettings.showLineNumberWithFileName) {
+                    value.fileNameTextPane!!.styledDocument.insertString(value.fileNameTextPane!!.styledDocument.length,
+                                                                                ":" + value.line_nr.toString(),
+                                                                                tinyStyle)
+                }
                 value.mainPanel?.add(value.fileNameTextPane!!, BorderLayout.EAST)
                 val fontMetrics: FontMetrics = value.fileNameTextPane!!.getFontMetrics(Font(font.family, Font.PLAIN, StyleConstants.getFontSize(tinyStyle)))
-                value.fileNameWidth = fontMetrics.stringWidth(value.vf.name)
+                value.fileNameWidth = fontMetrics.stringWidth(value.fileNameTextPane!!.text) + value.fileNameTextPane!!.margin.left + value.fileNameTextPane!!.margin.right
                 value.fileNameTextPane!!.setWidth(value.fileNameWidth)
             }
 
@@ -79,16 +84,14 @@ class HighlightedStringCellRenderer(val mProject: Project,
     }
 
     fun setText(item: StringMatchInstanceItem, index: Int) {
-
         val doc = item.textPane!!.styledDocument
-
         if (mSettings.string.showNumberInSearchView) {
             val formattedNumber = String.format(" %02d - ", index)
             doc.insertString(doc.length, formattedNumber, tinyStyle)
         } else {
             doc.insertString(doc.length, " ", tinyStyle)
         }
-
+        val highlightOffset = doc.length
         doc.insertString(doc.length, item.text, normalStyle)
 
         // If text is too wide for the view, remove and place ... at the end
@@ -97,7 +100,7 @@ class HighlightedStringCellRenderer(val mProject: Project,
         cutoffStringToMaxWidth(item.textPane!!, doc, maxWidth - iconW - fileNameW)
 
         if (mSettings.applySyntaxHighlightingOnTextSearch) {
-            highlightText(mProject, doc, doc.length, item.text, item.vf.extension)
+            highlightText(mProject, doc, highlightOffset , item.text, item.vf.extension)
         }
     }
 

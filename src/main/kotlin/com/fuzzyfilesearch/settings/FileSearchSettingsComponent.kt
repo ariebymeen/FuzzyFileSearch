@@ -80,6 +80,13 @@ class FileSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState) {
         builder.addSeparator()
             .addComponent(warningText)
 
+        keeper.createActionsTableComponent(mSettings::searchPathActions, builder, "Search in path", """
+               Search in a path. Use / as first character searches in the folder that is open in the editor. 
+               Start with . to create a relative path (./ searches in directory of currently open file ../ in its parent etc.)
+               Specify the extensions you want to search for, if empty all are included.
+                """.trimIndent(), arrayOf("Name", "Path", "Extensions", "Shortcut"), arrayOf("ActionName", "/", ".cc,.cpp", "alt shift V"),
+            arrayOf(2, 1, 3, 2), mSettings, 0, 3, ::registerSearchFileInPathActions)
+        builder.addSeparator()
         keeper.createActionsTableComponent(mSettings::openRelativeFileActions, builder, "Create action for opening file", """
                 Open a file that is related to the currently open file. If no regex is entered, %name% is set to the name of the current file (without extension).
                 If not empty, %rname% is set to the name of the file that matches the regex that is closest to the currently open file (without extension).
@@ -110,12 +117,6 @@ class FileSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState) {
                     mSettings, 0, 3, ::registerSearchFileMatchingPatternActions)
         // Create file in path search actions
         builder.addSeparator()
-        keeper.createActionsTableComponent(mSettings::searchPathActions, builder, "Search in path", """
-               Search in a path. Use / as first character searches in the folder that is open in the editor. 
-               Start with . to create a relative path (./ searches in directory of currently open file ../ in its parent etc.)
-               Specify the extensions you want to search for, if empty all are included.
-                """.trimIndent(), arrayOf("Name", "Path", "Extensions", "Shortcut"), arrayOf("ActionName", "/", ".cc,.cpp", "alt shift V"),
-                arrayOf(2, 1, 3, 2), mSettings, 0, 3, ::registerSearchFileInPathActions)
 
         keeper.createActionsTableComponent(mSettings::searchRecentFilesActions, builder, "Search in most recently opened files", """
                 Search through all the files that you have opened most recently. Also includes all files that are currently open in your editor.
@@ -126,9 +127,9 @@ class FileSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState) {
                 Search through files currently open in your editor with extension. If extension is empty, include all """.trimIndent(),
                 arrayOf("Name", "Extensions", "Shortcut"), arrayOf("SearchOpenFiles", ".txt,.md", ""), arrayOf(2, 1, 2),
                 mSettings, 0, 2, ::registerSearchOpenFiles)
-        keeper.createActionsTableComponent(mSettings::searchAllFilesActions, builder, "Search in all files, including files that are not tracked by version control",
-            """Special action to search through all files""".trimIndent(),arrayOf("Name", "Extensions", "Shortcut"), arrayOf("SearchAllFiles", "", "alt shift O"),
-            arrayOf(2, 1, 2), mSettings, 0, 2, ::registerSearchAllFiles)
+//        keeper.createActionsTableComponent(mSettings::searchAllFilesActions, builder, "Search in all files, including files that are not tracked by version control",
+//            """Special action to search through all files""".trimIndent(),arrayOf("Name", "Extensions", "Shortcut"), arrayOf("SearchAllFiles", "", "alt shift O"),
+//            arrayOf(2, 1, 2), mSettings, 0, 2, ::registerSearchAllFiles)
 
         builder.addSeparator()
             .addComponent(JBLabel("Test your regex below"))

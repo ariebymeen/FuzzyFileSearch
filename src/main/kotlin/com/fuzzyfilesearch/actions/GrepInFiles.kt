@@ -7,7 +7,10 @@ import com.fuzzyfilesearch.settings.GlobalSettings
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.application.runReadAction
+import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.ScrollType
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
@@ -17,7 +20,6 @@ import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.project.Project
 import com.jetbrains.rd.framework.base.deepClonePolymorphic
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -40,6 +42,8 @@ class GrepInFiles(val action: Array<String>,
 
     /* Keep track of the latest search query */
     var mSearchQuery: String = ""
+    /* Keep track of the latest selected text used as search query */
+    var mSelectedText: String? = ""
     /* The same list but only the matching string. Is used in the search action to search */
     var mSearchItemStrings = emptyList<String>()
     var mProject: Project? = null
@@ -70,13 +74,14 @@ class GrepInFiles(val action: Array<String>,
         var initialQuery = ""
         val time = if (mHistory == null) 0 else mHistory!!.timeMs
         val historyWithinTimeout = (System.currentTimeMillis() - time) < (settings.grepRememberPreviousQuerySeconds * 1000)
-        if (historyWithinTimeout && mHistory!!.query.isNotEmpty()) {
+        val selectedText = getSelectedText(e)
+        if (selectedText != null &&
+            (mSelectedText != selectedText && mSearchQuery != selectedText) // If selected text is still the same but query has changed
+            ) {
+            initialQuery = selectedText
+            mSelectedText = selectedText
+        } else if (historyWithinTimeout && mHistory!!.query.isNotEmpty()) {
             initialQuery = mHistory!!.query
-        } else {
-            val selectedText = getSelectedText(e)
-            if (selectedText != null) {
-                initialQuery = selectedText
-            }
         }
 
         mPopup!!.showPopupInstance(initialQuery)
@@ -87,8 +92,6 @@ class GrepInFiles(val action: Array<String>,
         val trimmedQuery = query.trim().lowercase()
 
         mHistory = History(trimmedQuery, timeMs = System.currentTimeMillis())
-        println("Trimmed query: ${trimmedQuery}")
-
         if (trimmedQuery.isEmpty()) {
             mMatches = mFileNames.deepClonePolymorphic()
             mSearchQuery = trimmedQuery
@@ -108,6 +111,7 @@ class GrepInFiles(val action: Array<String>,
         val result = Collections.synchronizedList(mutableListOf<StringMatchInstanceItem>())
         val itemsToRemove = Collections.synchronizedList(mutableListOf<VirtualFile>())
         val nofFilesToSearch = mMatches.size
+
         val timeTaken = measureTimeMillis {
             // Loop over all files and find regex matches. Store result into class variable to use in search
             if (settings.string.searchMultiThreaded) {
@@ -136,8 +140,7 @@ class GrepInFiles(val action: Array<String>,
             }
         }
 
-        if (nofFilesToSearch > 0) {
-            // TODO: Remove debug prints
+        if (settings.common.enableDebugPrints) {
             println("GrepInFiles: ${result.size} in $timeTaken ms. Nof files to search: ${nofFilesToSearch} (${(timeTaken * 1000) / nofFilesToSearch} us/file), total nof files: ${mFileNames.size}")
         }
 
@@ -155,6 +158,8 @@ class GrepInFiles(val action: Array<String>,
                           query: String,
                           matches: MutableList<StringMatchInstanceItem>,
                           nonMatches: MutableList<VirtualFile>): Boolean {
+        if (vf.extension.equals("min.js")) return true // Don't search through library files
+
         val contents = readFileContents(vf)
         var match = contents.indexOf(query, 0, !settings.common.searchCaseSensitivity)
         if (match < 0) {
@@ -162,7 +167,8 @@ class GrepInFiles(val action: Array<String>,
         }
         while (match >= 0 && matches.size < settings.string.numberOfFilesInSearchView) {
             val text = findTextBetweenNewlines(contents, match)
-            matches.add(StringMatchInstanceItem(vf, text.second, text.third, text.first.trim()))
+            val line_nr = getLineNumberFromVirtualFile(vf, text.second)?: 0
+            matches.add(StringMatchInstanceItem(vf, text.second, text.third, line_nr,text.first.trim()))
             match = contents.indexOf(query, text.third, !settings.common.searchCaseSensitivity)
 
             if (matches.size >= settings.string.numberOfFilesInSearchView) {
@@ -205,7 +211,7 @@ class GrepInFiles(val action: Array<String>,
     }
 
     private fun readFileContents(virtualFile: VirtualFile): String {
-        return if (virtualFile.exists() && virtualFile.isValid) {
+        return if (virtualFile.exists() && virtualFile.isValid && !virtualFile.fileType.isBinary) {
                 // Read the file content as a string
                 virtualFile.inputStream.bufferedReader().use { it.readText() }
             } else {

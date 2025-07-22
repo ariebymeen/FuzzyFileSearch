@@ -5,6 +5,7 @@ import com.intellij.icons.AllIcons
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.FormBuilder
+import java.awt.BorderLayout
 import javax.swing.JPanel
 
 class StringSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState) {
@@ -74,6 +75,8 @@ class StringSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState)
 
         keeper.createCheckboxComponent(mSettings::applySyntaxHighlightingOnTextSearch, builder, "Apply syntax highlighting on text search", """
                     If checked, apply syntax highlighting on text search results. If false, plain text is used""".trimIndent())
+        keeper.createCheckboxComponent(mSettings::showLineNumberWithFileName, builder, "Show the line number of the match", """
+                If checked, show the filename:line number of the matching line """.trimIndent())
         keeper.createComboboxComponent(mSettings::showFilenameForRegexMatch, ShowFilenamePolicy.values(), builder,
              "Show filename in regex search", """
                     Show filename in front of the matching string""".trimIndent())
@@ -97,7 +100,6 @@ class StringSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState)
             .addComponentFillVertically(JPanel(), 0)
 
         panel = builder.panel
-
     }
 }
 

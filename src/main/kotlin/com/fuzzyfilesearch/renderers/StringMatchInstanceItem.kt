@@ -11,6 +11,7 @@ import javax.swing.JTextPane
 class StringMatchInstanceItem(val vf: VirtualFile,
                               val start: Int,
                               val end: Int,
+                              val line_nr: Int,
                               val text: String,
                               var icon: Icon? = null,
                               var mainPanel: JPanel? = null,

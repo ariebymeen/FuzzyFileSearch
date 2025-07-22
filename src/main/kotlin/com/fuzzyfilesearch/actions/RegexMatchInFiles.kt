@@ -9,6 +9,7 @@ import com.fuzzyfilesearch.showErrorNotification
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.ScrollType
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
@@ -63,8 +64,6 @@ class RegexMatchInFiles(val action: Array<String>,
                     // Remove newlines and indenting for to make the view single line
                     // TODO: This may not be the most efficient way to do any of this
                     var oldText = match.value.replace('\n', ' ')
-//                    val newText = match.value.split('\n').map { line -> line.trim() }.joinToString(" ")
-//                    println("old: ${match.value}, new: ${newText}")
                     var newText = oldText.replace("  ", " ")
                     while (newText != oldText) {
                         oldText = newText
@@ -72,7 +71,8 @@ class RegexMatchInFiles(val action: Array<String>,
                                          .replace("   " , " ")
                                          .replace("  "  , " ")
                     }
-                    StringMatchInstanceItem(vf, match.range.first, match.range.last, newText)
+                    val line_nr = getLineNumberFromVirtualFile(vf, match.range.first)?: 0
+                    StringMatchInstanceItem(vf, match.range.first, match.range.last, line_nr, newText)
                 })
 
             }

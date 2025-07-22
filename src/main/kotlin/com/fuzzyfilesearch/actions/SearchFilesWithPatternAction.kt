@@ -7,8 +7,10 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.fuzzyfilesearch.*
 import com.fuzzyfilesearch.renderers.FileInstanceItem
+import com.fuzzyfilesearch.searchbox.getAllFilesInRoot
 import com.fuzzyfilesearch.services.FileWatcher
 import com.intellij.openapi.components.service
+import com.intellij.openapi.vcs.changes.ChangeListManager
 import com.intellij.openapi.vfs.VfsUtil
 import kotlin.io.path.Path
 
@@ -43,16 +45,17 @@ class SearchFilesWithPatternAction(val action: Array<String>,
             return
         }
 
-//        val changeListManager = if (settings.common.searchOnlyFilesTrackedByVersionControl) ChangeListManager.getInstance(project) else null
-//        val allFiles = getAllFilesInRoot(vfPath, settings.common.excludedDirs, emptyList(), changeListManager)
-//        files = allFiles.filter { vf -> regex.matches(vf.vf.name) }
-//        files ?: return
+        val changeListManager = if (settings.common.searchOnlyFilesTrackedByVersionControl) ChangeListManager.getInstance(project) else null
+        val allFiles = getAllFilesInRoot(vfPath, settings.common.excludedDirs, emptyList(), changeListManager)
+        files = allFiles.filter { vf -> regex.matches(vf.vf.name) }
+        files ?: return
 
-        files = project.service<FileWatcher>().getListOfFiles(
-            vfPath,
-            project,
-            settings.common.searchOnlyFilesTrackedByVersionControl,
-            ::isFileIncluded)
+        // TODO: Re-enable once it is working
+//        files = project.service<FileWatcher>().getListOfFiles(
+//            vfPath,
+//            project,
+//            settings.common.searchOnlyFilesTrackedByVersionControl,
+//            ::isFileIncluded)
 
         searchAction.doSearchForFiles(files!!, project, "", null)
     }

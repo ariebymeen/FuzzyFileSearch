@@ -57,6 +57,7 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         var selectedColor = ""
         var showTileInSearchView = true
         var titleFontSize = 10 // Font size of the title (showing the action)
+        var enableDebugPrints = true
     }
 
     class PopupSettings {
@@ -92,14 +93,15 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         var searchRelativeFileActions: Array<Array<String>> = emptyArray()
         var searchPathActions: Array<Array<String>> = emptyArray()
         var searchFilesMatchingPatterActions: Array<Array<String>> = emptyArray()
-        var searchRecentFilesActions: Array<Array<String>> = arrayOf(arrayOf("SearchRecentFiles", "10", "", "alt shift R"))
-        var searchOpenFilesActions: Array<Array<String>> = arrayOf(arrayOf("SearchOpenFiles", "", "alt shift O"))
-        var searchAllFilesActions: Array<Array<String>> = arrayOf(arrayOf("SearchAllFiles", "", "alt shift F"))
+        var searchRecentFilesActions: Array<Array<String>> = arrayOf(arrayOf("SearchRecentFiles", "10", "", ""))
+        var searchOpenFilesActions: Array<Array<String>> = arrayOf(arrayOf("SearchOpenFiles", "", ""))
+//        var searchAllFilesActions: Array<Array<String>> = arrayOf(arrayOf("SearchAllFiles", "", ""))
 
         // String search settings
         var applySyntaxHighlightingOnTextSearch = true
         var showFilenameForGrepInFiles          = true
         var showFilenameForRegexMatch           = ShowFilenamePolicy.WHEN_SEARCHING_MULTIPLE_FILES
+        var showLineNumberWithFileName          = true
         var useSelectedTextForGrepInFiles       = true
         var grepRememberPreviousQuerySeconds: Int = 6
         var searchStringMatchingPatternActions: Array<Array<String>> = emptyArray()

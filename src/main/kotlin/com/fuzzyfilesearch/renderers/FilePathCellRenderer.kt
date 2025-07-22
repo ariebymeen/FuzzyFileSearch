@@ -38,12 +38,10 @@ class FilePathCellRenderer(val mProject: Project,
     ): Component {
         if (value.textPane == null) {
             value.mainPanel = JPanel(BorderLayout())
-//            value.mainPanel?.maximumWidth = maxWidth
             if (mSettings.file.showFileIcon) {
                 value.iconLabel = JBLabel()
                 value.iconLabel!!.border = EmptyBorder(0, 5, 0, 0)
-//                value.iconLabel!!.icon = value.vf.fileType.icon // TODO: This action is very slow and should not happen on EDT (UI) Thread
-                value.iconLabel!!.icon = value.icon // TODO: This action is very slow and should not happen on EDT (UI) Thread
+                value.iconLabel!!.icon = value.icon
                 value.mainPanel?.add(value.iconLabel, BorderLayout.WEST)
             }
             value.textPane = VerticallyCenteredTextPane(mSettings.file.searchItemHeight)

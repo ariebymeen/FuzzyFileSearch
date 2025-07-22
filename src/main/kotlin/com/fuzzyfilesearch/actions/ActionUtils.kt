@@ -8,6 +8,8 @@ import com.intellij.openapi.actionSystem.KeyboardShortcut
 import com.intellij.openapi.keymap.KeymapManager
 import com.fuzzyfilesearch.settings.*
 import com.fuzzyfilesearch.showErrorNotification
+import com.intellij.openapi.application.runReadAction
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vcs.changes.ChangeListManager
 import com.intellij.openapi.vfs.VfsUtil
@@ -206,3 +208,17 @@ fun getAllFilesInLocation(curFile: VirtualFile, project: Project, location: Stri
     }
     return files
 }
+
+fun getLineNumberFromVirtualFile(vf: VirtualFile, offset: Int): Int? {
+    var line_nr: Int? = 0
+    runReadAction {
+        try {
+            val document = FileDocumentManager.getInstance().getDocument(vf)
+            line_nr = document?.getLineNumber(offset)?.plus(1)
+        } catch (e: IndexOutOfBoundsException) {
+            println("Line number ${offset} could not be retrieved for file ${vf.name}")
+        }
+    }
+    return line_nr
+}
+

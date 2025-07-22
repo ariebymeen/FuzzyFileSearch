@@ -25,6 +25,8 @@ SOFTWARE.
 */
 
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.WriteIntentReadAction
+import com.intellij.openapi.application.writeAction
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.EditorFactory
@@ -37,6 +39,7 @@ import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.EditorTextField
+import kotlinx.coroutines.runBlocking
 import javax.swing.BorderFactory
 import javax.swing.SwingUtilities
 
@@ -50,7 +53,6 @@ class SearchBoxEditor(project: Project?) : EditorTextField(project, PlainTextFil
         editor.isOneLineMode = false
         editor.settings.isLineNumbersShown = true
         editor.isViewer = false
-        // TODO: Make this editable
         editor.foldingModel.isFoldingEnabled = false
         editor.setBorder(BorderFactory.createEmptyBorder())
         editor.scrollPane.border = BorderFactory.createEmptyBorder(2, 4, 2, 4)
@@ -62,11 +64,6 @@ class SearchBoxEditor(project: Project?) : EditorTextField(project, PlainTextFil
         // Set the background color explicitly to match the main editor
         val backgroundColor = globalScheme.getColor(EditorColors.CARET_ROW_COLOR) ?: globalScheme.defaultBackground
         editor.backgroundColor =  backgroundColor
-
-//        val previewFontSize = settingsState.previewFontSize
-//        if (previewFontSize != 0) {
-//            this.font = this.font.deriveFont(previewFontSize.toFloat())
-//        }
 
         return editor
     }
@@ -82,20 +79,25 @@ class SearchBoxEditor(project: Project?) : EditorTextField(project, PlainTextFil
             val sourceDocument = ApplicationManager.getApplication().runReadAction<Document?> {
                 virtualFile?.let { FileDocumentManager.getInstance().getDocument(virtualFile) }
             }
-            val fileType = virtualFile?.let { FileTypeManager.getInstance().getFileTypeByFile(virtualFile) }
 
             ApplicationManager.getApplication().executeOnPooledThread {
                 SwingUtilities.invokeLater {
-                    if (sourceDocument != null) {
-                        WriteCommandAction.runWriteCommandAction(project) {
-                            // Use the actual document to enable full highlighting in the preview
+                    WriteIntentReadAction.run {
+                        if (sourceDocument != null) {
                             document = sourceDocument
-                            moveToOffset(caretOffset)
+
+                            SwingUtilities.invokeLater {
+                                WriteIntentReadAction.run {
+                                    moveToOffset(caretOffset) // Delay moving caret position to ensure document is updated
+                                }
+                            }
+                        } else {
+                            document = EditorFactory.getInstance().createDocument("Cannot preview file")
                         }
-                    } else {
-                        document = EditorFactory.getInstance().createDocument("Cannot preview file")
+                        val fileType = virtualFile?.let { FileTypeManager.getInstance().getFileTypeByFile(virtualFile) }
+                        if (fileType != null) this.fileType = fileType
                     }
-                    if (fileType != null) this.fileType = fileType
+
                 }
             }
         }
@@ -104,16 +106,7 @@ class SearchBoxEditor(project: Project?) : EditorTextField(project, PlainTextFil
     fun moveToOffset(offset: Int) {
         val editor = this.editor as? EditorEx ?: return
         editor.caretModel.moveToOffset(offset + 1)
-        editor.scrollingModel.scrollToCaret(com.intellij.openapi.editor.ScrollType.CENTER_UP)
+        editor.scrollingModel.scrollToCaret(com.intellij.openapi.editor.ScrollType.CENTER)
+        println("Scrolled to offset: $offset")
     }
-
-//    fun moveToLine(lineNumber: Int) {
-//        val editor = this.editor as? EditorEx ?: return
-//        val document = editor.document
-//        if (lineNumber in 1..document.lineCount) {
-//            val offset = document.getLineStartOffset(lineNumber - 1)
-//            editor.caretModel.moveToOffset(offset)
-//            editor.scrollingModel.scrollToCaret(com.intellij.openapi.editor.ScrollType.CENTER)
-//        }
-//    }
 }

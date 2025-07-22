@@ -8,8 +8,10 @@ import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.fuzzyfilesearch.*
 import com.fuzzyfilesearch.renderers.FileInstanceItem
+import com.fuzzyfilesearch.searchbox.getAllFilesInRoot
 import com.fuzzyfilesearch.services.FileWatcher
 import com.intellij.openapi.components.service
+import com.intellij.openapi.vcs.changes.ChangeListManager
 import kotlin.io.path.Path
 import kotlin.system.measureTimeMillis
 
@@ -51,17 +53,18 @@ class SearchFileInPathAction(val action: Array<String>,
         }
 
 //        val timeTaken = measureTimeMillis {
-//            val changeListManager = if (settings.common.searchOnlyFilesTrackedByVersionControl && !overrideVscIgnore) ChangeListManager.getInstance(project) else null
-//            files = getAllFilesInRoot(vfPath, settings.common.excludedDirs, extensions, changeListManager)
+            val changeListManager = if (settings.common.searchOnlyFilesTrackedByVersionControl && !overrideVscIgnore) ChangeListManager.getInstance(project) else null
+            files = getAllFilesInRoot(vfPath, settings.common.excludedDirs, extensions, changeListManager)
 //            println("Found ${files?.size} files in ${timeTaken} ms")
 //        }
 
-        val time2 = measureTimeMillis {
-            files = project.service<FileWatcher>().getListOfFiles(vfPath, project,
-                settings.common.searchOnlyFilesTrackedByVersionControl && !overrideVscIgnore,
-                ::isFileIncluded)
-        }
-        println("Retrieved ${files?.size} files in ${time2} ms")
+        // TODO: Re-enable once tested
+//        val time2 = measureTimeMillis {
+//            files = project.service<FileWatcher>().getListOfFiles(vfPath, project,
+//                settings.common.searchOnlyFilesTrackedByVersionControl && !overrideVscIgnore,
+//                ::isFileIncluded)
+//        }
+//        println("Retrieved ${files?.size} files in ${time2} ms")
         searchAction.doSearchForFiles(files!!, project, searchPath, extensions)
     }
 

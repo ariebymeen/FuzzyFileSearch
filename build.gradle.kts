@@ -27,9 +27,7 @@ dependencies {
 
     implementation(kotlin("stdlib"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.9.2")
-//    testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.2")
-//    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.2")
-//    implementation(kotlin("test"))
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 intellijPlatform {
@@ -45,7 +43,9 @@ intellijPlatform {
 }
 
 tasks.test {
-    useJUnitPlatform()
+    useJUnitPlatform() {
+        includeEngines("junit-jupiter")
+    }
 }
 
 java {
