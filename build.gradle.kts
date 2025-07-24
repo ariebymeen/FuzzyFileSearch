@@ -1,13 +1,11 @@
 plugins {
     id("java")
-//    id("org.jetbrains.kotlin.jvm") version "1.9.25"
     id("org.jetbrains.kotlin.jvm") version "2.2.0"
     id("org.jetbrains.intellij.platform") version "2.3.0"
-//    id("org.jetbrains.intellij.migration") version "2.3.0"
 }
 
 group = "com.fuzzyfilesearch"
-version = "0.1.12-SNAPSHOT"
+version = "1.0.0-rc1-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -33,12 +31,8 @@ dependencies {
 intellijPlatform {
     pluginConfiguration {
         ideaVersion {
-            sinceBuild = "242"
+            sinceBuild = "251"
         }
-
-        changeNotes = """
-      Initial version
-    """.trimIndent()
     }
 }
 
@@ -61,7 +55,5 @@ tasks {
         targetCompatibility = "21"
     }
     withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-//        kotlinOptions.compileKotlinJvm = "21"
-//        kotlinOptions.
     }
 }

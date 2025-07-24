@@ -22,6 +22,8 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+This file contains an edited version of the editor created by Mitja Leino
 */
 
 import com.intellij.openapi.application.ApplicationManager
@@ -72,30 +74,38 @@ class SearchBoxEditor(project: Project?) : EditorTextField(project, PlainTextFil
     }
 
     fun updateFile(virtualFile: VirtualFile?, caretOffset: Int = 0) {
-        if (currentFile == virtualFile) {
-            ApplicationManager.getApplication().invokeLater { moveToOffset(caretOffset) }
-            return
-        }
-        currentFile = virtualFile
-
         ApplicationManager.getApplication().executeOnPooledThread {
-            val sourceDocument = ApplicationManager.getApplication().runReadAction<Document?> {
-                virtualFile?.let { FileDocumentManager.getInstance().getDocument(virtualFile) }
-            }
-            val fileType = virtualFile?.let { FileTypeManager.getInstance().getFileTypeByFile(virtualFile) }
+            if (currentFile == virtualFile) {
+                ApplicationManager.getApplication().invokeLater {
+                    WriteCommandAction.runWriteCommandAction(project) {
+                        moveToOffset(caretOffset)
+                    }
+                }
+            } else {
+                currentFile = virtualFile
 
-            ApplicationManager.getApplication().executeOnPooledThread {
+                val sourceDocument = ApplicationManager.getApplication().runReadAction<Document?> {
+                    virtualFile?.let { FileDocumentManager.getInstance().getDocument(virtualFile) }
+                }
+                val fileType = virtualFile?.let { FileTypeManager.getInstance().getFileTypeByFile(virtualFile) }
+
                 SwingUtilities.invokeLater {
+                    WriteCommandAction.runWriteCommandAction(project) {
                     if (sourceDocument != null) {
-                        WriteCommandAction.runWriteCommandAction(project) {
                             // Use the actual document to enable full highlighting in the preview
                             document = sourceDocument
-                            moveToOffset(caretOffset)
-                        }
+                            SwingUtilities.invokeLater {
+//                                SwingUtilities.invokeLater {
+                                    WriteCommandAction.runWriteCommandAction(project) {
+                                        moveToOffset(caretOffset)
+//                                    }
+                                }
+                            }
                     } else {
                         document = EditorFactory.getInstance().createDocument("Cannot preview file")
                     }
                     if (fileType != null) this.fileType = fileType
+                    }
                 }
             }
         }
@@ -106,14 +116,4 @@ class SearchBoxEditor(project: Project?) : EditorTextField(project, PlainTextFil
         editor.caretModel.moveToOffset(offset + 1)
         editor.scrollingModel.scrollToCaret(com.intellij.openapi.editor.ScrollType.CENTER_UP)
     }
-
-//    fun moveToLine(lineNumber: Int) {
-//        val editor = this.editor as? EditorEx ?: return
-//        val document = editor.document
-//        if (lineNumber in 1..document.lineCount) {
-//            val offset = document.getLineStartOffset(lineNumber - 1)
-//            editor.caretModel.moveToOffset(offset)
-//            editor.scrollingModel.scrollToCaret(com.intellij.openapi.editor.ScrollType.CENTER)
-//        }
-//    }
 }

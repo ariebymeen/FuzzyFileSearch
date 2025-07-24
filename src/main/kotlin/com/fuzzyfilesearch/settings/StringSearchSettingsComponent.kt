@@ -143,11 +143,14 @@ class StringSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState)
         keeper.createJBIntSpinnerComponent(
             mSettings::grepRememberPreviousQuerySeconds, 5, 0, 100, 1, builder, "Remember previous query (seconds)", """
                     Time (seconds) for which the previous query will be remembered. When zero, it is never remembered""".trimIndent())
-        keeper.createCheckboxComponent(
-            mSettings.string::searchMultiThreaded,
-            builder,
-            "Testoption, search multithreaded",
-            "")
+
+        if (mSettings.common.enableDebugOptions) {
+            keeper.createCheckboxComponent(
+                mSettings.string::searchMultiThreaded,
+                builder,
+                "Testoption, search multithreaded",
+                "")
+        }
 
         // Create Relative file opening actions
         builder.addSeparator()

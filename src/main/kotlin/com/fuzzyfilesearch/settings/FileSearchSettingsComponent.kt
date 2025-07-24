@@ -19,7 +19,6 @@ class FileSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState) {
 
     var keeper = SettingsComponentKeeper()
 
-    var warningText = createWarningLabel()
     val regexTestComponent = RegexTestComponent()
     val showHelpButton = JButton("Show help")
     val exportButton = JButton("Export actions").apply {
@@ -150,11 +149,14 @@ class FileSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState) {
                     The ratio of the preview editor size as a fraction of the total width or height of the popup. 
                     If the preview editor is shown below the search area, the fraction of the total height will be selected.
                     If the preview editor is shown to the right of the search area, the fraction of the total width will be selected""".trimIndent())
-        keeper.createCheckboxComponent(
-            mSettings.file::searchMultiThreaded,
-            builder,
-            "Testoption, search multithreaded",
-            "")
+
+        if (mSettings.common.enableDebugOptions) {
+            keeper.createCheckboxComponent(
+                mSettings.file::searchMultiThreaded,
+                builder,
+                "Testoption, search multithreaded",
+                "")
+        }
 
         // Create Relative file opening actions
         builder.addSeparator()
