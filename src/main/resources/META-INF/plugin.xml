@@ -8,14 +8,14 @@
     <name>FuzzyFileSearch</name>
 
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-    <vendor email="fuzzyfilesearch@outlook.com" url="">fuzzyfilesearch</vendor>
+    <vendor email="fuzzyfilesearch@outlook.com">fuzzyfilesearch</vendor>
 
     <!-- Description of the plugin displayed on the Plugin Page and IDE Plugin Manager.
          Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
     <description><![CDATA[
-    Helps you find your files more quickly by integrating the fzf search algorithm into your intelij ide.
-    Provides similar functionality to telescope.
+    Brings telescope like functionality to your IDE.
+    Helps you find your files more quickly by integrating the fzf search algorithm into your intellij ide.
 
     Search for files:
     <ul>
@@ -23,6 +23,7 @@
     <li> Assign shortcuts to search in different directories to more quickly find your files. </li>
     <li> Assign shortcuts to search for files with certain extensions or patterns </li>
     <li> Quickly open file in vertical and horizontal split </li>
+    <li> Search through your open or recently edited files </li>
     </ul>
 
     Open files with shortcuts:
@@ -52,10 +53,9 @@
     <change-notes>
         <![CDATA[
         <ul>
-            <li>Add icon showing the file extension</li>
-            <li>Add regex match search</li>
-            <li>Add live grep</li>
-            <li>Split settings</li>
+            <li>Update settings UI</li>
+            <li>Improve support for intellij 2025</li>
+            <li>Added option to search only through edited files</li>
         </ul>
         ]]>
     </change-notes>
