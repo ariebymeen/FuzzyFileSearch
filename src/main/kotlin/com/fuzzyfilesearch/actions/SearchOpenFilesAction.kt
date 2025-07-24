@@ -4,35 +4,34 @@ import com.fuzzyfilesearch.renderers.FileInstanceItem
 import com.fuzzyfilesearch.settings.GlobalSettings
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.project.Project
 
-class SearchOpenFilesAction(val action: Array<String>,
-                            val settings: GlobalSettings.SettingsState) : AnAction(getActionName(action))
-{
-    val name = action[0]
-    private val extensions: List<String> = extractExtensions(action[1])
-    lateinit var files: List<FileInstanceItem>
-    private var searchAction = SearchForFiles(settings)
+class SearchOpenFilesAction(
+    settings: utils.ActionSettings,
+    val globalSettings: GlobalSettings.SettingsState
+                           ) : AnAction(settings.name) {
+
+    data class Settings(val extensionList: List<String>)
+
+    val settings = parseSettings(settings.generic)
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        files = getAllOpenFiles(project)
-        searchAction.doSearchForFiles(files, project, null, null)
+        val openFiles = utils.getAllOpenFiles(project)
+        val files =
+                openFiles.filter { file -> settings.extensionList.isEmpty() || settings.extensionList.contains(file.extension) }
+                    .map { file -> FileInstanceItem(file) }
+        SearchForFiles(globalSettings).search(files, project, settings.extensionList, "Open files")
     }
 
     companion object {
-        fun getActionName(actionSettings: Array<String>) : String {
-            return actionSettings[0]
+        fun parseSettings(actionSettings: List<String>): Settings {
+            val settings = Settings(extensionList = utils.extractExtensions(actionSettings.getOrElse(0) { "" }))
+            return settings
         }
-        fun getActionShortcut(actionSettings: Array<String>) : String {
-            return actionSettings[2]
-        }
-    }
 
-    private fun getAllOpenFiles(project: Project): List<FileInstanceItem> {
-        val fileEditorManager = FileEditorManager.getInstance(project)
-        return fileEditorManager.openFiles.toList().filter { file -> extensions.isEmpty() || extensions.contains(file.extension) }
-            .map{ file -> FileInstanceItem(file) }
+        fun register(settings: utils.ActionSettings, globalSettings: GlobalSettings.SettingsState) {
+            val action = SearchOpenFilesAction(settings, globalSettings)
+            utils.registerAction(settings.name, settings.shortcut, action)
+        }
     }
 }

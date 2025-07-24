@@ -3,7 +3,7 @@ package com.fuzzyfilesearch.settings
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.*
 
-enum class PopupSizePolicy{
+enum class PopupSizePolicy {
     FIXED_SIZE,
     SCALE_WITH_IDE,
     SCALE_WITH_SCREEN
@@ -36,14 +36,14 @@ enum class ShowFilenamePolicy {
 @State(
     name = "com.fuzzyfilesearch.settings.GlobalSettings",
     storages = [Storage(StoragePathMacros.NON_ROAMABLE_FILE)]
-)
+      )
 @Service
 class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
-    private var interalState = SettingsState()
+    private var internalState = SettingsState()
 
     class CommonSettings {
         var searchCaseSensitivity = false
-        var searchOnlyFilesTrackedByVersionControl = true
+        var searchOnlyFilesTrackedByVersionControl = true // TODO: Depreciated
         var excludedDirs: Set<String> = setOf("build", ".gradle", ".idea", ".run")
         var modifierKey: ModifierKey = ModifierKey.CTRL
         var openInVerticalSplit: String = "ctrl S"
@@ -55,9 +55,10 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         var fontSize = 0
         var useDefaultHighlightColor = true
         var selectedColor = ""
-        var showTileInSearchView = true
+        var showTitleInSearchView = true
+        var showScrollbar = false
         var titleFontSize = 10 // Font size of the title (showing the action)
-        var enableDebugPrints = true
+        var enableDebugOptions = true
     }
 
     class PopupSettings {
@@ -83,41 +84,34 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
 
     class SettingsState {
         var common = CommonSettings()
-        var file   = PopupSettings()
+        var file = PopupSettings()
         var string = PopupSettings()
+
+        // All custom actions that can be configured and stored
+        var allActions: Array<Array<String>> = emptyArray()
 
         // File search settings
         var filePathDisplayType: PathDisplayType = PathDisplayType.FILENAME_RELATIVE_PATH
-        var openRelativeFileActions: Array<Array<String>> = emptyArray()
-//        var openRelatedFileAction: Array<Array<String>> = emptyArray() // TODO
-        var searchRelativeFileActions: Array<Array<String>> = emptyArray()
-        var searchPathActions: Array<Array<String>> = emptyArray()
-        var searchFilesMatchingPatterActions: Array<Array<String>> = emptyArray()
-        var searchRecentFilesActions: Array<Array<String>> = arrayOf(arrayOf("SearchRecentFiles", "10", "", ""))
-        var searchOpenFilesActions: Array<Array<String>> = arrayOf(arrayOf("SearchOpenFiles", "", ""))
-//        var searchAllFilesActions: Array<Array<String>> = arrayOf(arrayOf("SearchAllFiles", "", ""))
 
         // String search settings
         var applySyntaxHighlightingOnTextSearch = true
-        var showFilenameForGrepInFiles          = true
-        var showFilenameForRegexMatch           = ShowFilenamePolicy.WHEN_SEARCHING_MULTIPLE_FILES
-        var showLineNumberWithFileName          = true
-        var useSelectedTextForGrepInFiles       = true
+        var showFilenameForGrepInFiles = true
+        var showFilenameForRegexMatch = ShowFilenamePolicy.WHEN_SEARCHING_MULTIPLE_FILES
+        var showLineNumberWithFileName = true
+        var useSelectedTextForGrepInFiles = true
         var grepRememberPreviousQuerySeconds: Int = 6
-        var searchStringMatchingPatternActions: Array<Array<String>> = emptyArray()
-        var searchStringMatchingSubstringActions: Array<Array<String>> = emptyArray()
     }
 
-    fun getInstance() : GlobalSettings {
+    fun getInstance(): GlobalSettings {
         return ApplicationManager.getApplication()
             .getService(GlobalSettings::class.java)
     }
 
     override fun getState(): SettingsState {
-        return interalState
+        return internalState
     }
 
     override fun loadState(storedState: SettingsState) {
-        interalState = storedState
+        internalState = storedState
     }
 }

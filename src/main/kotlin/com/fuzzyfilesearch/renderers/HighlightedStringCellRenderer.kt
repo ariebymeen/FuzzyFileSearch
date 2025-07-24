@@ -1,25 +1,27 @@
 package com.fuzzyfilesearch.renderers
 
-import com.fuzzyfilesearch.components.VerticallyCenteredTextPane
 import com.fuzzyfilesearch.components.ShrunkVerticallyCenteredTextPane
+import com.fuzzyfilesearch.components.VerticallyCenteredTextPane
 import com.fuzzyfilesearch.searchbox.CustomRenderer
 import com.fuzzyfilesearch.searchbox.getFont
-import com.intellij.openapi.project.Project
 import com.fuzzyfilesearch.settings.GlobalSettings
-import com.intellij.ui.JBColor
+import com.intellij.openapi.project.Project
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.util.preferredWidth
-import java.awt.*
-import javax.swing.*
-import javax.swing.text.StyleConstants
-import cutoffStringToMaxWidth
-import highlightText
-import javax.swing.border.EmptyBorder
+import com.intellij.util.ui.JBUI
+import java.awt.BorderLayout
+import java.awt.Component
+import java.awt.Font
+import java.awt.FontMetrics
+import javax.swing.JList
+import javax.swing.JPanel
 import javax.swing.text.Style
+import javax.swing.text.StyleConstants
 
-class HighlightedStringCellRenderer(val mProject: Project,
-                                    val mSettings: GlobalSettings.SettingsState,
-                                    val mShowFileName: Boolean) : CustomRenderer<StringMatchInstanceItem>() {
+class HighlightedStringCellRenderer(
+    val mProject: Project,
+    val mSettings: GlobalSettings.SettingsState,
+    val mShowFileName: Boolean) : CustomRenderer<StringMatchInstanceItem>() {
     val font = getFont(mSettings)
     lateinit var normalStyle: Style
     lateinit var tinyStyle: Style
@@ -30,20 +32,18 @@ class HighlightedStringCellRenderer(val mProject: Project,
         index: Int,
         isSelected: Boolean,
         cellHasFocus: Boolean
-    ): Component {
+                                             ): Component {
         if (value.mainPanel == null) {
             value.mainPanel = JPanel(BorderLayout())
             if (mSettings.string.showFileIcon) {
                 value.iconLabel = JBLabel()
-                value.iconLabel!!.border = EmptyBorder(0, 5, 0, 0)
+                value.iconLabel!!.border = JBUI.Borders.emptyLeft(5)
                 value.iconLabel!!.icon = value.vf.fileType.icon
-                value.mainPanel?.add(value.iconLabel, BorderLayout.WEST)
+                value.mainPanel?.add(value.iconLabel!!, BorderLayout.WEST)
             }
             value.textPane = VerticallyCenteredTextPane(mSettings.string.searchItemHeight)
             value.textPane!!.text = ""
             value.textPane!!.isOpaque = false
-//            value.textPane?.preferredHeight = mSettings.string.searchItemHeight
-//            value.textPane?.maximumHeight = mSettings.string.searchItemHeight
             value.textPane?.font = font
             normalStyle = value.textPane!!.addStyle("Normal", null).apply {}
             tinyStyle = value.textPane!!.addStyle("Tiny", null).apply {
@@ -51,25 +51,30 @@ class HighlightedStringCellRenderer(val mProject: Project,
                 StyleConstants.setFontSize(this, StyleConstants.getFontSize(normalStyle) - 1)
             }
 
-            val mShowFileName = true
             if (mShowFileName) {
                 value.fileNameTextPane = ShrunkVerticallyCenteredTextPane(mSettings.string.searchItemHeight)
                 value.fileNameTextPane!!.text = ""
                 value.fileNameTextPane!!.isOpaque = false
                 value.fileNameTextPane!!.styledDocument.insertString(0, value.vf.name, tinyStyle)
                 if (mSettings.showLineNumberWithFileName) {
-                    value.fileNameTextPane!!.styledDocument.insertString(value.fileNameTextPane!!.styledDocument.length,
-                                                                                ":" + value.line_nr.toString(),
-                                                                                tinyStyle)
+                    value.fileNameTextPane!!.styledDocument.insertString(
+                        value.fileNameTextPane!!.styledDocument.length,
+                        ":" + value.line_nr.toString(),
+                        tinyStyle)
                 }
                 value.mainPanel?.add(value.fileNameTextPane!!, BorderLayout.EAST)
-                val fontMetrics: FontMetrics = value.fileNameTextPane!!.getFontMetrics(Font(font.family, Font.PLAIN, StyleConstants.getFontSize(tinyStyle)))
-                value.fileNameWidth = fontMetrics.stringWidth(value.fileNameTextPane!!.text) + value.fileNameTextPane!!.margin.left + value.fileNameTextPane!!.margin.right
+                val fontMetrics: FontMetrics = value.fileNameTextPane!!.getFontMetrics(
+                    Font(
+                        font.family,
+                        Font.PLAIN,
+                        StyleConstants.getFontSize(tinyStyle)))
+                value.fileNameWidth =
+                        fontMetrics.stringWidth(value.fileNameTextPane!!.text) + value.fileNameTextPane!!.margin.left + value.fileNameTextPane!!.margin.right
                 value.fileNameTextPane!!.setWidth(value.fileNameWidth)
             }
 
             setText(value, index)
-            value.mainPanel?.add(value.textPane, BorderLayout.CENTER)
+            value.mainPanel?.add(value.textPane!!, BorderLayout.CENTER)
 
         } else if (mSettings.string.showNumberInSearchView) {
             val formattedNumber = String.format(" %02d - ", index)
@@ -95,12 +100,12 @@ class HighlightedStringCellRenderer(val mProject: Project,
         doc.insertString(doc.length, item.text, normalStyle)
 
         // If text is too wide for the view, remove and place ... at the end
-        val iconW       = item.iconLabel?.preferredWidth ?: 0
-        val fileNameW   = item.fileNameTextPane?.preferredWidth ?: 0
+        val iconW = item.iconLabel?.preferredWidth ?: 0
+        val fileNameW = item.fileNameTextPane?.preferredWidth ?: 0
         cutoffStringToMaxWidth(item.textPane!!, doc, maxWidth - iconW - fileNameW)
 
         if (mSettings.applySyntaxHighlightingOnTextSearch) {
-            highlightText(mProject, doc, highlightOffset , item.text, item.vf.extension)
+            highlightText(mProject, doc, highlightOffset, item.text, item.vf.extension)
         }
     }
 

@@ -1,19 +1,18 @@
 package com.fuzzyfilesearch.settings
 
-import com.fuzzyfilesearch.actions.OpenRelativeFileAction
-import com.fuzzyfilesearch.actions.isEqual
-import com.fuzzyfilesearch.actions.registerOpenRelativeFileActions
-import com.fuzzyfilesearch.actions.unregisterActions
+import com.fuzzyfilesearch.actions.utils.isEqual
+import com.fuzzyfilesearch.actions.utils.unregisterActions
 import kotlin.reflect.KMutableProperty0
 
-class ActionsTableComponent(private var setting: KMutableProperty0<Array<Array<String>>>,
-                            header: Array<String>,
-                            default: Array<String>,
-                            weights: Array<Int>,
-                            private val nameIndex: Int,
-                            private val shortcutIndex: Int,
-                            private val createActionCb: (Array<Array<String>>, GlobalSettings.SettingsState) -> Unit,
-                            private val settings: GlobalSettings.SettingsState): SettingsComponent {
+class ActionsTableComponent(
+    private var setting: KMutableProperty0<Array<Array<String>>>,
+    header: Array<String>,
+    default: Array<String>,
+    weights: Array<Int>,
+    private val nameIndex: Int,
+    private val shortcutIndex: Int,
+    private val createActionCb: (Array<Array<String>>, GlobalSettings.SettingsState) -> Unit,
+    private val settings: GlobalSettings.SettingsState) : SettingsComponent {
     val table = ActionsTable(header, default, weights)
 
     override fun initialize() {

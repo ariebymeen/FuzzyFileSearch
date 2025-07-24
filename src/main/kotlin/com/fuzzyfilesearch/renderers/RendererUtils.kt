@@ -1,3 +1,5 @@
+package com.fuzzyfilesearch.renderers
+
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.editor.colors.EditorColorsScheme
 import com.intellij.openapi.editor.colors.TextAttributesKey
@@ -34,7 +36,9 @@ fun computeNofCharsToRemove(textPane: JTextPane, maxWidth: Int): Pair<Int, Int> 
         if (totalWidth + segmentWidth > maxWidth) {
             // Compute the nof chars to remove. Start with initial guess from mean char width
             dotsTextWidth = fontMetrics.stringWidth(".")
-            var nofRemovedChars: Int = Math.min(segmentText.length, (Math.max(segmentWidth + totalWidth - maxWidth, 1)) / segmentText.length)
+            var nofRemovedChars: Int = Math.min(
+                segmentText.length,
+                (Math.max(segmentWidth + totalWidth - maxWidth, 1)) / segmentText.length)
             val segmentLen = segmentText.length
             try {
 //                segmentText = doc.getText(elem.startOffset, elem.endOffset - elem.startOffset)
@@ -43,7 +47,12 @@ fun computeNofCharsToRemove(textPane: JTextPane, maxWidth: Int): Pair<Int, Int> 
                 segmentWidth = fontMetrics.stringWidth(segmentText)
 //                println("1: Segment text: ${segmentText} has width $segmentWidth")
             } catch (e: BadLocationException) {
-                println("Exception thrown: ${e.toString()}, segment text: ${segmentText}, elem start: ${elem.startOffset}, elem emd: ${elem.endOffset}, text: ${doc.getText(0, doc.length)}")
+                println(
+                    "Exception thrown: ${e.toString()}, segment text: ${segmentText}, elem start: ${elem.startOffset}, elem emd: ${elem.endOffset}, text: ${
+                        doc.getText(
+                            0,
+                            doc.length)
+                    }")
             }
             while (totalWidth + segmentWidth + dotsTextWidth * 2 > maxWidth && nofRemovedChars < segmentLen) {
                 // Iteratively move to the chars until the text including '...' fits into the max width
@@ -87,9 +96,9 @@ fun getFontFromAttributes(attrs: AttributeSet, defaultFont: Font): Font {
     // Create a new font with the specified family, style, and size
     val style = when {
         isBold && isItalic -> Font.BOLD or Font.ITALIC
-        isBold -> Font.BOLD
-        isItalic -> Font.ITALIC
-        else -> Font.PLAIN
+        isBold             -> Font.BOLD
+        isItalic           -> Font.ITALIC
+        else               -> Font.PLAIN
     }
 
     return Font(fontFamily, style, fontSize)
@@ -118,7 +127,8 @@ fun highlightText(project: Project, doc: StyledDocument, startOffset: Int, text:
 
     val iterator = highlighter.createIterator(0)
     while (!iterator.atEnd()) {
-        val textAttributesKey: TextAttributesKey? = syntaxHighlighter.getTokenHighlights(iterator.tokenType).firstOrNull()
+        val textAttributesKey: TextAttributesKey? =
+                syntaxHighlighter.getTokenHighlights(iterator.tokenType).firstOrNull()
         val textAttributes = textAttributesKey?.defaultAttributes
         if (textAttributes != null && textAttributes.foregroundColor != null) {
             val style = SimpleAttributeSet()

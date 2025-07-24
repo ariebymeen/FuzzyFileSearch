@@ -1,6 +1,7 @@
 package com.fuzzyfilesearch.actions
 
 import com.fuzzyfilesearch.searchbox.getParentSatisfyingRegex
+import com.fuzzyfilesearch.settings.GlobalSettings
 import com.fuzzyfilesearch.showTimedNotification
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -10,42 +11,38 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.isFile
 import kotlin.math.min
 
-class OpenRelativeFileAction(var action: Array<String>,
-                             var excludedDirs: Set<String>) : AnAction(getActionName(action))
-{
-    val regex = Regex(pattern = action[1], options = setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
+class OpenRelativeFileAction(
+    var actionSettings: utils.ActionSettings,
+    var excludedDirs: Set<String>) : AnAction(actionSettings.name) {
+    data class Settings(val regex: Regex, val filePatterns: List<String>)
+
+    val settings = parseSettings(actionSettings.generic)
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
 
         val currentFile = e.getData(com.intellij.openapi.actionSystem.CommonDataKeys.VIRTUAL_FILE)
         if (currentFile == null) {
-            showTimedNotification("${action[0]} No open file", "Cannot perform action when no file is opened")
+            showTimedNotification("${actionSettings.name} no open file", "Cannot perform action when no file is opened")
             return
         }
 
-        val matchingFile: VirtualFile?
-        if (action[1].isEmpty()) {
-            matchingFile = currentFile
-        } else {
-            matchingFile = getParentSatisfyingRegex(project, currentFile, regex, excludedDirs)
-        }
-
+        val matchingFile = getParentSatisfyingRegex(project, currentFile, settings.regex, excludedDirs)
         if (matchingFile == null) {
-            showTimedNotification("${action[0]} Could not find file", "Could not find file satisfying regex ${regex.pattern}")
+            showTimedNotification(
+                "${actionSettings.name} Could not find file",
+                "Could not find file satisfying regex ${settings.regex.pattern}")
             return
         }
 
         var fileFound = false
-        val fileNames = getOpenFilesPaths(action)
-        for (rawFileName in fileNames) {
+        for (rawFileName in settings.filePatterns) {
             var virtualFile: VirtualFile? = null
             if (rawFileName.contains("%rname%")) {
                 virtualFile = getReferenceFileName(rawFileName, matchingFile)
             } else {
-                val matchingPath    = matchingFile.parent.path + "/" + rawFileName.split('/').dropLast(1).joinToString("/")
+                val matchingPath = matchingFile.parent.path + "/" + rawFileName.split('/').dropLast(1).joinToString("/")
                 val matchingPattern = rawFileName.split("/").last()
-//                println("File path: ${matchingFile.parent.path}, subpath: ${rawFileName.split('/').dropLast(1).joinToString("/")}, total: $matchingPath")
 
                 val directory = LocalFileSystem.getInstance().findFileByPath(matchingPath)
                 if (directory != null) {
@@ -61,7 +58,9 @@ class OpenRelativeFileAction(var action: Array<String>,
         }
 
         if (!fileFound) {
-            showTimedNotification("${action[0]} File not found", "Trying to open file in path ${matchingFile.parent.path + '/'} with pattern $fileNames")
+            showTimedNotification(
+                "${actionSettings.name} File not found",
+                "Trying to open file in path ${matchingFile.parent.path + '/'} with pattern ${settings.filePatterns.joinToString { ", " }}")
         }
     }
 
@@ -70,7 +69,7 @@ class OpenRelativeFileAction(var action: Array<String>,
         return LocalFileSystem.getInstance().findFileByPath(matchingFile.parent.path + '/' + fileName)
     }
 
-    fun getMatchingCnameFile(searchDirectory: VirtualFile, currentFile: VirtualFile, pattern: String) : VirtualFile? {
+    fun getMatchingCnameFile(searchDirectory: VirtualFile, currentFile: VirtualFile, pattern: String): VirtualFile? {
         val currentFileName = currentFile.nameWithoutExtension
 
         // Evaluate all files in directory, if there is a match with the pattern, return this one
@@ -95,14 +94,16 @@ class OpenRelativeFileAction(var action: Array<String>,
     }
 
     companion object {
-        fun getActionName(actionSettings: Array<String>) : String {
-            return actionSettings[0]
+        fun parseSettings(actionSettings: List<String>): Settings {
+            return Settings(
+                regex = utils.parseRegex(actionSettings[0]),
+                filePatterns = actionSettings[1].split('|').map { path -> path.trim() })
         }
-        fun getOpenFilesPaths(actionSettings: Array<String>) : List<String> {
-            return actionSettings[2].split('|').map { path -> path.trim() }
+
+        fun register(settings: utils.ActionSettings, globalSettings: GlobalSettings.SettingsState) {
+            val action = OpenRelativeFileAction(settings, globalSettings.common.excludedDirs)
+            utils.registerAction(settings.name, settings.shortcut, action)
         }
-        fun getActionShortcut(actionSettings: Array<String>) : String {
-            return actionSettings[3]
-        }
+
     }
 }

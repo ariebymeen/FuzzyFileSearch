@@ -1,62 +1,74 @@
 package com.fuzzyfilesearch.actions
 
+import com.fuzzyfilesearch.renderers.FileInstanceItem
+import com.fuzzyfilesearch.services.RecentFilesKeeper
 import com.fuzzyfilesearch.settings.GlobalSettings
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.components.service
-import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vcs.FileStatus
+import com.intellij.openapi.vcs.FileStatusManager
 import com.intellij.openapi.vfs.VirtualFile
-import com.fuzzyfilesearch.*
-import com.fuzzyfilesearch.renderers.FileInstanceItem
-import com.fuzzyfilesearch.services.RecentFilesKeeper
+import kotlin.math.min
 
-class SearchRecentFilesAction(val action: Array<String>,
-                              val settings: GlobalSettings.SettingsState) : AnAction(getActionName(action))
-{
-    val name = action[0]
-    var history: Int
-    val extensions: List<String>
-    var searchAction = SearchForFiles(settings)
+class SearchRecentFilesAction(
+    settings: utils.ActionSettings,
+    val globalSettings: GlobalSettings.SettingsState
+                             ) : AnAction(settings.name) {
 
-    init {
-        try {
-            history = action[1].toInt()
-        } catch (e: Exception) {
-            showErrorNotification("Not a valid number", "Trying to register $name, but the history field was not set with a valid number. Using the default of 10")
-            history = 10
-        }
+    data class Settings(
+        var nofFilesHistory: Int,
+        var extensionList: List<String>,
+        var searchModifiedOnly: Boolean,
+        var alwaysIncludeOpenFiles: Boolean)
 
-        extensions = extractExtensions(action[2])
-    }
+    val settings = parseSettings(settings.generic)
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
 
-        val recentFiles = project.service<RecentFilesKeeper>().getRecentFiles(history).toMutableList()
-        val openFiles = getAllOpenFiles(project).toMutableList()
-        for (file in openFiles) {
-            if (!recentFiles.contains(file)) {
-                recentFiles += file
-            }
+        val recentFiles = project.service<RecentFilesKeeper>().getRecentFiles().toMutableList()
+
+        if (settings.alwaysIncludeOpenFiles) {
+            val openFiles = utils.getAllOpenFiles(project).toMutableList()
+            recentFiles += openFiles.filter { !recentFiles.contains(it) }
         }
-        val filteredFiles = recentFiles.filter { file -> extensions.isEmpty() || extensions.contains(file.extension) }
-                                        .map{ file -> FileInstanceItem(file) }
-        searchAction.doSearchForFiles(filteredFiles, project, null, extensions)
+
+        var filteredFiles = recentFiles.filter { file -> isFileExtensionIncluded(file) }
+        if (settings.searchModifiedOnly) {
+            filteredFiles = filteredFiles.filter { isFileModifiedOrAdded(project, it) }
+        }
+        filteredFiles = filteredFiles.takeLast(min(filteredFiles.size, settings.nofFilesHistory))
+
+        val searchItems = filteredFiles.map { file -> FileInstanceItem(file) }
+        val title = if (settings.searchModifiedOnly) "Recent files (edited only)" else "Recent files"
+        SearchForFiles(globalSettings).search(searchItems, project, settings.extensionList, title)
+    }
+
+    fun isFileModifiedOrAdded(project: Project, vf: VirtualFile): Boolean {
+        val status = FileStatusManager.getInstance(project).getStatus(vf)
+        // It seems that new (not yet added files) are marked as UNKNOWN
+        return status == FileStatus.MODIFIED || status == FileStatus.ADDED || status == FileStatus.UNKNOWN
+    }
+
+    fun isFileExtensionIncluded(vf: VirtualFile): Boolean {
+        return settings.extensionList.isEmpty() || settings.extensionList.contains(vf.extension)
     }
 
     companion object {
-        fun getActionName(actionSettins: Array<String>) : String {
-            return actionSettins[0]
+        fun parseSettings(actionSettings: List<String>): Settings {
+            val settings = Settings(
+                nofFilesHistory = actionSettings.getOrElse(0) { "10" }.toInt(),
+                extensionList = utils.extractExtensions(actionSettings.getOrElse(1) { "" }),
+                searchModifiedOnly = actionSettings.getOrElse(2) { "true" }.toBoolean(),
+                alwaysIncludeOpenFiles = actionSettings.getOrElse(3) { "true" }.toBoolean())
+            return settings
         }
-        fun getActionShortcut(actionSettins: Array<String>) : String {
-            return actionSettins[3]
+
+        fun register(settings: utils.ActionSettings, globalSettings: GlobalSettings.SettingsState) {
+            val action = SearchRecentFilesAction(settings, globalSettings)
+            utils.registerAction(settings.name, settings.shortcut, action)
         }
     }
-
-    private fun getAllOpenFiles(project: Project): List<VirtualFile> {
-        val fileEditorManager = FileEditorManager.getInstance(project)
-        return fileEditorManager.openFiles.toList()
-    }
-
 }

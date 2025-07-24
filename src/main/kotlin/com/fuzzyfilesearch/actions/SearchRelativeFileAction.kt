@@ -1,59 +1,74 @@
 package com.fuzzyfilesearch.actions
 
-import com.fuzzyfilesearch.settings.GlobalSettings
-import com.intellij.openapi.actionSystem.AnAction
-import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.project.Project
-import com.intellij.openapi.vcs.changes.ChangeListManager
-import com.fuzzyfilesearch.*
 import com.fuzzyfilesearch.renderers.FileInstanceItem
 import com.fuzzyfilesearch.searchbox.getAllFilesInRoot
 import com.fuzzyfilesearch.searchbox.getParentSatisfyingRegex
+import com.fuzzyfilesearch.settings.GlobalSettings
+import com.fuzzyfilesearch.showTimedNotification
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.vcs.changes.ChangeListManager
 
-class SearchRelativeFileAction(val action: Array<String>,
-                               val settings: GlobalSettings.SettingsState) : AnAction(getActionName(action))
-{
-    val regex = Regex(pattern = action[1], options = setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
-    val name = getActionName(action)
-    var files: List<FileInstanceItem>? = null
-    var project: Project? = null
-    var searchAction = SearchForFiles(settings)
-    val extensions: List<String> = extractExtensions(action[2])
+class SearchRelativeFileAction(
+    val actionSettings: utils.ActionSettings,
+    val globalSettings: GlobalSettings.SettingsState) : AnAction(actionSettings.name) {
+
+    data class Settings(
+        val regex: Regex,
+        val extensionList: List<String>,
+        val onlyVcsTracked: Boolean)
+
+    val settings = parseSettings(actionSettings.generic)
 
     override fun actionPerformed(e: AnActionEvent) {
-        project = e.project ?: return
+        val project = e.project ?: return
 
         val currentFile = e.getData(com.intellij.openapi.actionSystem.CommonDataKeys.VIRTUAL_FILE)
         if (currentFile == null) {
-            showTimedNotification("$name No open file", "Cannot perform action when no file is opened");
+            showTimedNotification("${actionSettings.name} No open file", "Cannot perform action when no file is opened")
             return
         }
 
-        val changeListManager = if (settings.common.searchOnlyFilesTrackedByVersionControl) ChangeListManager.getInstance(project!!) else null
-        var directory = currentFile.parent
-        if (regex.pattern.isEmpty()) {
+        val changeListManager = if (settings.onlyVcsTracked) ChangeListManager.getInstance(project) else null
+        var files: List<FileInstanceItem>? = null
+        if (settings.regex.pattern.isEmpty()) {
             // If pattern is empty, list all files from current directory down
-            files = getAllFilesInRoot(currentFile.parent, settings.common.excludedDirs, extensions, changeListManager)
+            files = getAllFilesInRoot(
+                currentFile.parent,
+                globalSettings.common.excludedDirs,
+                settings.extensionList,
+                changeListManager)
         } else {
             // Else try finding a file matching pattern
-            val matchingFile = getParentSatisfyingRegex(project!!, currentFile, regex, settings.common.excludedDirs)
+            val matchingFile =
+                    getParentSatisfyingRegex(project, currentFile, settings.regex, globalSettings.common.excludedDirs)
             if (matchingFile == null) {
-                showTimedNotification("$name Could not find file", "Could not find file satisfying regex ${regex.pattern}");
+                showTimedNotification(
+                    "${actionSettings.name} Could not find file",
+                    "Could not find file satisfying regex ${settings.regex.pattern}")
                 return
             }
-            directory = matchingFile.parent
-            files = getAllFilesInRoot(matchingFile.parent, settings.common.excludedDirs, extensions, changeListManager)
+            files = getAllFilesInRoot(
+                matchingFile.parent,
+                globalSettings.common.excludedDirs,
+                settings.extensionList,
+                changeListManager)
         }
-        files ?: return
-        searchAction.doSearchForFiles(files!!, project!!, directory.path, extensions)
+        SearchForFiles(globalSettings).search(files, project, settings.extensionList)
     }
 
     companion object {
-        fun getActionName(actionSettins: Array<String>) : String {
-            return actionSettins[0]
+        fun parseSettings(actionSettings: List<String>): Settings {
+            val settings = Settings(
+                regex = utils.parseRegex(actionSettings[0]),
+                extensionList = utils.extractExtensions(actionSettings[1]),
+                onlyVcsTracked = actionSettings.getOrElse(2) { "true" }.toBoolean())
+            return settings
         }
-        fun getActionShortcut(actionSettins: Array<String>) : String {
-            return actionSettins[3]
+
+        fun register(settings: utils.ActionSettings, globalSettings: GlobalSettings.SettingsState) {
+            val action = SearchRelativeFileAction(settings, globalSettings)
+            utils.registerAction(settings.name, settings.shortcut, action)
         }
     }
 }

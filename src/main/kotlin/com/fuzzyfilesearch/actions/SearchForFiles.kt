@@ -3,10 +3,10 @@ package com.fuzzyfilesearch.actions
 import com.fuzzyfilesearch.renderers.FileInstanceItem
 import com.fuzzyfilesearch.renderers.FilePathCellRenderer
 import com.fuzzyfilesearch.searchbox.*
-import com.intellij.openapi.project.Project
 import com.fuzzyfilesearch.settings.GlobalSettings
 import com.fuzzyfilesearch.settings.PathDisplayType
 import com.fuzzyfilesearch.showErrorNotification
+import com.intellij.openapi.project.Project
 import kotlin.math.min
 import kotlin.system.measureTimeMillis
 
@@ -18,21 +18,23 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
     var mProject: Project? = null
     var fzfSearchAction: FzfSearchAction? = null
 
-    fun doSearchForFiles(files: List<FileInstanceItem>,
-                         project: Project,
-                         directory: String?,
-                         extensions: List<String>?) {
+    fun search(
+        files: List<FileInstanceItem>,
+        project: Project,
+        extensions: List<String>?,
+        title: String = "File search") {
         if (files.size > 100000) {
-            showErrorNotification("Too many files", "Found ${files.size} files fir searching, " +
-                    "please limit the number of files by searching for files" +
-                    "with a extension, change the position you search or exclude directories from your search")
+            showErrorNotification(
+                "Too many files", "Found ${files.size} files fir searching, " +
+                                  "please limit the number of files by searching for files" +
+                                  "with a extension, change the position you search or exclude directories from your search")
             return
         }
 
         mFiles = files
         mProject = project
-        if (settings.filePathDisplayType != PathDisplayType.FILENAME_ONLY) {
-            mFileNames = mFiles.map { file ->
+        mFileNames = if (settings.filePathDisplayType != PathDisplayType.FILENAME_ONLY) {
+            mFiles.map { file ->
                 if (isFileInProject(project, file.vf)) {
                     file.vf.path.substring(project.basePath!!.length)
                 } else {
@@ -40,43 +42,49 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
                 }
             }
         } else {
-            mFileNames = mFiles.map { file -> file.vf.name }
+            mFiles.map { file -> file.vf.name }
         }
 
-        mPopup = SearchPopupInstance(FilePathCellRenderer(project, settings), ::getSortedFileList, ::openFile,
-                                                                    ::getFileFromItem, settings,  project, extensions,
-                                                                            settings.file,
-                                                                            "File search")
+        mPopup = SearchPopupInstance(
+            FilePathCellRenderer(project, settings), ::getSortedFileList, ::openFile,
+            ::getFileFromItem, settings, project, extensions,
+            settings.file,
+            title)
         mPopup!!.showPopupInstance()
-        fzfSearchAction = FzfSearchAction(mFileNames!!, settings.common.searchCaseSensitivity, settings.file.searchMultiThreaded)
+        fzfSearchAction =
+                FzfSearchAction(mFileNames!!, settings.common.searchCaseSensitivity, settings.file.searchMultiThreaded)
     }
 
-    fun getSortedFileList(query: String) : List<FileInstanceItem> {
+    fun getSortedFileList(query: String): List<FileInstanceItem> {
         if (query.isNotEmpty()) {
             val visibleFiles: List<FileInstanceItem>
             val timeTaken = measureTimeMillis {
                 val filteredFiles = fzfSearchAction!!.search(query)
-                val visibleList = filteredFiles.subList(0, min(filteredFiles.size, settings.file.numberOfFilesInSearchView))
+                val visibleList =
+                        filteredFiles.subList(0, min(filteredFiles.size, settings.file.numberOfFilesInSearchView))
                 visibleFiles = visibleList
                     .map { file -> mFileNames!!.indexOfFirst { name -> name == file } }
                     .map { index ->
-                            if (index >= 0) {
-                                mFiles[index]
-                            } else {
-                                println("Error, unexpected index $index. Filtered files size: ${filteredFiles.size}, file size: ${mFiles.size}")
-                                showErrorNotification("Something went wrong searching", "Error searching mFiles: $visibleList, invalidating caches now")
-                                mFiles[0]
-                            }
+                        if (index >= 0) {
+                            mFiles[index]
+                        } else {
+                            println("Error, unexpected index $index. Filtered files size: ${filteredFiles.size}, file size: ${mFiles.size}")
+                            showErrorNotification(
+                                "Something went wrong searching",
+                                "Error searching mFiles: $visibleList, invalidating caches now")
+                            mFiles[0]
+                        }
                     }
                 // We do this here to prevent doing this on the UI thread even though this is horrible and ugly
                 visibleFiles.forEach {
                     if (settings.file.showFileIcon && it.icon == null) it.icon = it.vf.fileType.icon
                 }
             }
-            println("Searching and sorting files took ${timeTaken} ms")
+            if (settings.common.enableDebugOptions) {
+                println("Searching and sorting files took ${timeTaken} ms")
+            }
             return visibleFiles
-        }
-        else {
+        } else {
             val visibleFiles = mFiles.subList(0, min(mFiles.size, settings.file.numberOfFilesInSearchView))
             // We do this here to prevent doing this on the UI thread even though this is horrible and ugly
             visibleFiles.forEach {

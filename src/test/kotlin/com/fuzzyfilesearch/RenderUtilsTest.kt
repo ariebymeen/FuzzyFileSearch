@@ -1,5 +1,6 @@
 package com.fuzzyfilesearch
-import computeNofCharsToRemove
+
+import com.fuzzyfilesearch.renderers.computeNofCharsToRemove
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import javax.swing.JTextPane
@@ -26,9 +27,7 @@ class RenderUtilsTest {
         val formattedNumber = String.format(" %02d - ", 1)
         doc.insertString(0, formattedNumber, tinyStyle)
         doc.insertString(doc.length, text, normalStyle)
-//        fun computeNofCharsToRemove(textPane: JTextPane, maxWidth: Int): Pair<Int, Int> {
         val (nofCharsToRemove, nofDots) = computeNofCharsToRemove(panel, maxW)
         println("Nof chars: $nofCharsToRemove, nof dots: $nofDots")
-
     }
 }

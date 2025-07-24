@@ -1,62 +1,37 @@
 package com.fuzzyfilesearch.actions
 
+import com.fuzzyfilesearch.searchbox.getAllFilesInRoot
 import com.fuzzyfilesearch.settings.GlobalSettings
+import com.fuzzyfilesearch.showTimedNotification
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.VfsUtil
-import com.intellij.openapi.vfs.VirtualFile
-import com.fuzzyfilesearch.*
-import com.fuzzyfilesearch.renderers.FileInstanceItem
-import com.fuzzyfilesearch.searchbox.getAllFilesInRoot
-import com.fuzzyfilesearch.services.FileWatcher
-import com.intellij.openapi.components.service
 import com.intellij.openapi.vcs.changes.ChangeListManager
-import kotlin.io.path.Path
-import kotlin.system.measureTimeMillis
 
-class SearchFileInPathAction(val action: Array<String>,
-                             val settings: GlobalSettings.SettingsState,
-                             val overrideVscIgnore: Boolean = false) : AnAction(getActionName(action))
-{
-    val name = action[0]
-    val location = action[1]
-    val extensions: List<String>
+class SearchFileInPathAction(
+    val actionSettings: utils.ActionSettings,
+    val globalSettings: GlobalSettings.SettingsState) : AnAction(actionSettings.name) {
 
-    var files: List<FileInstanceItem>? = null
-    var project: Project? = null
-    var searchAction = SearchForFiles(settings)
+    data class Settings(
+        var path: String,
+        var extensionList: List<String>,
+        var onlyVcsTracked: Boolean)
 
-    init {
-        extensions = extractExtensions(action[2])
-    }
+    val settings: Settings = parseSettings(actionSettings.generic)
+    val searchForFiles = SearchForFiles(globalSettings)
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
 
-        val searchPath: String
-        if (location.isEmpty() || location[0] == '/') { // Search from project root
-            searchPath = project.basePath + location
-        } else { // Search from current file
-            val currentFile = e.getData(com.intellij.openapi.actionSystem.CommonDataKeys.VIRTUAL_FILE)
-            if (currentFile == null) {
-                showTimedNotification("$name No open file", "Cannot perform action when no file is opened");
-                return
-            }
-            searchPath = currentFile.parent.path + "/" + location
-        }
+        val searchPath = getSearchPath(settings, project, e) ?: return
+        val vfPath = utils.getVirtualFileFromPath(searchPath) ?: return
 
-        val vfPath = getVirtualFileFromPath(searchPath)
-        if (vfPath == null) {
-            showTimedNotification("$name path not found", "Trying to open path ${searchPath}, but this path does not exist");
-            return
-        }
-
-//        val timeTaken = measureTimeMillis {
-            val changeListManager = if (settings.common.searchOnlyFilesTrackedByVersionControl && !overrideVscIgnore) ChangeListManager.getInstance(project) else null
-            files = getAllFilesInRoot(vfPath, settings.common.excludedDirs, extensions, changeListManager)
-//            println("Found ${files?.size} files in ${timeTaken} ms")
-//        }
+        val changeListManager = if (settings.onlyVcsTracked) ChangeListManager.getInstance(project) else null
+        val files = getAllFilesInRoot(
+            vfPath,
+            globalSettings.common.excludedDirs,
+            settings.extensionList,
+            changeListManager)
 
         // TODO: Re-enable once tested
 //        val time2 = measureTimeMillis {
@@ -65,24 +40,38 @@ class SearchFileInPathAction(val action: Array<String>,
 //                ::isFileIncluded)
 //        }
 //        println("Retrieved ${files?.size} files in ${time2} ms")
-        searchAction.doSearchForFiles(files!!, project, searchPath, extensions)
+        searchForFiles.search(files, project, settings.extensionList)
     }
 
-    fun getVirtualFileFromPath(filePath: String): VirtualFile? {
-        val virtualFile = VfsUtil.findFile(Path(filePath), true)
-        return virtualFile
-    }
-
-    fun isFileIncluded(vf: VirtualFile): Boolean {
-        return extensions.isEmpty() || extensions.contains(vf.extension)
+    fun getSearchPath(settings: Settings, project: Project, e: AnActionEvent): String? {
+        val searchPath: String
+        if (settings.path.isEmpty() || settings.path[0] == '/') { // Search from project root
+            searchPath = project.basePath + settings.path
+        } else { // Search from current file
+            val currentFile = e.getData(com.intellij.openapi.actionSystem.CommonDataKeys.VIRTUAL_FILE)
+            if (currentFile == null) {
+                showTimedNotification(
+                    "${actionSettings.name} no open file",
+                    "Cannot perform action when no file is opened")
+                return null
+            }
+            searchPath = currentFile.parent.path + "/" + settings.path
+        }
+        return searchPath
     }
 
     companion object {
-        fun getActionName(actionSettings: Array<String>) : String {
-            return actionSettings[0]
+        fun parseSettings(actionSettings: List<String>): Settings {
+            val settings = Settings(
+                path = actionSettings[0],
+                extensionList = utils.extractExtensions(actionSettings.getOrElse(1) { "" }),
+                onlyVcsTracked = actionSettings.getOrElse(2) { "true" }.toBoolean())
+            return settings
         }
-        fun getActionShortcut(actionSettings: Array<String>) : String {
-            return actionSettings[3]
+
+        fun register(settings: utils.ActionSettings, globalSettings: GlobalSettings.SettingsState) {
+            val action = SearchFileInPathAction(settings, globalSettings)
+            utils.registerAction(settings.name, settings.shortcut, action)
         }
     }
 }

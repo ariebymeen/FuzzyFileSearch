@@ -1,80 +1,66 @@
 package com.fuzzyfilesearch.actions
 
+import com.fuzzyfilesearch.searchbox.getAllFilesInRoot
 import com.fuzzyfilesearch.settings.GlobalSettings
+import com.fuzzyfilesearch.showTimedNotification
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.VirtualFile
-import com.fuzzyfilesearch.*
-import com.fuzzyfilesearch.renderers.FileInstanceItem
-import com.fuzzyfilesearch.searchbox.getAllFilesInRoot
-import com.fuzzyfilesearch.services.FileWatcher
-import com.intellij.openapi.components.service
 import com.intellij.openapi.vcs.changes.ChangeListManager
-import com.intellij.openapi.vfs.VfsUtil
-import kotlin.io.path.Path
 
-class SearchFilesWithPatternAction(val action: Array<String>,
-                                   val settings: GlobalSettings.SettingsState) : AnAction(getActionName(action))
-{
-    val regex = Regex(pattern = action[2], options = setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
-    val location = action[1]
-    val name = getActionName(action)
-    var files: List<FileInstanceItem>? = null
-    var project: Project? = null
-    var searchAction = SearchForFiles(settings)
+class SearchFilesWithPatternAction(
+    val actionSettings: utils.ActionSettings,
+    val globalSettings: GlobalSettings.SettingsState) : AnAction(actionSettings.name) {
+
+    data class Settings(
+        var path: String,
+        var regex: Regex,
+        var onlyVcsTracked: Boolean)
+
+    val settings = parseSettings(actionSettings.generic)
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
 
+        val searchPath = getSearchPath(settings, project, e) ?: return
+        val vfPath = utils.getVirtualFileFromPath(searchPath) ?: return
+
+        val changeListManager = if (settings.onlyVcsTracked) ChangeListManager.getInstance(project) else null
+        val allFiles = getAllFilesInRoot(vfPath, globalSettings.common.excludedDirs, emptyList(), changeListManager)
+        val files = allFiles.filter { vf -> settings.regex.matches(vf.vf.name) }
+
+        SearchForFiles(globalSettings).search(files, project, null)
+    }
+
+    fun getSearchPath(settings: Settings, project: Project, e: AnActionEvent): String? {
         val searchPath: String
-        if (location.isEmpty() || location[0] == '/') { // Search from project root
-            searchPath = project.basePath + location
+        if (settings.path.isEmpty() || settings.path[0] == '/') { // Search from project root
+            searchPath = project.basePath + settings.path
         } else { // Search from current file
             val currentFile = e.getData(com.intellij.openapi.actionSystem.CommonDataKeys.VIRTUAL_FILE)
             if (currentFile == null) {
-                showTimedNotification("$name No open file", "Cannot perform action when no file is opened")
-                return
+                showTimedNotification(
+                    "${actionSettings.name} no open file",
+                    "Cannot perform action when no file is opened")
+                return null
             }
-            searchPath = currentFile.parent.path + "/" + location
+            searchPath = currentFile.parent.path + "/" + settings.path
         }
-
-        val vfPath = getVirtualFileFromPath(searchPath)
-        if (vfPath == null) {
-            showTimedNotification("$name path not found", "Trying to open path ${searchPath}, but this path does not exist")
-            return
-        }
-
-        val changeListManager = if (settings.common.searchOnlyFilesTrackedByVersionControl) ChangeListManager.getInstance(project) else null
-        val allFiles = getAllFilesInRoot(vfPath, settings.common.excludedDirs, emptyList(), changeListManager)
-        files = allFiles.filter { vf -> regex.matches(vf.vf.name) }
-        files ?: return
-
-        // TODO: Re-enable once it is working
-//        files = project.service<FileWatcher>().getListOfFiles(
-//            vfPath,
-//            project,
-//            settings.common.searchOnlyFilesTrackedByVersionControl,
-//            ::isFileIncluded)
-
-        searchAction.doSearchForFiles(files!!, project, "", null)
-    }
-
-    fun getVirtualFileFromPath(filePath: String): VirtualFile? {
-        val virtualFile = VfsUtil.findFile(Path(filePath), true)
-        return virtualFile
-    }
-
-    fun isFileIncluded(vf: VirtualFile): Boolean {
-        return regex.matches(vf.name)
+        return searchPath
     }
 
     companion object {
-        fun getActionName(actionSettings: Array<String>) : String {
-            return actionSettings[0]
+        fun parseSettings(actionSettings: List<String>): Settings {
+            val settings = Settings(
+                path = actionSettings[0],
+                regex = utils.parseRegex(actionSettings.getOrElse(1) { "" }),
+                onlyVcsTracked = actionSettings.getOrElse(2) { "true" }.toBoolean())
+            return settings
         }
-        fun getActionShortcut(actionSettings: Array<String>) : String {
-            return if (actionSettings.size > 3) actionSettings[3] else ""
+
+        fun register(settings: utils.ActionSettings, globalSettings: GlobalSettings.SettingsState) {
+            val action = SearchFilesWithPatternAction(settings, globalSettings)
+            utils.registerAction(settings.name, settings.shortcut, action)
         }
     }
 }

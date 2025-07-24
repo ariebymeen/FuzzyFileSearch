@@ -1,0 +1,12 @@
+package com.fuzzyfilesearch.actions
+
+enum class ActionType {
+    SEARCH_FILE_IN_PATH,
+    SEARCH_FILE_IN_RELATED_PATH,
+    SEARCH_FILE_MATCHING_PATTERN,
+    SEARCH_RECENT_FILES,
+    SEARCH_OPEN_FILES,
+    OPEN_RELATIVE_FILE,
+    REGEX_SEARCH_IN_FILES,
+    GREP_IN_FILES,
+}
