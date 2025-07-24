@@ -1,8 +1,11 @@
 .gradle
+.idea
+.kotlin
 build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
+*.swp
 
 ### IntelliJ IDEA ###
 .idea
@@ -12,7 +15,7 @@ build/
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
-.intelijPlatform
+.intellijPlatform/
 
 ### Eclipse ###
 .apt_generated

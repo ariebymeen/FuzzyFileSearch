@@ -5,6 +5,7 @@ import com.fuzzyfilesearch.actions.utils
 import com.fuzzyfilesearch.settings.actionView.ActionViewWrapper
 import com.google.common.reflect.TypeToken
 import com.google.gson.Gson
+import com.intellij.openapi.actionSystem.KeyboardShortcut
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileChooser.*
 import com.intellij.openapi.keymap.KeymapManager
@@ -56,7 +57,8 @@ fun verifyShortcut(shortcut: String): String {
         if (keyStroke == null) {
             return "Shortcut '$shortcut' is not a valid shortcut. Please provide something similar to 'alt shift U'"
         }
-        val actions = KeymapManager.getInstance().activeKeymap.getActionIds(keyStroke, null)
+        val sc = KeyboardShortcut(keyStroke, null)
+        val actions = KeymapManager.getInstance().activeKeymap.getActionIdList(sc)
         val error = actions.any { !it.startsWith("com.fuzzyfilesearch.") }
         if (error) {
             return "Error, shortcut $shortcut is already in use with [${actions.joinToString(",")}].\nGo to keymap settings to remove this shortcut"

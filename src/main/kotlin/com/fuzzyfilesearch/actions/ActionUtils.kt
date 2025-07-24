@@ -83,105 +83,6 @@ object utils {
         }
     }
 
-//    fun registerOpenRelativeFileAction(action: Array<String>, settings: GlobalSettings.SettingsState) {
-//        registerAction(
-//            OpenRelativeFileAction.getActionName(action),
-//            OpenRelativeFileAction.getActionShortcut(action),
-//            OpenRelativeFileAction(action, settings.common.excludedDirs)
-//                      )
-//    }
-
-//    fun registerOpenRelativeFileActions(actions: Array<Array<String>>, settings: GlobalSettings.SettingsState) {
-//        actions.forEach { action -> registerOpenRelativeFileAction(action, settings) }
-//    }
-//
-//    fun registerSearchRelativeFileAction(action: Array<String>, settings: GlobalSettings.SettingsState) {
-//        registerAction(
-//            SearchRelativeFileAction.getActionName(action),
-//            SearchRelativeFileAction.getActionShortcut(action),
-//            SearchRelativeFileAction(action, settings)
-//                      )
-//    }
-//
-//    fun registerSearchRelativeFileActions(actions: Array<Array<String>>, settings: GlobalSettings.SettingsState) {
-//        actions.forEach { action -> registerSearchRelativeFileAction(action, settings) }
-//    }
-//
-//    fun registerSearchFileInPathAction(action: Array<String>, settings: GlobalSettings.SettingsState) {
-//        registerAction(
-//            SearchFileInPathAction.getActionName(action),
-//            SearchFileInPathAction.getActionShortcut(action),
-//            SearchFileInPathAction(action, settings)
-//                      )
-//    }
-//
-//    fun registerSearchFileInPathActions(actions: Array<Array<String>>, settings: GlobalSettings.SettingsState) {
-//        actions.forEach { action -> registerSearchFileInPathAction(action, settings) }
-//    }
-//
-//    fun registerSearchRecentFilesAction(action: Array<String>, settings: GlobalSettings.SettingsState) {
-//        registerAction(
-//            SearchRecentFilesAction.getActionName(action),
-//            SearchRecentFilesAction.getActionShortcut(action),
-//            SearchRecentFilesAction(action, settings)
-//                      )
-//    }
-//
-//    fun registerSearchRecentFiles(actions: Array<Array<String>>, settings: GlobalSettings.SettingsState) {
-//        actions.forEach { action -> registerSearchRecentFilesAction(action, settings) }
-//    }
-//
-//    fun registerSearchOpenFilesAction(action: Array<String>, settings: GlobalSettings.SettingsState) {
-//        registerAction(
-//            SearchOpenFilesAction.getActionName(action),
-//            SearchOpenFilesAction.getActionShortcut(action),
-//            SearchOpenFilesAction(action, settings)
-//                      )
-//    }
-//
-//    fun registerSearchOpenFiles(actions: Array<Array<String>>, settings: GlobalSettings.SettingsState) {
-//        actions.forEach { action -> registerSearchOpenFilesAction(action, settings) }
-//    }
-
-//    fun registerSearchFileMatchingPatternAction(action: Array<String>, settings: GlobalSettings.SettingsState) {
-//        registerAction(
-//            SearchFilesWithPatternAction.getActionName(action),
-//            SearchFilesWithPatternAction.getActionShortcut(action),
-//            SearchFilesWithPatternAction(action, settings)
-//                      )
-//    }
-
-//    fun registerSearchFileMatchingPatternActions(
-//        actions: Array<Array<String>>,
-//        settings: GlobalSettings.SettingsState
-//                                                ) {
-//        actions.forEach { action -> registerSearchFileMatchingPatternAction(action, settings) }
-//    }
-
-//    fun registerSearchForRegexInFilesAction(action: Array<String>, settings: GlobalSettings.SettingsState) {
-//        registerAction(
-//            RegexMatchInFiles.getActionName(action),
-//            RegexMatchInFiles.getActionShortcut(action),
-//            RegexMatchInFiles(action, settings)
-//                      )
-//    }
-
-//    fun registerSearchForRegexInFiles(actions: Array<Array<String>>, settings: GlobalSettings.SettingsState) {
-//        actions.forEach { action -> registerSearchForRegexInFilesAction(action, settings) }
-//    }
-
-//    fun registerGrepInFilesAction(action: Array<String>, settings: GlobalSettings.SettingsState) {
-//        registerAction(
-//            GrepInFiles.getActionName(action),
-//            GrepInFiles.getActionShortcut(action),
-//            GrepInFiles(action, settings)
-//                      )
-//    }
-
-//    fun registerGrepInFilesActions(actions: Array<Array<String>>, settings: GlobalSettings.SettingsState) {
-//        actions.forEach { action -> registerGrepInFilesAction(action, settings) }
-//    }
-
     fun registerActionsFromSettings(actions: Array<Array<String>>, settings: GlobalSettings.SettingsState) {
         actions.forEach { action ->
             try {
@@ -202,14 +103,6 @@ object utils {
             }
         }
     }
-
-//fun registerSearchAllFiles(actions: Array<Array<String>>, settings: GlobalSettings.SettingsState) {
-//    actions.forEach { action ->
-//        run {
-//            registerAction(action[0], action[2], SearchFileInPathAction(arrayOf(action[0], "/", action[1], action[2]), settings, true))
-//        }
-//    }
-//}
 
     fun unregisterActions(
         actions: Array<Array<String>>,
