@@ -20,7 +20,7 @@ class SearchOpenFilesActionView() : ActionViewBase() {
         panel.add(shortcutField)
     }
 
-    override fun initialize(panel: JPanel, settings: utils.ActionSettings) {
+    override fun initialize(settings: utils.ActionSettings) {
         actionNameField.textField.text = settings.name
         shortcutField.textField.text = settings.shortcut
 
@@ -29,7 +29,6 @@ class SearchOpenFilesActionView() : ActionViewBase() {
                 if (custom.extensionList.isEmpty()) "" else custom.extensionList.joinToString(", ")
 
         initialSettings = this.getStored()
-        this.addToPanel(panel)
     }
 
     override fun modified(): Boolean {

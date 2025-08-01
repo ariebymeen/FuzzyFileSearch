@@ -1,5 +1,6 @@
 package com.fuzzyfilesearch.services
 
+import com.fuzzyfilesearch.actions.utils
 import com.fuzzyfilesearch.settings.GlobalSettings
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -19,6 +20,9 @@ class RecentFilesKeeper(private val project: Project) : FileEditorManagerListene
     init {
         connection = project.messageBus.connect()
         connection.subscribe(FileEditorManagerListener.FILE_EDITOR_MANAGER, this)
+
+        val openFiles = utils.getAllOpenFiles(project).toMutableList()
+        historyList.addAll(openFiles)
     }
 
     override fun fileOpened(source: FileEditorManager, file: VirtualFile) {
@@ -34,6 +38,6 @@ class RecentFilesKeeper(private val project: Project) : FileEditorManagerListene
     fun getRecentFiles(nofFiles: Int = historyLength): List<VirtualFile> {
         val nofFiles = min(nofFiles, historyList.size)
         if (historyList.isEmpty()) return emptyList()
-        return historyList.subList(historyList.size - nofFiles, historyList.size - 1)
+        return historyList.subList(historyList.size - nofFiles, historyList.size)
     }
 }

@@ -13,6 +13,9 @@ import com.intellij.openapi.editor.ScrollType
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import kotlin.math.min
 import kotlin.system.measureTimeMillis
 
@@ -109,12 +112,31 @@ class RegexMatchInFiles(
             globalSettings.string,
             "Regex search")
         mPopup!!.showPopupInstance()
-        fzfSearchAction = FzfSearchAction(mSearchItemStrings, globalSettings.common.searchCaseSensitivity)
+//        fzfSearchAction = FzfSearchAction(mSearchItemStrings, globalSettings.common.searchCaseSensitivity)
+    }
+
+    private fun searchFzf(strings: List<String>, query: String): List<String> {
+        var searchFunc = ::FuzzyMatchV2
+        if (strings.size > 200) {
+            searchFunc = ::FuzzyMatchV1
+        }
+
+        val queryNorm = if (globalSettings.common.searchCaseSensitivity) query else query.lowercase()
+        val scores = Array<Int>(strings.size) { 0 }
+        for (index in strings.indices) {
+            scores[index] = searchFunc(globalSettings.common.searchCaseSensitivity, strings[index], queryNorm).score
+        }
+
+        val filtered = scores.zip(strings).filter { (num, _) -> num != 0 }
+        val sorted = filtered.sortedByDescending{ (num, _) -> num }
+        val (_, results) = sorted.unzip()
+        return results
     }
 
     fun getSortedResult(query: String): List<StringMatchInstanceItem> {
         if (query.isNotEmpty()) {
-            val filtered = fzfSearchAction!!.search(query)
+//            val filtered = fzfSearchAction!!.search(query)
+            val filtered = searchFzf(mSearchItemStrings, query)
             val visibleList = filtered.subList(0, min(filtered.size, globalSettings.string.numberOfFilesInSearchView))
             val visibleItems = visibleList
                 .map { file -> mSearchItemStrings.indexOfFirst { name -> name == file } }

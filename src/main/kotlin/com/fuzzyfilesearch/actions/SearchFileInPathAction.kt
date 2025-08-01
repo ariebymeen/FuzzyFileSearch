@@ -1,5 +1,6 @@
 package com.fuzzyfilesearch.actions
 
+import com.fuzzyfilesearch.renderers.FileInstanceItem
 import com.fuzzyfilesearch.searchbox.getAllFilesInRoot
 import com.fuzzyfilesearch.settings.GlobalSettings
 import com.fuzzyfilesearch.showTimedNotification
@@ -15,7 +16,8 @@ class SearchFileInPathAction(
     data class Settings(
         var path: String,
         var extensionList: List<String>,
-        var onlyVcsTracked: Boolean)
+        var onlyVcsTracked: Boolean,
+        var searchModifiedOnly: Boolean)
 
     val settings: Settings = parseSettings(actionSettings.generic)
     val searchForFiles = SearchForFiles(globalSettings)
@@ -27,11 +29,15 @@ class SearchFileInPathAction(
         val vfPath = utils.getVirtualFileFromPath(searchPath) ?: return
 
         val changeListManager = if (settings.onlyVcsTracked) ChangeListManager.getInstance(project) else null
-        val files = getAllFilesInRoot(
+        var files = getAllFilesInRoot(
             vfPath,
             globalSettings.common.excludedDirs,
             settings.extensionList,
             changeListManager)
+
+        if (settings.searchModifiedOnly) {
+            files = ArrayList(files.filter { utils.isFileModifiedOrAdded(project, it.vf) })
+        }
 
         // TODO: Re-enable once tested
 //        val time2 = measureTimeMillis {
@@ -65,7 +71,8 @@ class SearchFileInPathAction(
             val settings = Settings(
                 path = actionSettings[0],
                 extensionList = utils.extractExtensions(actionSettings.getOrElse(1) { "" }),
-                onlyVcsTracked = actionSettings.getOrElse(2) { "true" }.toBoolean())
+                onlyVcsTracked = actionSettings.getOrElse(2) { "true" }.toBoolean(),
+                searchModifiedOnly = actionSettings.getOrElse(3) { "false" }.toBoolean())
             return settings
         }
 

@@ -5,6 +5,7 @@ import com.fuzzyfilesearch.actions.OpenRelativeFileAction
 import com.fuzzyfilesearch.actions.utils
 import com.fuzzyfilesearch.components.LabeledTextField
 import com.fuzzyfilesearch.settings.verifyActionName
+import com.fuzzyfilesearch.settings.verifyRegex
 import com.fuzzyfilesearch.settings.verifyShortcut
 import javax.swing.JPanel
 
@@ -25,17 +26,16 @@ class OpenRelativeFileActionView() : ActionViewBase() {
         panel.add(shortcutField)
     }
 
-    override fun initialize(panel: JPanel, settings: utils.ActionSettings) {
+    override fun initialize(settings: utils.ActionSettings) {
         actionNameField.textField.text = settings.name
         shortcutField.textField.text = settings.shortcut
 
         val custom = OpenRelativeFileAction.parseSettings(settings.generic)
         regexPatternField.textField.text = custom.regex.pattern
         filePatternField.textField.text =
-                if (custom.filePatterns.isEmpty()) "" else custom.filePatterns.joinToString("| ")
+                if (custom.filePatterns.isEmpty()) "" else custom.filePatterns.joinToString(" | ")
 
         initialSettings = this.getStored()
-        this.addToPanel(panel)
     }
 
     override fun modified(): Boolean {
@@ -43,7 +43,10 @@ class OpenRelativeFileActionView() : ActionViewBase() {
     }
 
     override fun verify(): String {
-        val res = verifyActionName(actionNameField.text())
+        var res = verifyActionName(actionNameField.text())
+        if (res.isNotEmpty()) return res
+
+        res = verifyRegex(regexPatternField.text())
         if (res.isNotEmpty()) return res
 
         if (filePatternField.text().isEmpty()) {
@@ -56,7 +59,7 @@ class OpenRelativeFileActionView() : ActionViewBase() {
 
     override fun getStored(): Array<String> {
         return arrayOf(
-            ActionType.SEARCH_FILE_IN_PATH.toString(),
+            ActionType.OPEN_RELATIVE_FILE.toString(),
             actionNameField.text(),
             shortcutField.text(),
             regexPatternField.text(),

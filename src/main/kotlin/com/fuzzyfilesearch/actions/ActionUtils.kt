@@ -12,6 +12,8 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.keymap.KeymapManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vcs.FileStatus
+import com.intellij.openapi.vcs.FileStatusManager
 import com.intellij.openapi.vcs.changes.ChangeListManager
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
@@ -190,6 +192,12 @@ object utils {
     fun getAllOpenFiles(project: Project): List<VirtualFile> {
         val fileEditorManager = FileEditorManager.getInstance(project)
         return fileEditorManager.openFiles.toList()
+    }
+
+    fun isFileModifiedOrAdded(project: Project, vf: VirtualFile): Boolean {
+        val status = FileStatusManager.getInstance(project).getStatus(vf)
+        // It seems that new (not yet added files) are marked as UNKNOWN
+        return status == FileStatus.MODIFIED || status == FileStatus.ADDED || status == FileStatus.UNKNOWN
     }
 
     fun parseRegex(pattern: String): Regex {

@@ -35,7 +35,7 @@ class SearchRecentFilesActionView() : ActionViewBase() {
         panel.add(includeOpenFilesCheckbox)
     }
 
-    override fun initialize(panel: JPanel, settings: utils.ActionSettings) {
+    override fun initialize(settings: utils.ActionSettings) {
         actionNameField.textField.text = settings.name
         shortcutField.textField.text = settings.shortcut
 
@@ -47,7 +47,6 @@ class SearchRecentFilesActionView() : ActionViewBase() {
         includeOpenFilesCheckbox.box.isSelected = custom.alwaysIncludeOpenFiles
 
         initialSettings = this.getStored()
-        this.addToPanel(panel)
     }
 
     override fun modified(): Boolean {

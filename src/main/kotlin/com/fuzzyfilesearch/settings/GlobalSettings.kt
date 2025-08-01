@@ -68,7 +68,7 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         var searchPopupWidthPx = 700
         var searchPopupHeightPx = 500
         var minSizeEditorPx = 200
-        var numberOfFilesInSearchView = 99
+        var numberOfFilesInSearchView = 20
         var showNumberInSearchView = false
         var showFileIcon = true
         var verticalPositionOnScreen = 0.5
@@ -90,8 +90,20 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         // All custom actions that can be configured and stored
         var allActions: Array<Array<String>> = emptyArray()
 
+        // TODO: REMOVE, this is legacy, used for porting old settings into the new structure only!
+        var openRelativeFileActions: Array<Array<String>> = emptyArray()
+        var searchRelativeFileActions: Array<Array<String>> = emptyArray()
+        var searchPathActions: Array<Array<String>> = emptyArray()
+        var searchFilesMatchingPatterActions: Array<Array<String>> = emptyArray()
+        var searchRecentFilesActions: Array<Array<String>> = emptyArray()
+        var searchOpenFilesActions: Array<Array<String>> = emptyArray()
+        var searchAllFilesActions: Array<Array<String>> = emptyArray()
+        // TODO: REMOVE END
+
         // File search settings
         var filePathDisplayType: PathDisplayType = PathDisplayType.FILENAME_RELATIVE_PATH
+        var searchFileNameOnly: Boolean = false
+        var searchFileNameMultiplier: Double = 1.0
 
         // String search settings
         var applySyntaxHighlightingOnTextSearch = true
@@ -100,6 +112,10 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         var showLineNumberWithFileName = true
         var useSelectedTextForGrepInFiles = true
         var grepRememberPreviousQuerySeconds: Int = 6
+        // TODO: REMOVE, this is legacy, used for porting old settings into the new structure only!
+        var searchStringMatchingPatternActions: Array<Array<String>> = emptyArray()
+        var searchStringMatchingSubstringActions: Array<Array<String>> = emptyArray()
+        // TODO: REMOVE END
     }
 
     fun getInstance(): GlobalSettings {

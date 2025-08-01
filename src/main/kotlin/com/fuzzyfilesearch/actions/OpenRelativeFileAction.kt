@@ -9,7 +9,6 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.isFile
-import kotlin.math.min
 
 class OpenRelativeFileAction(
     var actionSettings: utils.ActionSettings,
@@ -60,7 +59,7 @@ class OpenRelativeFileAction(
         if (!fileFound) {
             showTimedNotification(
                 "${actionSettings.name} File not found",
-                "Trying to open file in path ${matchingFile.parent.path + '/'} with pattern ${settings.filePatterns.joinToString { ", " }}")
+                "Trying to open file in path ${matchingFile.parent.path + '/'} with pattern ${settings.filePatterns.joinToString(" | ")}")
         }
     }
 
@@ -76,8 +75,7 @@ class OpenRelativeFileAction(
         searchDirectory.children!!
             .filter { vf -> vf.isFile }
             .forEach { vf ->
-                val strLen = min(vf.nameWithoutExtension.length, currentFileName.length)
-                val patternMatch = pattern.replace("%cname%", vf.nameWithoutExtension.substring(0, strLen))
+                val patternMatch = pattern.replace("%cname%", currentFileName)
                 if (vf.name.contains(patternMatch)) {
                     return vf
                 }

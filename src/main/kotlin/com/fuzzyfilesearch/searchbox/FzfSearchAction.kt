@@ -3,82 +3,93 @@ package com.fuzzyfilesearch.searchbox
 import kotlinx.coroutines.*
 import ai.grazie.text.find
 import java.util.concurrent.Executors
-import java.util.concurrent.atomic.AtomicIntegerArray
 import kotlin.system.measureTimeMillis
 
-class FzfSearchAction(val files: List<String>,
+class FzfSearchAction(filePaths: List<String>,
+                      fileNames: List<String>,
                       val caseSensitive: Boolean = false,
-                      val multithreaded: Boolean = false) {
-    var previousResult: List<String>? = null
+                      val multithreaded: Boolean = false,
+                      val searchFileNameOnly: Boolean = false,
+                      val fileNameMultiplier: Double = 1.0) {
+    var previousResultPaths: List<String>? = null
+    var previousResultNames: List<String>? = null
     var previousQuery: String? = null
-    val mFiles = files
+    val mFilePaths = filePaths
+    val mFileNames = fileNames
 
     val cpuDispatcher = Executors.newFixedThreadPool(
         Runtime.getRuntime().availableProcessors()
     ).asCoroutineDispatcher()
 
-    fun search(query: String) : List<String> {
-        val result : List<String>
+    fun search(query: String) : Pair<List<String>, List<String>> {
         if (previousQuery != null
-            && previousResult != null
+            && previousResultPaths != null
             && query.find(previousQuery!!)?.start == 0) {
 
-            result = searchFzf(previousResult!!, query)
+            searchFzf(previousResultPaths!!, previousResultNames!!, query)
         } else {
-            result = searchFzf(mFiles, query)
+            searchFzf(mFilePaths,mFileNames, query)
         }
 
-        previousQuery = query
-        previousResult = result
-        return result
+        return Pair(previousResultPaths!!, previousResultNames!!)
     }
 
-    fun filterAndSort(ints: Array<Int>, strings: List<String>): List<String>
+    fun filterAndSortAndSetPreviousResult(ints: Array<Int>, paths: List<String>, names: List<String>)
     {
-        require(ints.size == strings.size) { "Arrays must be of equal length" }
+        require(ints.size == paths.size) { "Arrays must be of equal length" }
+        require(ints.size == names.size) { "Arrays must be of equal length" }
 
         // Pair each int with its corresponding string, filter out zeros
-        val filtered = ints.zip(strings.asIterable())
+        val filtered = ints.zip(ints.indices)
                            .filter { (num, _) -> num != 0 }
 
         // Sort by the integer values while keeping strings paired
         val sorted = filtered.sortedByDescending{ (num, _) -> num }
 
         // Unzip back into separate arrays
-        val (_, sortedStrings) = sorted.unzip()
-
-        return sortedStrings
+        val (_, sortedIndices) = sorted.unzip()
+        previousResultPaths = sortedIndices.map { index -> paths[index] }
+        previousResultNames = sortedIndices.map { index -> names[index] }
     }
 
-    private fun searchFzf(searchFiles: List<String>, query: String) : List<String> {
+    private fun searchFzf(searchPaths: List<String>, searchNames: List<String>, query: String) {
         var searchFunc = ::FuzzyMatchV2
-        if (searchFiles.size > 200) {
+        if (searchPaths.size > 200) {
             searchFunc = ::FuzzyMatchV1
         }
 
         val queryNorm = if (!caseSensitive) query else query.lowercase()
 
-        val scores = Array<Int>(searchFiles.size) { 0 }
+        val scores = Array<Int>(searchPaths.size) { 0 }
         val timeTaken = measureTimeMillis {
            // Process chunks in parallel but collect results in chunk order
             if (multithreaded) {
                 runBlocking {
-                    searchFiles.indices.chunked(30).map { chunk ->
+                    searchPaths.indices.chunked(30).map { chunk ->
                         async(cpuDispatcher) {
                             for (index in chunk) {
-                                scores[index] = searchFunc(caseSensitive, searchFiles[index], queryNorm).score
+                                if (searchFileNameOnly) {
+                                    scores[index] = searchFunc(caseSensitive, searchNames[index], queryNorm).score
+                                } else {
+                                    scores[index] = searchFunc(caseSensitive, searchPaths[index], queryNorm).score
+                                    scores[index] = (scores[index] + (fileNameMultiplier - 1) * searchFunc(caseSensitive, searchNames[index], queryNorm).score).toInt()
+                                }
                             }
                         }
                     }.awaitAll()
                 }
             } else {
-                for (index in searchFiles.indices) {
-                    scores[index] = searchFunc(caseSensitive, searchFiles[index], queryNorm).score
+                for (index in searchPaths.indices) {
+                    if (searchFileNameOnly) {
+                        scores[index] = searchFunc(caseSensitive, searchNames[index], queryNorm).score
+                    } else {
+                        scores[index] = searchFunc(caseSensitive, searchPaths[index], queryNorm).score
+                        scores[index] = (scores[index] + (fileNameMultiplier - 1) * searchFunc(caseSensitive, searchNames[index], queryNorm).score).toInt()
+                    }
                 }
             }
         }
 
-        println("Searching ${searchFiles.size} files took ${timeTaken} ms. Multithreaded: ${multithreaded}")
-        return filterAndSort(scores, searchFiles)
+        filterAndSortAndSetPreviousResult(scores, searchPaths, searchNames)
     }
 }

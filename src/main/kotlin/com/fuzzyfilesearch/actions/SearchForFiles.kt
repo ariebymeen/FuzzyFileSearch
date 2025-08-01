@@ -12,6 +12,7 @@ import kotlin.system.measureTimeMillis
 
 class SearchForFiles(val settings: GlobalSettings.SettingsState) {
 
+    var mFilePaths: List<String>? = null
     var mFileNames: List<String>? = null
     var mPopup: SearchPopupInstance<FileInstanceItem>? = null
     var mFiles = emptyList<FileInstanceItem>()
@@ -33,16 +34,14 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
 
         mFiles = files
         mProject = project
-        mFileNames = if (settings.filePathDisplayType != PathDisplayType.FILENAME_ONLY) {
-            mFiles.map { file ->
-                if (isFileInProject(project, file.vf)) {
-                    file.vf.path.substring(project.basePath!!.length)
-                } else {
-                    file.vf.path
-                }
+
+        mFileNames = mFiles.map { file -> file.vf.name }
+        mFilePaths = mFiles.map { file ->
+            if (isFileInProject(project, file.vf)) {
+                file.vf.path.substring(project.basePath!!.length)
+            } else {
+                file.vf.path
             }
-        } else {
-            mFiles.map { file -> file.vf.name }
         }
 
         mPopup = SearchPopupInstance(
@@ -51,24 +50,27 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
             settings.file,
             title)
         mPopup!!.showPopupInstance()
-        fzfSearchAction =
-                FzfSearchAction(mFileNames!!, settings.common.searchCaseSensitivity, settings.file.searchMultiThreaded)
+        fzfSearchAction = FzfSearchAction(mFilePaths!!,
+                                          mFileNames!!,
+                                          settings.common.searchCaseSensitivity,
+                                          settings.file.searchMultiThreaded,
+                                          settings.searchFileNameOnly,
+                                          settings.searchFileNameMultiplier)
     }
 
     fun getSortedFileList(query: String): List<FileInstanceItem> {
         if (query.isNotEmpty()) {
             val visibleFiles: List<FileInstanceItem>
             val timeTaken = measureTimeMillis {
-                val filteredFiles = fzfSearchAction!!.search(query)
-                val visibleList =
-                        filteredFiles.subList(0, min(filteredFiles.size, settings.file.numberOfFilesInSearchView))
+                val (filteredPaths, _) = fzfSearchAction!!.search(query)
+                val visibleList = filteredPaths.subList(0, min(filteredPaths.size, settings.file.numberOfFilesInSearchView))
                 visibleFiles = visibleList
-                    .map { file -> mFileNames!!.indexOfFirst { name -> name == file } }
+                    .map { file -> mFilePaths!!.indexOfFirst { name -> name == file } }
                     .map { index ->
                         if (index >= 0) {
                             mFiles[index]
                         } else {
-                            println("Error, unexpected index $index. Filtered files size: ${filteredFiles.size}, file size: ${mFiles.size}")
+                            println("Error, unexpected index $index. Filtered files size: ${filteredPaths.size}, file size: ${mFiles.size}")
                             showErrorNotification(
                                 "Something went wrong searching",
                                 "Error searching mFiles: $visibleList, invalidating caches now")

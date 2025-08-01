@@ -47,11 +47,7 @@ class GrepInFiles(
 
     /* Keep track of the latest selected text used as search query */
     var mSelectedText: String? = ""
-
-    /* The same list but only the matching string. Is used in the search action to search */
-    var mSearchItemStrings = emptyList<String>()
     var mProject: Project? = null
-    var fzfSearchAction: FzfSearchAction? = null
 
     val cpuDispatcher = Executors.newFixedThreadPool(
         Runtime.getRuntime().availableProcessors()
@@ -101,7 +97,6 @@ class GrepInFiles(
         }
 
         mPopup!!.showPopupInstance(initialQuery)
-        fzfSearchAction = FzfSearchAction(mSearchItemStrings, globalSettings.common.searchCaseSensitivity)
     }
 
     fun getSortedResult(query: String): List<StringMatchInstanceItem> {

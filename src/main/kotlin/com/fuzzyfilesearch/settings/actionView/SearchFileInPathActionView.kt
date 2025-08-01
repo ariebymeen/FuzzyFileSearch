@@ -12,7 +12,8 @@ import javax.swing.JPanel
 class SearchFileInPathActionView() : ActionViewBase() {
     val pathField = LabeledTextField(
         "Path: ",
-        "Enter a path. Starting with '/' searches from the project root, starting with '.' searches from the current file")
+        "Enter a path. Starting with '/' searches from the project root, starting with '.' searches from the current file",
+        "/")
     val extensionFilterField =
             LabeledTextField(
                 "Extensions filter: ",
@@ -20,6 +21,9 @@ class SearchFileInPathActionView() : ActionViewBase() {
     val vcsTrackedOnlyCheckbox = WrappedCheckbox(
         "Only search files tracked by vcs",
         "If selected, only search files that are tracked by vcs")
+    val modifiedFilesOnlyCheckbox = WrappedCheckbox(
+        "Only search files that have been modified",
+        "If selected, only search through recent files that have been edited", false)
 
     override fun addToPanel(panel: JPanel) {
         panel.add(actionNameField)
@@ -27,9 +31,10 @@ class SearchFileInPathActionView() : ActionViewBase() {
         panel.add(extensionFilterField)
         panel.add(shortcutField)
         panel.add(vcsTrackedOnlyCheckbox)
+        panel.add(modifiedFilesOnlyCheckbox)
     }
 
-    override fun initialize(panel: JPanel, settings: utils.ActionSettings) {
+    override fun initialize(settings: utils.ActionSettings) {
         actionNameField.textField.text = settings.name
         shortcutField.textField.text = settings.shortcut
 
@@ -38,9 +43,9 @@ class SearchFileInPathActionView() : ActionViewBase() {
         extensionFilterField.textField.text =
                 if (custom.extensionList.isEmpty()) "" else custom.extensionList.joinToString(", ")
         vcsTrackedOnlyCheckbox.box.isSelected = custom.onlyVcsTracked
+        modifiedFilesOnlyCheckbox.box.isSelected = custom.searchModifiedOnly
 
         initialSettings = this.getStored()
-        this.addToPanel(panel)
     }
 
     override fun modified(): Boolean {
@@ -66,7 +71,8 @@ class SearchFileInPathActionView() : ActionViewBase() {
             shortcutField.text(),
             pathField.text(),
             extensionFilterField.text(),
-            vcsTrackedOnlyCheckbox.box.isSelected.toString())
+            vcsTrackedOnlyCheckbox.box.isSelected.toString(),
+            modifiedFilesOnlyCheckbox.box.isSelected.toString())
     }
 
     override fun help(): String {

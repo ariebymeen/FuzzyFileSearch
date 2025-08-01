@@ -75,7 +75,7 @@ class ActionViewWrapper(
         combobox.isEnabled = false
         combobox.selectedItem = settings.type
         setItemBasedOnSelectedType()
-        item?.initialize(contents, settings)
+        item?.initialize(settings)
         fillContentBox()
     }
 
@@ -119,7 +119,12 @@ class ActionViewWrapper(
         val panel = JPanel(BorderLayout())
         panel.add(warningLabel)
         contents.add(panel)
-        item?.addToPanel(contents)
+        val contentsPanel = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+            border = JBUI.Borders.emptyLeft(4)
+        }
+        item?.addToPanel(contentsPanel)
+        contents.add(contentsPanel)
         contents.add(rbPanel)
 
         contents.revalidate()

@@ -8,6 +8,7 @@ import com.fuzzyfilesearch.components.WrappedCheckbox
 import com.fuzzyfilesearch.settings.verifyActionName
 import com.fuzzyfilesearch.settings.verifyRegex
 import com.fuzzyfilesearch.settings.verifyShortcut
+import com.intellij.ui.components.JBTextArea
 import javax.swing.JPanel
 
 class RegexMatchInFilesActionView() : ActionViewBase() {
@@ -15,7 +16,7 @@ class RegexMatchInFilesActionView() : ActionViewBase() {
     val pathField = LabeledTextField(
         "Path: ",
         "Enter a path. Starting with '/' searches from the project root, starting with '.' searches from the current file. Leaving it empty searches only the current file",
-        "")
+        "/")
     val regexPatternField =
             LabeledTextField(
                 "Regex: ",
@@ -37,7 +38,7 @@ class RegexMatchInFilesActionView() : ActionViewBase() {
         panel.add(vcsTrackedOnlyCheckbox)
     }
 
-    override fun initialize(panel: JPanel, settings: utils.ActionSettings) {
+    override fun initialize(settings: utils.ActionSettings) {
         actionNameField.textField.text = settings.name
         shortcutField.textField.text = settings.shortcut
 
@@ -49,7 +50,6 @@ class RegexMatchInFilesActionView() : ActionViewBase() {
         vcsTrackedOnlyCheckbox.box.isSelected = custom.onlyVcsTracked
 
         initialSettings = this.getStored()
-        this.addToPanel(panel)
     }
 
     override fun modified(): Boolean {

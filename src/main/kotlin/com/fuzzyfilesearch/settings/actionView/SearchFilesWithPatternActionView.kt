@@ -31,7 +31,7 @@ class SearchFilesWithPatternActionView() : ActionViewBase() {
         panel.add(vcsTrackedOnlyCheckbox)
     }
 
-    override fun initialize(panel: JPanel, settings: utils.ActionSettings) {
+    override fun initialize(settings: utils.ActionSettings) {
         actionNameField.textField.text = settings.name
         shortcutField.textField.text = settings.shortcut
 
@@ -41,7 +41,6 @@ class SearchFilesWithPatternActionView() : ActionViewBase() {
         vcsTrackedOnlyCheckbox.box.isSelected = custom.onlyVcsTracked
 
         initialSettings = this.getStored()
-        this.addToPanel(panel)
     }
 
     override fun modified(): Boolean {

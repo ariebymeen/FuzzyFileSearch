@@ -6,6 +6,7 @@ import com.fuzzyfilesearch.searchbox.CustomRenderer
 import com.fuzzyfilesearch.searchbox.getFont
 import com.fuzzyfilesearch.settings.GlobalSettings
 import com.intellij.openapi.project.Project
+import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.util.preferredWidth
 import com.intellij.util.ui.JBUI
@@ -54,6 +55,7 @@ class HighlightedStringCellRenderer(
             if (mShowFileName) {
                 value.fileNameTextPane = ShrunkVerticallyCenteredTextPane(mSettings.string.searchItemHeight)
                 value.fileNameTextPane!!.text = ""
+                value.fileNameTextPane!!.font = font
                 value.fileNameTextPane!!.isOpaque = false
                 value.fileNameTextPane!!.styledDocument.insertString(0, value.vf.name, tinyStyle)
                 if (mSettings.showLineNumberWithFileName) {

@@ -1,5 +1,6 @@
 package com.fuzzyfilesearch.settings
 
+import com.intellij.openapi.application.invokeLater
 import com.intellij.ui.ColorPanel
 import com.intellij.ui.FontComboBox
 import com.intellij.ui.components.JBLabel
@@ -52,7 +53,7 @@ class CommonSettingsComponent(mSettings: GlobalSettings.SettingsState) {
         keeper.createTextFieldComponent(
             mSettings.common::openInActiveEditor, builder, "Shortcut open file in aive editor", """
                     Apart from using enter, a custom shortcut can be added to open the currently selected file in the active editor""".trimIndent())
-        keeper.createCheckboxComponent(
+        val defaultFontCheckbox = keeper.createCheckboxComponent(
             mSettings.common::useDefaultFont, builder, "Use default popup font",
             """If checked use the same font as the editor, else a font can be selected""".trimIndent())
         builder.addLabeledComponent(
@@ -70,7 +71,7 @@ class CommonSettingsComponent(mSettings: GlobalSettings.SettingsState) {
             "Popup font size",
             """Choose the font size""")
 
-        keeper.createCheckboxComponent(
+        val defaultHighlightCheckbox = keeper.createCheckboxComponent(
             mSettings.common::useDefaultHighlightColor,
             builder,
             "Use default highlight color",
@@ -104,6 +105,20 @@ class CommonSettingsComponent(mSettings: GlobalSettings.SettingsState) {
 
         builder.addComponentFillVertically(JPanel(), 0)
         panel = builder.panel
+
+        fun setEnabledDisabled() {
+            invokeLater {
+                fontSelectorDropdown.isEnabled = !defaultFontCheckbox.isSelected
+                colorSelectorElement.isEnabled = !defaultHighlightCheckbox.isSelected
+            }
+        }
+
+        defaultFontCheckbox.addActionListener {
+            setEnabledDisabled()
+        }
+        defaultHighlightCheckbox.addActionListener {
+            setEnabledDisabled()
+        }
     }
 }
 

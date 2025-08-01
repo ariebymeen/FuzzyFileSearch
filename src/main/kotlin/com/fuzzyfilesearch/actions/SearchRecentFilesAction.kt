@@ -24,12 +24,12 @@ class SearchRecentFilesAction(
         var alwaysIncludeOpenFiles: Boolean)
 
     val settings = parseSettings(settings.generic)
+    val searchForFiles = SearchForFiles(globalSettings)
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
 
         val recentFiles = project.service<RecentFilesKeeper>().getRecentFiles().toMutableList()
-
         if (settings.alwaysIncludeOpenFiles) {
             val openFiles = utils.getAllOpenFiles(project).toMutableList()
             recentFiles += openFiles.filter { !recentFiles.contains(it) }
@@ -37,19 +37,13 @@ class SearchRecentFilesAction(
 
         var filteredFiles = recentFiles.filter { file -> isFileExtensionIncluded(file) }
         if (settings.searchModifiedOnly) {
-            filteredFiles = filteredFiles.filter { isFileModifiedOrAdded(project, it) }
+            filteredFiles = filteredFiles.filter { utils.isFileModifiedOrAdded(project, it) }
         }
         filteredFiles = filteredFiles.takeLast(min(filteredFiles.size, settings.nofFilesHistory))
 
         val searchItems = filteredFiles.map { file -> FileInstanceItem(file) }
         val title = if (settings.searchModifiedOnly) "Recent files (edited only)" else "Recent files"
-        SearchForFiles(globalSettings).search(searchItems, project, settings.extensionList, title)
-    }
-
-    fun isFileModifiedOrAdded(project: Project, vf: VirtualFile): Boolean {
-        val status = FileStatusManager.getInstance(project).getStatus(vf)
-        // It seems that new (not yet added files) are marked as UNKNOWN
-        return status == FileStatus.MODIFIED || status == FileStatus.ADDED || status == FileStatus.UNKNOWN
+        searchForFiles.search(searchItems, project, settings.extensionList, title)
     }
 
     fun isFileExtensionIncluded(vf: VirtualFile): Boolean {

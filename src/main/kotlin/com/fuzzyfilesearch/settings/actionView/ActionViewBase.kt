@@ -15,7 +15,7 @@ abstract class ActionViewBase() {
     abstract fun addToPanel(panel: JPanel)
 
     /** Add interface items to panel, but from the settings */
-    abstract fun initialize(panel: JPanel, settings: utils.ActionSettings)
+    abstract fun initialize(settings: utils.ActionSettings)
     abstract fun modified(): Boolean
     abstract fun verify(): String
 
