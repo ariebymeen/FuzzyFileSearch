@@ -23,6 +23,7 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
         files: List<FileInstanceItem>,
         project: Project,
         extensions: List<String>?,
+        searchDirectory: String,
         title: String = "File search") {
         if (files.size > 100000) {
             showErrorNotification(
@@ -45,10 +46,11 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
         }
 
         mPopup = SearchPopupInstance(
-            FilePathCellRenderer(project, settings), ::getSortedFileList, ::openFile,
+            FilePathCellRenderer(project, settings, searchDirectory), ::getSortedFileList, ::openFile,
             ::getFileFromItem, settings, project, extensions,
             settings.file,
-            title)
+            title,
+            utils.getVisualSearchDir(searchDirectory, settings, project.basePath.toString()))
         mPopup!!.showPopupInstance()
         fzfSearchAction = FzfSearchAction(mFilePaths!!,
                                           mFileNames!!,

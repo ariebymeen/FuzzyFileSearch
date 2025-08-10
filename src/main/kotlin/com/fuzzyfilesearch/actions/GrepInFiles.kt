@@ -130,6 +130,7 @@ class GrepInFiles(
                     mMatches.indices.chunked(10).map { chunk ->
                         async(cpuDispatcher) {
                             for (index in chunk) {
+                                if (mMatches.size < index) continue
                                 if (!findMatchesInFile(mMatches[index], query, result, itemsToRemove)) {
                                     break
                                 }

@@ -13,6 +13,7 @@ class SearchOpenFilesAction(
     data class Settings(val extensionList: List<String>)
 
     val settings = parseSettings(settings.generic)
+    val searchForFiles = SearchForFiles(globalSettings)
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
@@ -20,7 +21,7 @@ class SearchOpenFilesAction(
         val files =
                 openFiles.filter { file -> settings.extensionList.isEmpty() || settings.extensionList.contains(file.extension) }
                     .map { file -> FileInstanceItem(file) }
-        SearchForFiles(globalSettings).search(files, project, settings.extensionList, "Open files")
+        searchForFiles.search(files, project, settings.extensionList, project.basePath.toString(), "Open files")
     }
 
     companion object {

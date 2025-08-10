@@ -18,6 +18,7 @@ class SearchFilesWithPatternAction(
         var onlyVcsTracked: Boolean)
 
     val settings = parseSettings(actionSettings.generic)
+    val searchAction = SearchForFiles(globalSettings)
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
@@ -29,7 +30,7 @@ class SearchFilesWithPatternAction(
         val allFiles = getAllFilesInRoot(vfPath, globalSettings.common.excludedDirs, emptyList(), changeListManager)
         val files = allFiles.filter { vf -> settings.regex.matches(vf.vf.name) }
 
-        SearchForFiles(globalSettings).search(files, project, null)
+        searchAction.search(files, project, null, searchPath, "File search (pattern)")
     }
 
     fun getSearchPath(settings: Settings, project: Project, e: AnActionEvent): String? {

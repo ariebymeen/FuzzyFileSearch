@@ -19,6 +19,7 @@ class SearchRelativeFileAction(
         val onlyVcsTracked: Boolean)
 
     val settings = parseSettings(actionSettings.generic)
+    val searchAction = SearchForFiles(globalSettings)
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
@@ -31,6 +32,7 @@ class SearchRelativeFileAction(
 
         val changeListManager = if (settings.onlyVcsTracked) ChangeListManager.getInstance(project) else null
         var files: List<FileInstanceItem>? = null
+        var searchDirectory: String
         if (settings.regex.pattern.isEmpty()) {
             // If pattern is empty, list all files from current directory down
             files = getAllFilesInRoot(
@@ -38,6 +40,7 @@ class SearchRelativeFileAction(
                 globalSettings.common.excludedDirs,
                 settings.extensionList,
                 changeListManager)
+            searchDirectory = currentFile.parent.path
         } else {
             // Else try finding a file matching pattern
             val matchingFile =
@@ -48,13 +51,14 @@ class SearchRelativeFileAction(
                     "Could not find file satisfying regex ${settings.regex.pattern}")
                 return
             }
+            searchDirectory = matchingFile.parent.path
             files = getAllFilesInRoot(
                 matchingFile.parent,
                 globalSettings.common.excludedDirs,
                 settings.extensionList,
                 changeListManager)
         }
-        SearchForFiles(globalSettings).search(files, project, settings.extensionList)
+        searchAction.search(files, project, settings.extensionList, searchDirectory)
     }
 
     companion object {

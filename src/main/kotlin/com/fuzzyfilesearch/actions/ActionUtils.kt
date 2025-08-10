@@ -2,6 +2,8 @@ package com.fuzzyfilesearch.actions
 
 import com.fuzzyfilesearch.searchbox.getAllFilesInRoot
 import com.fuzzyfilesearch.settings.GlobalSettings
+import com.fuzzyfilesearch.settings.ShowFilenamePolicy
+import com.fuzzyfilesearch.settings.ShowSearchDirectoryPolicy
 import com.fuzzyfilesearch.showErrorNotification
 import com.fuzzyfilesearch.showTimedNotification
 import com.intellij.openapi.actionSystem.ActionManager
@@ -32,6 +34,35 @@ object utils {
 
     fun getActionName(name: String): String {
         return "com.fuzzyfilesearch.$name"
+    }
+
+    fun getVisualSearchDir(searchDirectory: String, settings: GlobalSettings.SettingsState, projectBaseDir: String): String {
+        var dir = searchDirectory
+        if (searchDirectory.takeLast(1)[0] == '/') {
+            dir = dir.substring(0, dir.length - 1)
+        }
+        var visualText: String
+        when (settings.showSearchDirectoryPolicy) {
+            ShowSearchDirectoryPolicy.SHOW_LAST_DIRECTORY_ONLY -> {
+                val dirs = dir.split('/')
+                if (dirs.isNotEmpty()) {
+                    val base = if (dirs.size == 1) "/" else "./"
+                    visualText = base + dirs.takeLast(1)[0] + "/"
+                } else {
+                    visualText = "/"
+                }
+            }
+            ShowSearchDirectoryPolicy.SHOW_FROM_PROJECT_ROOT -> visualText = "${dir.substring(projectBaseDir.length)}/"
+            ShowSearchDirectoryPolicy.SHOW_FULL_PATH -> visualText = "$dir/"
+            ShowSearchDirectoryPolicy.SHOW_NONE -> visualText = ""
+        }
+
+        if (visualText.length > settings.showSearchDirectoryCutoffLen) {
+            val start = (visualText.length - settings.showSearchDirectoryCutoffLen + 2)
+            println("Start: $start, vt: $visualText ${visualText.length}")
+            visualText = ".." + visualText.substring(start.coerceAtLeast(0))
+        }
+        return visualText
     }
 
     /** All actions are stored as Array<String> as this serializes easily.

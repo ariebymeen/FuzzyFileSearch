@@ -32,12 +32,6 @@ class CommonSettingsComponent(mSettings: GlobalSettings.SettingsState) {
         keeper.createCheckboxComponent(
             mSettings.common::searchCaseSensitivity, builder, "Search case sensitive",
             "If checked the searching algorithm is case sensitive")
-        keeper.createCheckboxComponent(
-            mSettings.common::searchOnlyFilesTrackedByVersionControl,
-            builder,
-            "Search only files that are tracked by vcs",
-            """ If checked only files that are tracked by a version control system (vcs) are searched.
-                Else all files are part of the search (except for directories explicitly excluded)""".trimIndent())
         keeper.createComboboxComponent(
             mSettings.common::modifierKey, ModifierKey.values(), builder, "Modifier key", """
                     The results can be scrolled through using the arrow up/down keys or using the j/k key if the modifier
@@ -119,6 +113,7 @@ class CommonSettingsComponent(mSettings: GlobalSettings.SettingsState) {
         defaultHighlightCheckbox.addActionListener {
             setEnabledDisabled()
         }
+        setEnabledDisabled()
     }
 }
 

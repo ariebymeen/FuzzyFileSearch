@@ -17,6 +17,7 @@ import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.WindowManager
+import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.util.width
 import com.intellij.util.ui.JBUI
@@ -71,9 +72,30 @@ class SearchPopupInstance<ListItemType>(
     var mExtensions: List<String>? = null,
     var mPopupSettings: GlobalSettings.PopupSettings,
     var mTitle: String,
-                                       ) {
-    val mSearchField: JTextField = JTextField()
-    val mExtensionField: JTextField = TransparentTextField(1.0F)
+    var mSearchDirectory: String = "") {
+    val mFont = getFont(mSettings)
+    val mSearchField: JTextField = JTextField().apply {
+        border = JBUI.Borders.empty(2, -6, 0, 5)
+        toolTipText = "Type to search..."
+        isFocusable = true
+        font = mFont
+    }
+    val mExtensionField: JTextField = TransparentTextField(1.0F).apply {
+        border = JBUI.Borders.empty(2, 0, 0, 2)
+        toolTipText = ""
+        isEditable = false
+        isEnabled = false
+        alignmentX = Component.RIGHT_ALIGNMENT
+        font = mFont
+    }
+    val mSearchDirField: JTextField = TransparentTextField(1.0F).apply {
+        toolTipText = ""
+        isEnabled = false
+        isEditable = false
+        font = mFont
+        alignmentX = Component.RIGHT_ALIGNMENT
+        border = BorderFactory.createCompoundBorder(JBUI.Borders.empty(2, 0, 0, -6), JBUI.Borders.empty())
+    }
     val mListModel: DefaultListModel<ListItemType> = DefaultListModel()
     val mResultsList = JXList(mListModel)
     var mPopup: JBPopup? = null
@@ -288,13 +310,14 @@ class SearchPopupInstance<ListItemType>(
                 mExtensionField.text = mExtensionField.text.substring(0, 13)
             }
             val width = mExtensionField.getFontMetrics(mExtensionField.font).stringWidth(mExtensionField.text)
-            mExtensionField.preferredSize = Dimension(width + 30, mPopupSettings.searchBarHeight)
+            mExtensionField.preferredSize = Dimension(width + 20, mPopupSettings.searchBarHeight)
         }
     }
 
     private fun setSearchBarHeight() {
         mSearchField.preferredSize = Dimension(0, mPopupSettings.searchBarHeight)
         mExtensionField.preferredSize = Dimension(0, mPopupSettings.searchBarHeight)
+        mSearchDirField.preferredSize = Dimension(0, mPopupSettings.searchBarHeight)
     }
 
     private fun getFont(settings: GlobalSettings.SettingsState): Font {
@@ -307,19 +330,21 @@ class SearchPopupInstance<ListItemType>(
         return Font(fontName, Font.PLAIN, settings.common.fontSize)
     }
 
-    private fun createPopupInstance() {
-        val font = getFont(mSettings)
-        val border: EmptyBorder = JBUI.Borders.empty(2, 5, 0, 5)
-        mSearchField.border = border
-        mSearchField.toolTipText = "Type to search..."
-        mSearchField.isFocusable = true
-        mSearchField.font = font
+    private fun setSearchDirField(searchDir: String) {
+        if (searchDir.isEmpty()) {
+            mSearchField.border = JBUI.Borders.empty(2, 5, 0, 5)
+            mSearchField.margin = JBUI.insetsLeft(3)
+            mSearchDirField.isVisible = false
+        } else {
+            mSearchDirField.text = searchDir
+            val width = mSearchDirField.getFontMetrics(mSearchDirField.font).stringWidth(mSearchDirField.text)
+            mSearchDirField.preferredSize = Dimension(width + 6 /* + 6 to compensate padding to the left */, mPopupSettings.searchBarHeight)
+        }
+    }
 
-        mExtensionField.border = border
-        mExtensionField.toolTipText = ""
-        mExtensionField.isEditable = false
-        mExtensionField.font = font
+    private fun createPopupInstance() {
         setSearchBarHeight()
+        setSearchDirField(mSearchDirectory)
         setExtensionsField(mExtensions)
 
         mSearchField.addKeyListener(object : KeyAdapter() {
@@ -361,30 +386,20 @@ class SearchPopupInstance<ListItemType>(
         // Total header, showing title (optional) and search bar
         val headerBar = JPanel(BorderLayout())
         if (mSettings.common.showTitleInSearchView) {
-            val title = JTextField(mTitle)
-            title.horizontalAlignment = JTextField.CENTER
-//            title.alignmentY
-            val titleFont = Font(font.name, Font.PLAIN, mSettings.common.titleFontSize)
-            title.isEditable = false
-            title.font = titleFont
-            title.background = mResultsList.background
-            // Set the height of the text field to exactly fit the text
-            val metrics: FontMetrics = title.getFontMetrics(font)
-            val height = metrics.height
-            mTitleBarHeight = floor(height * 1.2).toInt()
-            title.preferredSize = Dimension(title.preferredSize.width, mTitleBarHeight)
-            title.border = JBUI.Borders.empty()
-            headerBar.add(title, BorderLayout.NORTH)
+            addTitleBar(getFont(mSettings), headerBar)
         }
 
         // Field with text header
-        val searchBar = JPanel(BorderLayout())
+        val searchBar = JPanel(BorderLayout(0,0))
 
         // Search field has the same background color as the result list
         mSearchField.background = mResultsList.background
         mExtensionField.background = mResultsList.background
+        mSearchDirField.background = mResultsList.background
+//        mSearchDirField.background = JBColor.BLUE
         searchBar.background = mResultsList.background
 
+        searchBar.add(mSearchDirField, BorderLayout.WEST)
         searchBar.add(mSearchField, BorderLayout.CENTER)
         searchBar.add(mExtensionField, BorderLayout.EAST)
 
@@ -428,6 +443,22 @@ class SearchPopupInstance<ListItemType>(
                 }
             }
         }
+    }
+
+    private fun addTitleBar(font: Font, headerBar: JPanel) {
+        val title = JTextField(mTitle)
+        title.horizontalAlignment = JTextField.CENTER
+        val titleFont = Font(font.name, Font.PLAIN, mSettings.common.titleFontSize)
+        title.isEditable = false
+        title.font = titleFont
+        title.background = mResultsList.background
+        // Set the height of the text field to exactly fit the text
+        val metrics: FontMetrics = title.getFontMetrics(font)
+        val height = metrics.height
+        mTitleBarHeight = floor(height * 1.2).toInt()
+        title.preferredSize = Dimension(title.preferredSize.width, mTitleBarHeight)
+        title.border = JBUI.Borders.empty()
+        headerBar.add(title, BorderLayout.NORTH)
     }
 
     private fun getForegroundColor(settings: GlobalSettings.SettingsState): Color {

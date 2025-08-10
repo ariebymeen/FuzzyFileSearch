@@ -18,12 +18,18 @@ import javax.swing.text.StyleConstants
 
 class FilePathCellRenderer(
     val mProject: Project,
-    val mSettings: GlobalSettings.SettingsState) : CustomRenderer<FileInstanceItem>() {
-    val basePath = mProject.basePath!!
+    val mSettings: GlobalSettings.SettingsState,
+    var searchPath: String) : CustomRenderer<FileInstanceItem>() {
     val font = getFont(mSettings)
     lateinit var tinyStyle: Style
     lateinit var boldStyle: Style
     lateinit var italicStyle: Style
+
+    init {
+        if (searchPath.takeLast(1) == "/") {
+            searchPath = searchPath.subSequence(0, searchPath.length - 1).toString()
+        }
+    }
 
     override fun getListCellRendererComponent(
         list: JList<out FileInstanceItem>,
@@ -85,11 +91,12 @@ class FilePathCellRenderer(
             PathDisplayType.FILENAME_RELATIVE_PATH      -> {
                 doc.insertString(doc.length, "${item.vf.name} ", boldStyle)
                 val path = item.vf.parent!!.path
-                if (path.length > basePath.length) {
-                    doc.insertString(doc.length, path.subSequence(basePath.length, path.length).toString(), italicStyle)
+                if (path.length >= searchPath.length) {
+                    doc.insertString(doc.length, path.subSequence(searchPath.length, path.length).toString(), italicStyle)
                 } else {
                     doc.insertString(doc.length, path, italicStyle)
                 }
+                doc.insertString(doc.length, "/", italicStyle)
             }
 
             PathDisplayType.FILENAME_FULL_PATH          -> {
@@ -104,8 +111,8 @@ class FilePathCellRenderer(
 
             PathDisplayType.RELATIVE_PATH_WITH_FILENAME -> {
                 val path = item.vf.parent!!.path
-                if (path.length > basePath.length) {
-                    doc.insertString(doc.length, path.subSequence(basePath.length, path.length).toString(), italicStyle)
+                if (path.length >= searchPath.length) {
+                    doc.insertString(doc.length, path.subSequence(searchPath.length, path.length).toString(), italicStyle)
                 } else {
                     doc.insertString(doc.length, path, italicStyle)
                 }

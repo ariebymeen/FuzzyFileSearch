@@ -25,6 +25,9 @@ import kotlinx.coroutines.sync.withLock
 import kotlin.io.path.Path
 import com.intellij.openapi.startup.ProjectActivity
 
+// TODO: Update caching results, by storing the results per query / extensions. When a new file is added / moved etc.
+// TODO: We just clear the cache for that specific directory
+
 // TODO: This seems to work fine with my uses but on work machine does not work
 @Service(Service.Level.PROJECT)
 class FileWatcher(var mProject: Project) : Disposable {

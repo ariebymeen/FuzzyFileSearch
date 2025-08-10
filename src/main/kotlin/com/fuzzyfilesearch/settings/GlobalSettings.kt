@@ -33,6 +33,13 @@ enum class ShowFilenamePolicy {
     NEVER,
 }
 
+enum class ShowSearchDirectoryPolicy {
+    SHOW_LAST_DIRECTORY_ONLY,
+    SHOW_FROM_PROJECT_ROOT,
+    SHOW_FULL_PATH,
+    SHOW_NONE,
+}
+
 @State(
     name = "com.fuzzyfilesearch.settings.GlobalSettings",
     storages = [Storage(StoragePathMacros.NON_ROAMABLE_FILE)]
@@ -43,6 +50,7 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
 
     class CommonSettings {
         var searchCaseSensitivity = false
+        // TODO: REMOVE, this is legacy
         var searchOnlyFilesTrackedByVersionControl = true // TODO: Depreciated
         var excludedDirs: Set<String> = setOf("build", ".gradle", ".idea", ".run")
         var modifierKey: ModifierKey = ModifierKey.CTRL
@@ -104,6 +112,8 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         var filePathDisplayType: PathDisplayType = PathDisplayType.FILENAME_RELATIVE_PATH
         var searchFileNameOnly: Boolean = false
         var searchFileNameMultiplier: Double = 1.0
+        var showSearchDirectoryPolicy: ShowSearchDirectoryPolicy = ShowSearchDirectoryPolicy.SHOW_LAST_DIRECTORY_ONLY
+        var showSearchDirectoryCutoffLen: Int = 20
 
         // String search settings
         var applySyntaxHighlightingOnTextSearch = true

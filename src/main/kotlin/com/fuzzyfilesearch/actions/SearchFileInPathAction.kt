@@ -8,6 +8,7 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vcs.changes.ChangeListManager
+import kotlin.system.measureTimeMillis
 
 class SearchFileInPathAction(
     val actionSettings: utils.ActionSettings,
@@ -21,6 +22,8 @@ class SearchFileInPathAction(
 
     val settings: Settings = parseSettings(actionSettings.generic)
     val searchForFiles = SearchForFiles(globalSettings)
+    var totalTime: Long = 0
+    var totalTimeCount: Long = 0
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
@@ -28,25 +31,28 @@ class SearchFileInPathAction(
         val searchPath = getSearchPath(settings, project, e) ?: return
         val vfPath = utils.getVirtualFileFromPath(searchPath) ?: return
 
-        val changeListManager = if (settings.onlyVcsTracked) ChangeListManager.getInstance(project) else null
-        var files = getAllFilesInRoot(
-            vfPath,
-            globalSettings.common.excludedDirs,
-            settings.extensionList,
-            changeListManager)
+        var files: ArrayList<FileInstanceItem>
+        val time = measureTimeMillis {
+            val changeListManager = if (settings.onlyVcsTracked) ChangeListManager.getInstance(project) else null
+            files = getAllFilesInRoot(
+                vfPath,
+                globalSettings.common.excludedDirs,
+                settings.extensionList,
+                changeListManager)
 
-        if (settings.searchModifiedOnly) {
-            files = ArrayList(files.filter { utils.isFileModifiedOrAdded(project, it.vf) })
+            if (settings.searchModifiedOnly) {
+                files = ArrayList(files.filter { utils.isFileModifiedOrAdded(project, it.vf) })
+            }
         }
 
-        // TODO: Re-enable once tested
-//        val time2 = measureTimeMillis {
-//            files = project.service<FileWatcher>().getListOfFiles(vfPath, project,
-//                settings.common.searchOnlyFilesTrackedByVersionControl && !overrideVscIgnore,
-//                ::isFileIncluded)
-//        }
-//        println("Retrieved ${files?.size} files in ${time2} ms")
-        searchForFiles.search(files, project, settings.extensionList)
+        if (globalSettings.common.enableDebugOptions) {
+            totalTime += time
+            totalTimeCount += 1
+            println("Average time searching for files: ${totalTime / totalTimeCount}")
+        }
+
+        val title = if (settings.searchModifiedOnly) "File search (modified only)" else "File search"
+        searchForFiles.search(files, project, settings.extensionList, searchPath, title)
     }
 
     fun getSearchPath(settings: Settings, project: Project, e: AnActionEvent): String? {

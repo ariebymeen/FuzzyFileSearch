@@ -42,8 +42,8 @@ class SearchRecentFilesAction(
         filteredFiles = filteredFiles.takeLast(min(filteredFiles.size, settings.nofFilesHistory))
 
         val searchItems = filteredFiles.map { file -> FileInstanceItem(file) }
-        val title = if (settings.searchModifiedOnly) "Recent files (edited only)" else "Recent files"
-        searchForFiles.search(searchItems, project, settings.extensionList, title)
+        val title = if (settings.searchModifiedOnly) "Recent files (modified only)" else "Recent files"
+        searchForFiles.search(searchItems, project, settings.extensionList, project.basePath.toString(), title)
     }
 
     fun isFileExtensionIncluded(vf: VirtualFile): Boolean {

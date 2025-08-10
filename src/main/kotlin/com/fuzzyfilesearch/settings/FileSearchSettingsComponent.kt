@@ -166,6 +166,12 @@ class FileSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState) {
                 Increase or decrease the importance of the filename during searching. If 1, the path and the filename are
                 matched equally, if more than one, the filename match is weighted more
             """.trimIndent())
+        keeper.createComboboxComponent(
+            mSettings::showSearchDirectoryPolicy, ShowSearchDirectoryPolicy.values(), builder, "Show search directory in search view",
+            """Shows the search directory to the left of the search box. """.trimIndent())
+        keeper.createJBIntSpinnerComponent(mSettings::showSearchDirectoryCutoffLen,20, 4, 100, 1, builder,
+                                           "Search directory cutoff length", """Maximum length of the search directory string, if 
+                                               longer than the max, the string is cutoff""".trimMargin())
         if (mSettings.common.enableDebugOptions) {
             keeper.createCheckboxComponent(
                 mSettings.file::searchMultiThreaded,

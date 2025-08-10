@@ -1,11 +1,11 @@
 plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "2.2.0"
-    id("org.jetbrains.intellij.platform") version "2.3.0"
+    id("org.jetbrains.intellij.platform") version "2.7.0"
 }
 
 group = "com.fuzzyfilesearch"
-version = "1.0.0-rc5-SNAPSHOT"
+version = "1.1.0-rc1"
 
 repositories {
     mavenCentral()
