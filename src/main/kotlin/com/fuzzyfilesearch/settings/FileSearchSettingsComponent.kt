@@ -57,7 +57,7 @@ class FileSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState) {
     init {
 
         val builder = FormBuilder()
-            .addComponent(JBLabel("<html><strong>File search settings for FuzzyFileSearch</strong></html>"))
+            .addComponent(JBLabel("<html><strong>File search layout settings</strong></html>"))
             .addSeparator()
 
         keeper.createJBIntSpinnerComponent(
@@ -152,6 +152,15 @@ class FileSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState) {
                     If the preview editor is shown below the search area, the fraction of the total height will be selected.
                     If the preview editor is shown to the right of the search area, the fraction of the total width will be selected""".trimIndent())
 
+        keeper.createComboboxComponent(
+            mSettings::showSearchDirectoryPolicy, ShowSearchDirectoryPolicy.values(), builder, "Show search directory in search view",
+            """Shows the search directory to the left of the search box. """.trimIndent())
+        keeper.createJBIntSpinnerComponent(mSettings::showSearchDirectoryCutoffLen,20, 4, 100, 1, builder,
+                                           "Search directory cutoff length", """Maximum length of the search directory string, if 
+                                               longer than the max, the string is cutoff""".trimMargin())
+
+        builder.addComponent(JBLabel("<html><strong>Search settings</strong></html>")).addSeparator()
+
         val fileNameOnlyCheckbox = keeper.createCheckboxComponent(
             mSettings::searchFileNameOnly, builder, "Only match file name in search", """
                 When true, only the filename is used to search items, otherwise, both the path and the filename are used for matching searching
@@ -166,12 +175,6 @@ class FileSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState) {
                 Increase or decrease the importance of the filename during searching. If 1, the path and the filename are
                 matched equally, if more than one, the filename match is weighted more
             """.trimIndent())
-        keeper.createComboboxComponent(
-            mSettings::showSearchDirectoryPolicy, ShowSearchDirectoryPolicy.values(), builder, "Show search directory in search view",
-            """Shows the search directory to the left of the search box. """.trimIndent())
-        keeper.createJBIntSpinnerComponent(mSettings::showSearchDirectoryCutoffLen,20, 4, 100, 1, builder,
-                                           "Search directory cutoff length", """Maximum length of the search directory string, if 
-                                               longer than the max, the string is cutoff""".trimMargin())
         if (mSettings.common.enableDebugOptions) {
             keeper.createCheckboxComponent(
                 mSettings.file::searchMultiThreaded,
@@ -181,8 +184,7 @@ class FileSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState) {
         }
 
         // Create Relative file opening actions
-        builder.addSeparator()
-            .addComponent(JBLabel("Actions"))
+        builder.addComponent(JBLabel("<html><strong>Actions</strong></html>"))
 
         refreshActionsPanel()
         builder.addComponent(actionsCollectionPanel)

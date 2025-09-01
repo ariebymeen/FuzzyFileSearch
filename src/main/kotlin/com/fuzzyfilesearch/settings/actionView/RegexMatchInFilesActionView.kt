@@ -80,15 +80,16 @@ class RegexMatchInFilesActionView() : ActionViewBase() {
 
     override fun help(): String {
         return """
-            Opens a search view to search through all lines that match the specified regex pattern.
+            <b>Opens a search view to search through all lines that match the specified regex pattern</b><br>
             Will first search for all files in the specified path, for files (tracked by vcs if checked) with the specified extension.
             Will find all regex matches in all files that are found. The resulting matches can be search though. 
             Can be found for example to search through all functions in the current file or search for all classes in all .kt files
             
-            Path: If it starts with '/', search from project root, if it starts with '.' searches from current directory.
-            If the path is left empty, search only in the file currently open
-            Extensions filter: Provide a comma separated list with all file extensions you want to search through.
-            Leave empty to search through all files in the directory.
+            <b>Name:</b> Enter a unique name, this is used to register the action in the intellij framework. The action will be registered as <i>com.fuzzyfilesearch.%NAME%</i><br>
+            <b>Path (optional):</b> Enter a path, where '/' is the project root. To search relative to the open file, start with './'. If empty, only search through the current file<br>
+            <b>Regex:</b> Regex pattern to find all matches in the file contents<br>
+            <b>Extensions filter (optional):</b> List the extensions to search through, seperated by ','. If empty, all files in the (recursive) directory are included in the search. <br>
+            <b>Shortcut (optional):</b> Enter a shortcut to trigger the action <br>
         """.trimIndent()
     }
 }

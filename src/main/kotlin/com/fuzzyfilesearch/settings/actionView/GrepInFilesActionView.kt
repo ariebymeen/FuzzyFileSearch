@@ -67,11 +67,14 @@ class GrepInFilesActionView() : ActionViewBase() {
 
     override fun help(): String {
         return """
-            Opens a search view to live grep through all files in the path with that satisfies the extension filter.
-            Path: If it starts with '/', search from project root, if it starts with '.' searches from current directory.
-            If the path is left empty, search only in the file currently open
-            Extensions filter: Provide a comma separated list with all file extensions you want to search through.
-            Leave empty to search through all files in the directory.
+            <b>Provides live grep in your project</b><br>
+            This provides live grep in your project, but also allows to assign different shortcuts to search in different files, 
+            e.g. search through different directories, or search in files with a different extension. <br>
+            Opens a search view to live grep through all files in the path with that satisfies the extension filter. <br>
+            
+            <b>Action name:</b> Enter a unique name, this is used to register the action in the intellij framework. The action will be registered as <i>com.fuzzyfilesearch.%NAME%</i><br>
+            <b>Path:</b> If it starts with '/', search from project root, if it starts with '.' searches from current directory. If the path is left empty, search only in the file currently open<br>
+            <b>Extensions filter:</b> Provide a comma separated list with all file extensions you want to search through. Leave empty to search through all files in the directory.<br>
         """.trimIndent()
     }
 }

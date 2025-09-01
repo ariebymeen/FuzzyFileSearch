@@ -70,6 +70,7 @@ class GrepInFiles(
         mFileNames = mFileNames.filter { file -> isTextOrCodeFile(file) }.toMutableList()
         mMatches = mFileNames.deepClonePolymorphic()
 
+        val previousSearchQuery = mHistory?.query ?: ""
         mPopup = SearchPopupInstance(
             HighlightedStringCellRenderer(project, globalSettings, globalSettings.showFilenameForGrepInFiles),
             ::getSortedResult,
@@ -79,7 +80,9 @@ class GrepInFiles(
             project,
             settings.extensionList,
             globalSettings.string,
-            "Live grep")
+            "Live grep",
+            "",
+            previousSearchQuery)
 
         // Get search history and select from history or selected text (or empty)
         var initialQuery = ""
@@ -171,7 +174,8 @@ class GrepInFiles(
         query: String,
         matches: MutableList<StringMatchInstanceItem>,
         nonMatches: MutableList<VirtualFile>): Boolean {
-        if (vf.extension.equals("min.js")) return true // Don't search through library files
+        println("File ${vf.name} len: ${vf.length}")
+        if (vf.name.endsWith("min.js") || vf.length > 50000) return true // Don't search through library files
 
         val contents = readFileContents(vf)
         var match = contents.indexOf(query, 0, !globalSettings.common.searchCaseSensitivity)
@@ -183,7 +187,14 @@ class GrepInFiles(
             val lineNr =
                     utils.getLineNumberFromVirtualFile(vf, text.second, globalSettings.common.enableDebugOptions) ?: 0
             matches.add(StringMatchInstanceItem(vf, text.second, text.third, lineNr, text.first.trim()))
-            match = contents.indexOf(query, text.third, !globalSettings.common.searchCaseSensitivity)
+            match = text.third
+
+            // Skip a number of lines, these are not searched through
+            for (i in 0 until globalSettings.minNofLinesBetweenGrepResults) {
+                match = getStartOfNextNewline(contents, match + 1)
+            }
+
+            match = contents.indexOf(query, match, !globalSettings.common.searchCaseSensitivity)
 
             if (matches.size >= globalSettings.string.numberOfFilesInSearchView) {
                 return false
@@ -227,6 +238,10 @@ class GrepInFiles(
             println("Error reading file ${virtualFile.name}")
             return ""
         }
+    }
+
+    private fun getStartOfNextNewline(text: String, index: Int): Int {
+        return text.indexOf('\n', index).takeIf { it != -1 } ?: text.length
     }
 
     private fun findTextBetweenNewlines(text: String, index: Int): Triple<String, Int, Int> {

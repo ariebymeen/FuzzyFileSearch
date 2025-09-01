@@ -1,6 +1,7 @@
 package com.fuzzyfilesearch.settings.actionView
 
 import com.fuzzyfilesearch.actions.ActionType
+import com.intellij.ui.components.JBTextArea
 import com.fuzzyfilesearch.actions.utils
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.ui.ComboBox
@@ -8,10 +9,24 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
+import java.awt.Dimension
 import java.awt.event.ItemEvent
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import javax.swing.BoxLayout
 import javax.swing.JButton
+import javax.swing.JEditorPane
+import com.intellij.openapi.util.IconLoader
 import javax.swing.JPanel
+
+class MyEditorPane(type: String, text: String?) : JEditorPane(type, text) {
+    override fun getPreferredSize(): Dimension {
+        val d = super.getPreferredSize()
+        val parentWidth = parent?.width ?: d.width
+        // Restrict to parent’s width
+        return Dimension(parentWidth, d.height)
+    }
+}
 
 class ActionViewWrapper(
     val mParent: JPanel,
@@ -21,10 +36,23 @@ class ActionViewWrapper(
     val cbPanel = JPanel(BorderLayout()).apply {
         add(combobox)
     }
-    val warningLabel = JBLabel().apply {
-        this.foreground = JBColor.RED
-        this.isVisible = false
-        this.border = JBUI.Borders.empty()
+    val warningLabel = JBTextArea().apply {
+        foreground = JBColor.RED
+        isVisible = false
+        isEditable = false
+        wrapStyleWord = true
+        background = null
+        isOpaque = false
+        border = JBUI.Borders.empty()
+        font = JBLabel().font
+    }
+    val infoLabel = MyEditorPane("text/html", "").apply {
+        isEditable = false
+        isVisible = false
+        background = null
+        isOpaque = false
+        border = JBUI.Borders.empty()
+        font = JBLabel().font
     }
     val contents = JPanel().apply {
         layout = BoxLayout(this, BoxLayout.Y_AXIS)
@@ -37,7 +65,10 @@ class ActionViewWrapper(
         }
         toolTipText = "Remove this action from settings"
     }
-    val helpButton = JBLabel(AllIcons.General.ContextHelp)
+    val helpButton = JButton(AllIcons.General.ContextHelp).apply {
+        border = JBUI.Borders.empty()
+        preferredSize = Dimension(AllIcons.General.ContextHelp.iconWidth, height)
+    }
     val rbPanel = JPanel(BorderLayout()).apply {
         border = JBUI.Borders.emptyBottom(2)
         add(removeButton, BorderLayout.WEST)
@@ -56,6 +87,19 @@ class ActionViewWrapper(
             JBUI.Borders.customLine(JBColor.LIGHT_GRAY, 0, 2, 0, 0),
             JBUI.Borders.emptyLeft(10),
             JBUI.Borders.emptyBottom(2))
+
+        helpButton.addActionListener {
+            infoLabel.isVisible = infoLabel.isVisible.not()
+            val text = if (item == null) "" else item!!.help()
+            val html = $$"""
+            <html>
+            <body style="width:100%; font-family: ${JBFont.label().family}; font-size:${JBFont.label().size}pt;">
+            $$text
+            </body>
+            </html>
+            """.trimIndent()
+            infoLabel.text = html
+        }
     }
 
     fun initializeDefault() {
@@ -79,23 +123,24 @@ class ActionViewWrapper(
         fillContentBox()
     }
 
-    fun getType(): ActionType {
-        return combobox.selectedItem as ActionType
-    }
+//    fun getType(): ActionType {
+//        return combobox.selectedItem as ActionType
+//    }
 
     fun getStored(): Array<String> {
         return item!!.getStored()
     }
 
-    fun getShortcut(): String {
-        return item!!.getShortcut()
+    fun getShortcuts(): List<String> {
+        return item!!.getShortcuts()
     }
 
-    fun getActionName(): String {
-        return item!!.getActionName()
+    fun getActionNames(): List<String> {
+        return item!!.getActionNames()
     }
 
     fun setWarning(text: String) {
+        println("Setting warning text: $text")
         warningLabel.text = text
         warningLabel.isVisible = true
     }
@@ -116,9 +161,12 @@ class ActionViewWrapper(
     fun fillContentBox() {
         contents.removeAll()
 
-        val panel = JPanel(BorderLayout())
-        panel.add(warningLabel)
-        contents.add(panel)
+        val warningPanel = JPanel(BorderLayout())
+        warningPanel.add(warningLabel)
+        contents.add(warningPanel)
+        val infoPanel = JPanel(BorderLayout())
+        infoPanel.add(infoLabel)
+        contents.add(infoPanel)
         val contentsPanel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
             border = JBUI.Borders.emptyLeft(4)
@@ -138,6 +186,7 @@ class ActionViewWrapper(
             ActionType.SEARCH_FILE_IN_RELATED_PATH  -> SearchRelativeFileActionView()
             ActionType.SEARCH_FILE_MATCHING_PATTERN -> SearchFilesWithPatternActionView()
             ActionType.OPEN_RELATIVE_FILE           -> OpenRelativeFileActionView()
+            ActionType.OPEN_FILE_MATCHING_PATTERN   -> OpenFileMatchingPattern()
             ActionType.SEARCH_RECENT_FILES          -> SearchRecentFilesActionView()
             ActionType.SEARCH_OPEN_FILES            -> SearchOpenFilesActionView()
             ActionType.GREP_IN_FILES                -> GrepInFilesActionView()

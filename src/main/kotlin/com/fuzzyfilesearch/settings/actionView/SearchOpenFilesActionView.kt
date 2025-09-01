@@ -53,7 +53,12 @@ class SearchOpenFilesActionView() : ActionViewBase() {
 
     override fun help(): String {
         return """
-            Open search popup view to search through all files currently opened
+            <b>Open search popup view to search through all files currently opened</b><br>
+            Use this action to search quickly through all open files.
+            
+            <b>Name:</b> Enter a unique name, this is used to register the action in the intellij framework. The action will be registered as <i>com.fuzzyfilesearch.%NAME%</i><br>
+            <b>Extensions filter (optional):</b> List the extensions to search over, seperated by ','. If empty, all file extensions are included in the search. <br>
+            <b>Shortcut (optional):</b> Enter a shortcut to trigger the action <br>
         """.trimIndent()
     }
 }

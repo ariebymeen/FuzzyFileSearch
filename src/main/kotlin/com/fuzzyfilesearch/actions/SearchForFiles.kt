@@ -18,6 +18,8 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
     var mFiles = emptyList<FileInstanceItem>()
     var mProject: Project? = null
     var fzfSearchAction: FzfSearchAction? = null
+    // Allow restoring search query by pressing array up before typing
+    var mPreviousSearchQuery: String = ""
 
     fun search(
         files: List<FileInstanceItem>,
@@ -50,8 +52,9 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
             ::getFileFromItem, settings, project, extensions,
             settings.file,
             title,
-            utils.getVisualSearchDir(searchDirectory, settings, project.basePath.toString()))
-        mPopup!!.showPopupInstance()
+            utils.getVisualSearchDir(searchDirectory, settings, project.basePath.toString()),
+            mPreviousSearchQuery)
+        mPopup!!.showPopupInstance("", min(mFiles.size, settings.file.numberOfFilesInSearchView))
         fzfSearchAction = FzfSearchAction(mFilePaths!!,
                                           mFileNames!!,
                                           settings.common.searchCaseSensitivity,
@@ -99,10 +102,11 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
     }
 
     fun openFile(item: FileInstanceItem, location: OpenLocation) {
+        mPreviousSearchQuery = mPopup?.getQuery() ?: ""
         openFileWithLocation(item.vf, location, mProject!!)
     }
 
-    fun getFileFromItem(item: FileInstanceItem): FileLocation? {
+    fun getFileFromItem(item: FileInstanceItem): FileLocation {
         return FileLocation(item.vf, 0)
     }
 }

@@ -122,6 +122,7 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         var showLineNumberWithFileName = true
         var useSelectedTextForGrepInFiles = true
         var grepRememberPreviousQuerySeconds: Int = 6
+        var minNofLinesBetweenGrepResults: Int = 2
         // TODO: REMOVE, this is legacy, used for porting old settings into the new structure only!
         var searchStringMatchingPatternActions: Array<Array<String>> = emptyArray()
         var searchStringMatchingSubstringActions: Array<Array<String>> = emptyArray()

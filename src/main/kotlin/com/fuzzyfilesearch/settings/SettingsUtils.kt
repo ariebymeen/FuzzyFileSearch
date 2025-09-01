@@ -1,6 +1,7 @@
 package com.fuzzyfilesearch.settings
 
 import com.fuzzyfilesearch.actions.ActionType
+import com.fuzzyfilesearch.actions.OpenFileMatchingPattern
 import com.fuzzyfilesearch.actions.utils
 import com.fuzzyfilesearch.settings.actionView.ActionViewWrapper
 import com.google.common.reflect.TypeToken
@@ -92,7 +93,11 @@ fun clearSettingsAndClearActionRegistrationForTypes(
     val toRemove = getActionSettingsForTypes(settings, types)
     toRemove.forEach { action ->
         val actionSettings = utils.getGenericActionSettings(action)
-        utils.unregisterAction(actionSettings.name, actionSettings.shortcut)
+        when (actionSettings.type) {
+            ActionType.OPEN_FILE_MATCHING_PATTERN -> OpenFileMatchingPattern.unregister(actionSettings)
+            else -> utils.unregisterAction(actionSettings.name, actionSettings.shortcut)
+        }
+
         settings.allActions = settings.allActions.remove(action)
     }
 }
@@ -149,11 +154,11 @@ fun importFromFile(settings: GlobalSettings.SettingsState) {
 }
 
 fun getShortcuts(components: Array<Component>): List<String> {
-    return components.map { it -> (it as ActionViewWrapper).getShortcut() }
+    return components.flatMap { it -> (it as ActionViewWrapper).getShortcuts() }
 }
 
 fun getActionNames(components: Array<Component>): List<String> {
-    return components.map { it -> (it as ActionViewWrapper).getActionName() }
+    return components.flatMap{ it -> (it as ActionViewWrapper).getActionNames() }
 }
 
 fun getActionNamesForOtherActionTypes(
@@ -180,8 +185,7 @@ fun setWarningForDuplicateShortcuts(
     val duplShortcuts = allShortcuts.findDuplicateElements().filter { it -> it.isNotEmpty() }
     if (duplShortcuts.isNotEmpty()) {
         duplShortcuts.forEach { it ->
-            val comp =
-                    components.find { comp -> it == (comp as ActionViewWrapper).getShortcut() && comp.isModified() }
+            val comp = components.find { comp -> (comp as ActionViewWrapper).getShortcuts().contains(it) && comp.isModified() }
             if (comp != null) {
                 (comp as ActionViewWrapper).setWarning("Shortcut $it used multiple times")
             }
@@ -198,7 +202,7 @@ fun setWarningForDuplicateActionNames(
     if (duplNames.isNotEmpty()) {
         duplNames.forEach { it ->
             val comp =
-                    components.find { comp -> it == (comp as ActionViewWrapper).getActionName() && comp.isModified() }
+                    components.find { comp -> (comp as ActionViewWrapper).getActionNames().contains(it) && comp.isModified() }
             if (comp != null) {
                 (comp as ActionViewWrapper).setWarning("Name $it used multiple times")
             }

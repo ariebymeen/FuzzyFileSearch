@@ -35,6 +35,31 @@ fun getParentSatisfyingRegex(project: Project,
     return null
 }
 
+fun getFileWithName(project: Project,
+                    directory: VirtualFile,
+                    name: String,
+                    distance: Int = 0,
+                    maxDistance: Int = 1000,
+                    visitParents: Boolean = true): VirtualFile? {
+    for (child in directory.children!!) {
+        if (child.isFile) {
+            if (name == child.name) return child
+        } else if (child.isDirectory) {
+            val file = getFileWithName(project, child, name, distance + 1, maxDistance, false)
+            if (file != null) return file
+        }
+    }
+
+    directory.parent ?: return null
+
+    if (visitParents && distance <= maxDistance && isFileInProject(project, directory.parent)) {
+        val file = getFileWithName(project, directory.parent, name, distance + 1, maxDistance, true)
+        if (file != null) return file
+    }
+
+    return null
+}
+
 //fun getFileSatisfyingRegex(project: Project,
 //                           directory: VirtualFile,
 //                           regex: Regex,

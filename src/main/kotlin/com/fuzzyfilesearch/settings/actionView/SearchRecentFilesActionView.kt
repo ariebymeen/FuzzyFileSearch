@@ -74,9 +74,13 @@ class SearchRecentFilesActionView() : ActionViewBase() {
 
     override fun help(): String {
         return """
-            Open search popup to search through all most recently viewed files.
-            Specify the number of files you want to remember and search over.
-            Optionally filter to search only through files with specified extensions
+            <b>Open search popup to search through all most recently viewed files</b><br>
+            Specify the number of files you want to remember and search over <br>
+            
+            <b>Name:</b> Enter a unique name, this is used to register the action in the intellij framework. The action will be registered as <i>com.fuzzyfilesearch.%NAME%</i><br>
+            <b>Number of files in history:</b> Max number of recently visited files to search through<br>
+            <b>Extensions filter (optional):</b> List the extensions to search over, seperated by ','. If empty, all file extensions are included in the search. <br>
+            <b>Shortcut (optional):</b> Enter a shortcut to trigger the action <br>
         """.trimIndent()
     }
 }

@@ -53,9 +53,12 @@
     <change-notes>
         <![CDATA[
         <ul>
-            <li>Update settings UI</li>
-            <li>Improve support for intellij 2025</li>
-            <li>Added option to search only through edited files</li>
+            <li>Improved settings organisation</li>
+            <li>Improved help info for actions</li>
+            <li>Improved layout for warning messages</li>
+            <li>Skip matches that are very close in live grep</li>
+            <li>Add new option to quickly switch between files</li>
+            <li>Restore previous search query</li>
         </ul>
         ]]>
     </change-notes>

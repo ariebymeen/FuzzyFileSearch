@@ -44,8 +44,10 @@ object utils {
         var visualText: String
         when (settings.showSearchDirectoryPolicy) {
             ShowSearchDirectoryPolicy.SHOW_LAST_DIRECTORY_ONLY -> {
-                val dirs = dir.split('/')
+                dir = if (dir.length >= projectBaseDir.length) dir.substring(projectBaseDir.length) else dir
+                val dirs = dir.split('/').filter { it.isNotEmpty() }
                 if (dirs.isNotEmpty()) {
+                    print(dirs)
                     val base = if (dirs.size == 1) "/" else "./"
                     visualText = base + dirs.takeLast(1)[0] + "/"
                 } else {
@@ -127,6 +129,7 @@ object utils {
                     ActionType.SEARCH_OPEN_FILES            -> SearchOpenFilesAction.register(action, settings)
                     ActionType.SEARCH_FILE_IN_RELATED_PATH  -> SearchRelativeFileAction.register(action, settings)
                     ActionType.OPEN_RELATIVE_FILE           -> OpenRelativeFileAction.register(action, settings)
+                    ActionType.OPEN_FILE_MATCHING_PATTERN   -> OpenFileMatchingPattern.register(action, settings)
                     ActionType.SEARCH_FILE_MATCHING_PATTERN -> SearchFilesWithPatternAction.register(action, settings)
                     ActionType.REGEX_SEARCH_IN_FILES        -> RegexMatchInFiles.register(action, settings)
                     ActionType.GREP_IN_FILES                -> GrepInFiles.register(action, settings)
@@ -140,8 +143,7 @@ object utils {
     fun unregisterActions(
         actions: Array<Array<String>>,
         getName: (Array<String>) -> String,
-        getShortcut: (Array<String>) -> String
-                         ) {
+        getShortcut: (Array<String>) -> String) {
         actions.map { action -> unregisterAction(getName(action), getShortcut(action)) }
     }
 

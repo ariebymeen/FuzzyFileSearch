@@ -35,6 +35,8 @@ class RegexMatchInFiles(
     var mFileNames: MutableList<VirtualFile> = mutableListOf()
     var mPopup: SearchPopupInstance<StringMatchInstanceItem>? = null
     var mEvent: AnActionEvent? = null
+    // Allow restoring search query by pressing array up before typing
+    var mPreviousSearchQuery: String = ""
 
     /* List with instance items that matched the regex */
     var mSearchItems = mutableListOf<StringMatchInstanceItem>()
@@ -42,7 +44,6 @@ class RegexMatchInFiles(
     /* The same list but only the matching string. Is used in the search action to search */
     var mSearchItemStrings = emptyList<String>()
     var mProject: Project? = null
-    var fzfSearchAction: FzfSearchAction? = null
 
     override fun actionPerformed(e: AnActionEvent) {
         if (settings.regex.pattern.isEmpty()) {
@@ -110,9 +111,10 @@ class RegexMatchInFiles(
             project,
             settings.extensionList,
             globalSettings.string,
-            "Regex search")
+            "Regex search",
+            "",
+            mPreviousSearchQuery)
         mPopup!!.showPopupInstance()
-//        fzfSearchAction = FzfSearchAction(mSearchItemStrings, globalSettings.common.searchCaseSensitivity)
     }
 
     private fun searchFzf(strings: List<String>, query: String): List<String> {
@@ -162,6 +164,7 @@ class RegexMatchInFiles(
     }
 
     fun moveToLocation(item: StringMatchInstanceItem, location: OpenLocation) {
+        mPreviousSearchQuery = mPopup?.getQuery() ?: ""
         val event = mEvent ?: return
         if (item.vf != getCurrentFile(event)) {
             openFileWithLocation(item.vf, location, mProject!!)

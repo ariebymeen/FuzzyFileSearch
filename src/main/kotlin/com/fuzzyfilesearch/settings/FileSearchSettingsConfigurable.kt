@@ -23,6 +23,7 @@ class FileSearchSettingsConfigurable : Configurable {
             modified = modified || component.modified()
         }
 
+        // TODO: This may allow invalid settings to be saved
         component.actionsCollectionPanel.components.forEach { component ->
             val settingsComp = component as? ActionViewWrapper ?: return@forEach
             val componentModified = settingsComp.isModified()

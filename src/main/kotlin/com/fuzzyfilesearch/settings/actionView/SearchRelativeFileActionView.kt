@@ -71,10 +71,14 @@ class SearchRelativeFileActionView() : ActionViewBase() {
 
     override fun help(): String {
         return """
-            Instead of searching from a (relative) path, this action can be used to search from a recognisable file. 
-            This can be very useful if your project structure is predictable and contains marker files, like cmake files.
-            The regex you enter will match with a filename, starting from the current file all files will be searched.
-            This way, the first (closest) match is found. The parent of this matching file then is the directory in which you will search for files.
+            <b>Search through files that are located in the same or a subdirectory of a marker file</b><br>
+            Use this action if your projects have a predictable structure, like having a pom or cmake file. 
+            This action can find this file and search from there, allowing to search within some module in your project. <br>
+            
+            <b>Name:</b> Enter a unique name, this is used to register the action in the intellij framework. The action will be registered as <i>com.fuzzyfilesearch.%NAME%</i><br>
+            <b>Regex:</b> Regex to find the marker file, the most closely located file that matches this pattern is selected as the search location<br>
+            <b>Extensions filter (optional):</b> List the extensions to search over, seperated by ','. If empty, all file extensions in the (recursive) directory are included in the search. <br>
+            <b>Shortcut (optional):</b> Enter a shortcut to trigger the action <br>
         """.trimIndent()
     }
 }

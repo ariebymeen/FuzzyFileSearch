@@ -17,7 +17,6 @@ import javax.swing.JPanel
 class StringSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState) {
     var panel: JPanel
     var keeper = SettingsComponentKeeper()
-    var warningText = createWarningLabel()
     val exportButton = JButton("Export actions").apply {
         addActionListener {
             exportActionsToFile(mSettings, actionTypes)
@@ -51,7 +50,7 @@ class StringSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState)
 
     init {
         val builder = FormBuilder()
-            .addComponent(JBLabel("<html><strong>Settings for string search</strong></html>"))
+            .addComponent(JBLabel("<html><strong>Popup settings for string search</strong></html>"))
             .addSeparator()
 
         keeper.createJBIntSpinnerComponent(
@@ -142,10 +141,15 @@ class StringSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState)
                     The ratio of the preview editor size as a fraction of the total width or height of the popup. 
                     If the preview editor is shown below the search area, the fraction of the total height will be selected.
                     If the preview editor is shown to the right of the search area, the fraction of the total width will be selected""".trimIndent())
-        keeper.createJBIntSpinnerComponent(
-            mSettings::grepRememberPreviousQuerySeconds, 5, 0, 100, 1, builder, "Remember previous query (seconds)", """
-                    Time (seconds) for which the previous query will be remembered. When zero, it is never remembered""".trimIndent())
 
+        builder.addComponent(JBLabel("<html><strong>Common settings</strong></html>"))
+               .addSeparator()
+        keeper.createCheckboxComponent(
+            mSettings::applySyntaxHighlightingOnTextSearch, builder, "Apply syntax highlighting on text search", """
+                    If checked, apply syntax highlighting on text search results. If false, plain text is used""".trimIndent())
+        keeper.createCheckboxComponent(
+            mSettings::showLineNumberWithFileName, builder, "Show the line number of the match", """
+                If checked, show the filename:line number of the matching line """.trimIndent())
         if (mSettings.common.enableDebugOptions) {
             keeper.createCheckboxComponent(
                 mSettings.string::searchMultiThreaded,
@@ -155,44 +159,35 @@ class StringSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState)
         }
 
         // Create Relative file opening actions
-        builder.addSeparator()
-            .addComponent(warningText)
-
-        keeper.createCheckboxComponent(
-            mSettings::applySyntaxHighlightingOnTextSearch, builder, "Apply syntax highlighting on text search", """
-                    If checked, apply syntax highlighting on text search results. If false, plain text is used""".trimIndent())
-        keeper.createCheckboxComponent(
-            mSettings::showLineNumberWithFileName, builder, "Show the line number of the match", """
-                If checked, show the filename:line number of the matching line """.trimIndent())
+        builder.addComponent(JBLabel("<html><strong>Regex search settings</strong></html>"))
+            .addSeparator()
         keeper.createComboboxComponent(
             mSettings::showFilenameForRegexMatch, ShowFilenamePolicy.values(), builder,
             "Show filename in regex search", """
-                    Show filename in front of the matching string""".trimIndent())
+                    Show filename in the result list""".trimIndent())
+
+        builder.addComponent(JBLabel("<html><strong>Live grep settings</strong></html>"))
+            .addSeparator()
         keeper.createCheckboxComponent(
             mSettings::useSelectedTextForGrepInFiles, builder, "Use selected text as initial query", """
                     If true, the selected text is used as initial query. If no text is selected, no query is set """.trimIndent())
-//        keeper.createActionsTableComponent(mSettings::searchStringMatchingPatternActions, builder, "Search for regex pattern in files", """
-//                    Search through all instances that match the pattern. If path starts with '/', search through all files. This may
-//                    be performance intensive if there are many files. If path is empty or '.' search only the current path. Else a relative path
-//                    is selected""".trimIndent(), arrayOf("Name", "Path", "Regex", "Shortcut", "Extension"),
-//                    arrayOf("MySearchAction", "", "Enter regex", "", ""), arrayOf(2, 1, 6, 2, 1), mSettings, 0, 3, utils::registerSearchForRegexInFiles)
-
         keeper.createCheckboxComponent(
             mSettings::showFilenameForGrepInFiles, builder, "Show filename in grep result", """
-                    Show filename in front of the matching string""".trimIndent())
-//        keeper.createActionsTableComponent(mSettings::searchStringMatchingSubstringActions, builder, "Grep in files", """
-//                    Search through all lines containing the substring. If path starts with '/', search through all files. This may
-//                    be performance intensive if there are many files. If path is empty or '.' search only the current path. Else a relative path
-//                    is selected""".trimIndent(), arrayOf("Name", "Path", "Extension", "Shortcut"),
-//            arrayOf("MySearchAction", "/", "", ""), arrayOf(1, 1, 1, 1), mSettings, 0, 3, utils::registerGrepInFilesActions)
+                    Show filename in the result list""".trimIndent())
+        keeper.createJBIntSpinnerComponent(
+            mSettings::grepRememberPreviousQuerySeconds, 5, 0, 100, 1, builder, "Remember previous query (seconds)", """
+                    Time (seconds) for which the previous query will be remembered. When zero, it is never remembered""".trimIndent())
+        keeper.createJBIntSpinnerComponent(
+            mSettings::minNofLinesBetweenGrepResults, 2, 0, 100, 1, builder, "Min lines between results", """
+                    Minimum number of lines between live grep results. Prevents having many matches that are very closely placed""".trimIndent())
 
-        builder.addSeparator()
-        builder.addComponent(JBLabel("Actions"))
+        builder.addComponent(JBLabel("<html><strong>Actions</strong></html>"))
+               .addSeparator()
+               .addComponent(actionsCollectionPanel)
+               .addComponent(rbPanel)
+               .addSeparator()
+
         refreshActionsPanel()
-        builder.addComponent(actionsCollectionPanel)
-            .addComponent(rbPanel)
-            .addSeparator()
-
         val buttonPanel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.X_AXIS)
             add(exportButton)

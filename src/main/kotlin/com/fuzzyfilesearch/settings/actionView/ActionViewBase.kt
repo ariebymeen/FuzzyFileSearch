@@ -25,11 +25,11 @@ abstract class ActionViewBase() {
     /** Return the help string */
     abstract fun help(): String
 
-    fun getActionName(): String {
-        return actionNameField.text()
+    open fun getActionNames(): List<String> {
+        return listOf(actionNameField.text())
     }
 
-    fun getShortcut(): String {
-        return shortcutField.text()
+    open fun getShortcuts(): List<String> {
+        return listOf(shortcutField.text())
     }
 }

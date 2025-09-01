@@ -52,7 +52,6 @@ class SearchBoxEditor(project: Project?) : EditorTextField(project, PlainTextFil
         editor.isOneLineMode = false
         editor.settings.isLineNumbersShown = true
         editor.isViewer = false
-        // TODO: Make this editable
         editor.foldingModel.isFoldingEnabled = false
         editor.setBorder(BorderFactory.createEmptyBorder())
         editor.scrollPane.border = BorderFactory.createEmptyBorder(2, 4, 2, 4)

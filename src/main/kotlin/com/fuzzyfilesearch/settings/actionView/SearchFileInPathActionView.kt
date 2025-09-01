@@ -77,10 +77,16 @@ class SearchFileInPathActionView() : ActionViewBase() {
 
     override fun help(): String {
         return """
-            Open a popup to quickly search for a file in the specified path, with a certain extension (optional).
-            The name is used to register the action (you can find and test this in Help->Search action)
-            The path can be used to search in specific directories. To search from project root enter '/'.
-            To search from the currently open file, start the path with '.' (for example '../' will search one directory higher)
+            <b>Open a popup to quickly search for a file in the specified path.</b><br>
+            Use this action if you want to:
+            <ul>
+                <li>Find files in a specific directory (or project root)</li>
+                <li>Want to filter only on the file extension (optional)</li>
+            </ul>
+            <b>Name:</b> Enter a unique name, this is used to register the action in the intellij framework. The action will be registered as <i>com.fuzzyfilesearch.%NAME%</i><br>
+            <b>Path:</b> Enter a path, where '/' is the project root. To search relative to the open file, start with './'<br>
+            <b>Extensions filter (optional):</b> List the extensions to search over, seperated by ','. If empty, all file extensions are included in the search. <br>
+            <b>Shortcut (optional):</b> Enter a shortcut to trigger the action <br>
         """.trimIndent()
     }
 }

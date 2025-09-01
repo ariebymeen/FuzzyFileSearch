@@ -72,7 +72,9 @@ class SearchPopupInstance<ListItemType>(
     var mExtensions: List<String>? = null,
     var mPopupSettings: GlobalSettings.PopupSettings,
     var mTitle: String,
-    var mSearchDirectory: String = "") {
+    var mSearchDirectory: String = "",
+    var mPreviousSearchQuery: String = "") {
+
     val mFont = getFont(mSettings)
     val mSearchField: JTextField = JTextField().apply {
         border = JBUI.Borders.empty(2, -6, 0, 5)
@@ -113,7 +115,11 @@ class SearchPopupInstance<ListItemType>(
         createPopupInstance()
     }
 
-    fun showPopupInstance(initialQuery: String = "") {
+    fun getQuery(): String {
+        return mSearchField.text
+    }
+
+    fun showPopupInstance(initialQuery: String = "", initialNofItems: Int = 100) {
         val ideFrame = WindowManager.getInstance().getIdeFrame(mProject)
         val ideBounds = WindowManager.getInstance().getFrame(mProject)
 
@@ -161,7 +167,6 @@ class SearchPopupInstance<ListItemType>(
 
         }
 
-
         mResultsList.cellRenderer = mCellRenderer
         mSearchField.text = initialQuery
 
@@ -172,21 +177,30 @@ class SearchPopupInstance<ListItemType>(
             .setMinSize(Dimension(mPopupSettings.searchBarHeight, 0))
             .createPopup()
 
-        updateListedItems()
+        updateListedItems(inhibitShrinkView = true)
+        val height = computeHeightFromNofItems(initialNofItems)
 
         // Ensure that the popup is within the bounds of the ide
         if (ideFrame == null || ideBounds == null) {
-            mPopup!!.showInFocusCenter()
+            // TODO: This should not happen! Maybe remove this path and just give an error
+            println("ERROR: ideFrame == null: $ideFrame || ideBounds == null $ideBounds. This should really not happen!")
+            if (mPopupSettings.shrinkViewDynamically) {
+                popupHeight = min(mMaxPopupHeight!!, height)
+            }
             mPopup!!.size = Dimension(popupWidth, popupHeight)
+            mPopup!!.showInFocusCenter()
         } else {
             val posY = ideBounds.y + ideBounds.height * mPopupSettings.verticalPositionOnScreen - popupHeight / 2
             val posX = ideBounds.x + ideBounds.width * mPopupSettings.horizontalPositionOnScreen - popupWidth / 2
             val posYInBounds = min(ideBounds.y + ideBounds.height - popupHeight, max(ideBounds.y, posY.toInt()))
             val poxXInBounds = max(ideBounds.x, min(ideBounds.x + ideBounds.width - popupWidth, posX.toInt()))
 
-            mPopup!!.size = Dimension(popupWidth, popupHeight)
+            if (mPopupSettings.shrinkViewDynamically) {
+                // Shrink the view initially, but after computing the position of the popup
+                popupHeight = min(mMaxPopupHeight!!, height)
+            }
 
-            // TODO: Somehow this crashes sometimes
+            mPopup!!.size = Dimension(popupWidth, popupHeight)
             mPopup!!.showInScreenCoordinates(ideFrame.component, Point(poxXInBounds, posYInBounds))
         }
 
@@ -205,7 +219,11 @@ class SearchPopupInstance<ListItemType>(
         }
     }
 
-    private fun updateListedItems() {
+    private fun computeHeightFromNofItems(nofItems: Int): Int {
+        return mPopupSettings.searchBarHeight + nofItems * mPopupSettings.searchItemHeight + 6 + mTitleBarHeight
+    }
+
+    private fun updateListedItems(inhibitShrinkView: Boolean = false /* When called before rendered this should be true*/) {
         // TODO: Add indication that not all files are listed
         ApplicationManager.getApplication().executeOnPooledThread {
             mNofTimesClicked = 0 // Reset nof times clicked counter
@@ -237,14 +255,10 @@ class SearchPopupInstance<ListItemType>(
                     mEditorView.updateFile(null, 0)
                 }
 
-                if (mPopupSettings.shrinkViewDynamically) {
-                    mPopup!!.size = Dimension(
-                        mPopup!!.width,
-                        min(
-                            mMaxPopupHeight!!,
-                            mPopupSettings.searchBarHeight + mListModel.size() * mPopupSettings.searchItemHeight + 6 + mTitleBarHeight
-                           )
-                                             )
+                if (mPopupSettings.shrinkViewDynamically && !inhibitShrinkView) {
+                    val popupHeight = min(mMaxPopupHeight!!,
+                                          computeHeightFromNofItems(mListModel.size))
+                    mPopup!!.size = Dimension(mPopup!!.width, popupHeight)
                     mResultsList.revalidate()
                     mResultsList.repaint()
                 }
@@ -264,8 +278,17 @@ class SearchPopupInstance<ListItemType>(
     }
 
     private fun keyPressedEvent(e: KeyEvent) {
+        fun handleUpEvent() {
+            if (mSearchField.text.isNotEmpty() || mResultsList.selectedIndex > 0) {
+                if (mResultsList.selectedIndex > 0) mResultsList.selectedIndex -= 1
+            } else {
+                mSearchField.text = mPreviousSearchQuery
+                mPreviousSearchQuery = "" // Allow to restore only once
+            }
+        }
+
         when (e.keyCode) {
-            KeyEvent.VK_UP    -> mResultsList.selectedIndex -= 1
+            KeyEvent.VK_UP    -> handleUpEvent()
             KeyEvent.VK_DOWN  -> mResultsList.selectedIndex += 1
             KeyEvent.VK_TAB   -> mResultsList.selectedIndex += 1
             KeyEvent.VK_ENTER -> {
@@ -276,7 +299,7 @@ class SearchPopupInstance<ListItemType>(
                 if (this.mSettings.common.modifierKey == ModifierKey.CTRL) e.isControlDown else e.isAltDown
         if (isModifierPressed) {
             when (e.keyCode) {
-                KeyEvent.VK_K -> mResultsList.selectedIndex -= 1
+                KeyEvent.VK_K -> handleUpEvent()
                 KeyEvent.VK_J -> mResultsList.selectedIndex += 1
             }
         }
@@ -370,15 +393,13 @@ class SearchPopupInstance<ListItemType>(
                 debouncedFunction(Unit)
             }
         })
+
         mResultsList.addListSelectionListener(object : ListSelectionListener {
+            val debouncedUpdateEditorView = debounce<Unit>(80, mCoroutineScope) { updateEditorView() }
             override fun valueChanged(e: ListSelectionEvent?) {
                 if (e != null && !e.valueIsAdjusting) {
                     mResultsList.ensureIndexIsVisible(mResultsList.selectedIndex)
-                    if (mPopupSettings.showEditorPreview && mResultsList.selectedIndex >= 0) {
-                        val selectedFile = mGetFileAndLocationCallback(mResultsList.selectedValue as ListItemType)
-                        if (selectedFile != null) mEditorView.updateFile(selectedFile.vf, selectedFile.caretOffset)
-                        else mEditorView.updateFile(null, 0)
-                    }
+                    debouncedUpdateEditorView(Unit)
                 }
             }
         })
@@ -445,6 +466,14 @@ class SearchPopupInstance<ListItemType>(
         }
     }
 
+    private fun updateEditorView() {
+        if (mPopupSettings.showEditorPreview && mResultsList.selectedIndex >= 0) {
+            val selectedFile = mGetFileAndLocationCallback(mResultsList.selectedValue as ListItemType)
+            if (selectedFile != null) mEditorView.updateFile(selectedFile.vf, selectedFile.caretOffset)
+            else mEditorView.updateFile(null, 0)
+        }
+    }
+
     private fun addTitleBar(font: Font, headerBar: JPanel) {
         val title = JTextField(mTitle)
         title.horizontalAlignment = JTextField.CENTER
@@ -474,7 +503,7 @@ class SearchPopupInstance<ListItemType>(
             val action = ShortcutAction("OpenInHorizontalSplit", ShortcutType.OPEN_FILE_IN_HORIZONTAL_SPLIT)
             val tt = KeyStroke.getKeyStroke(mSettings.common.openInHorizontalSplit)
             if (tt == null) {
-                println("Invalid shortcut: ${mSettings.common.openInHorizontalSplit}")
+                println("ERROR: Invalid shortcut: ${mSettings.common.openInHorizontalSplit}")
             }
             val tabShortcut = CustomShortcutSet(KeyStroke.getKeyStroke(mSettings.common.openInHorizontalSplit))
             action.registerCustomShortcutSet(tabShortcut, mSearchField)
@@ -488,7 +517,7 @@ class SearchPopupInstance<ListItemType>(
             val action = ShortcutAction("OpenInActiveEditor", ShortcutType.OPEN_FILE_IN_ACTIVE_EDITOR)
             val tt = KeyStroke.getKeyStroke(mSettings.common.openInActiveEditor)
             if (tt == null) {
-                println("Invalid shortcut: ${mSettings.common.openInActiveEditor}")
+                println("ERROR: Invalid shortcut: ${mSettings.common.openInActiveEditor}")
             }
             val tabShortcut = CustomShortcutSet(KeyStroke.getKeyStroke(mSettings.common.openInActiveEditor))
             action.registerCustomShortcutSet(tabShortcut, mSearchField)

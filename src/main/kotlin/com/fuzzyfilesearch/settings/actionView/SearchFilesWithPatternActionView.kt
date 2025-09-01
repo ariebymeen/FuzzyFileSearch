@@ -74,10 +74,15 @@ class SearchFilesWithPatternActionView() : ActionViewBase() {
 
     override fun help(): String {
         return """
-            Open a popup to search for a file matching the given regex pattern.
+            <b>Open a popup to search for through files matching the given regex pattern</b><br>
+            
             Search through all files in the specified path and match files where the filename (with extension) matches the regex.
             The resulting list is searched through, allowing to more quickly find specific types of files (e.g. finding all test files).
-            Currently we only match on filename, it is not possible to match directories
+            Matches on the filename only (with extension).<br>
+            <b>Name:</b> Enter a unique name, this is used to register the action in the intellij framework. The action will be registered as <i>com.fuzzyfilesearch.%NAME%</i><br>
+            <b>Path:</b> Enter a path, where '/' is the project root. To search relative to the open file, start with './'<br>
+            <b>Regex:</b> Enter a valid regex to match files, e.g. find all files ending with <i>Test</i><br>
+            <b>Shortcut (optional):</b> Enter a shortcut to trigger the action <br>
         """.trimIndent()
     }
 }
