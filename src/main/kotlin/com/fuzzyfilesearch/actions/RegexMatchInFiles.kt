@@ -96,7 +96,7 @@ class RegexMatchInFiles(
         if (globalSettings.common.enableDebugOptions) {
             println("Elapsed time: $timeTaken ms")
             println(
-                "GrepInFiles: ${mSearchItems.size}. Nof files to search: ${mFileNames.size}, regex: ${settings.regex.pattern}, " +
+                "RegexMatchInFiles: ${mSearchItems.size}. Nof files to search: ${mFileNames.size}, regex: ${settings.regex.pattern}, " +
                 "action: ${actionSettings.name}")
         }
 
@@ -114,7 +114,7 @@ class RegexMatchInFiles(
             "Regex search",
             "",
             mPreviousSearchQuery)
-        mPopup!!.showPopupInstance()
+        mPopup!!.showPopupInstance("", mSearchItems.size)
     }
 
     private fun searchFzf(strings: List<String>, query: String): List<String> {

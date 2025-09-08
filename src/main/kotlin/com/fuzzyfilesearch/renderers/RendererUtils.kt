@@ -104,6 +104,7 @@ fun getFontFromAttributes(attrs: AttributeSet, defaultFont: Font): Font {
     return Font(fontFamily, style, fontSize)
 }
 
+// TODO: This returns a simple syntax highlighter based on token type, is it possible to highlight based on PSI with a annotator?
 fun getSyntaxHighlighterByExtension(project: Project, extension: String): SyntaxHighlighter? {
     val fileType = FileTypeManager.getInstance().getFileTypeByExtension(extension)
     return SyntaxHighlighterFactory.getSyntaxHighlighter(fileType, project, null)

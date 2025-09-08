@@ -53,12 +53,8 @@
     <change-notes>
         <![CDATA[
         <ul>
-            <li>Improved settings organisation</li>
-            <li>Improved help info for actions</li>
-            <li>Improved layout for warning messages</li>
-            <li>Skip matches that are very close in live grep</li>
-            <li>Add new option to quickly switch between files</li>
-            <li>Restore previous search query</li>
+            <li>Fixes in search algorithm</li>
+            <li>Search for code elements</li>
         </ul>
         ]]>
     </change-notes>
@@ -108,6 +104,8 @@
         <action id="com.example.TabKeyHandler" class="com.fuzzyfilesearch.actions.ShortcutAction" text="HandleTab" description="Custom handler for TAB key">
         </action>
         <action id="com.fuzzyfilesearch.actions.ToggleDebugAction" class="com.fuzzyfilesearch.actions.ToggleDebugAction" text="ToggleDebugOptions" description="Enable/disable debug options">
+        </action>
+        <action id="com.fuzzyfilesearch.actions.PrintPsiElementTypes" class="com.fuzzyfilesearch.actions.PrintPsiElementTypes" text="PrintPsiElementTypes" description="Find what code type elements are present in the current file">
         </action>
     </actions>
 </idea-plugin>

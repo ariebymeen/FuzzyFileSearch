@@ -119,6 +119,7 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         var applySyntaxHighlightingOnTextSearch = true
         var showFilenameForGrepInFiles = true
         var showFilenameForRegexMatch = ShowFilenamePolicy.WHEN_SEARCHING_MULTIPLE_FILES
+        var showFilenameForPsiSearch  = ShowFilenamePolicy.WHEN_SEARCHING_MULTIPLE_FILES
         var showLineNumberWithFileName = true
         var useSelectedTextForGrepInFiles = true
         var grepRememberPreviousQuerySeconds: Int = 6

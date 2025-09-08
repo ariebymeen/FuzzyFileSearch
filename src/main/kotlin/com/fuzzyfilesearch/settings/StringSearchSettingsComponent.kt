@@ -31,7 +31,7 @@ class StringSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState)
     val actionsCollectionPanel = JPanel().apply {
         layout = BoxLayout(this, BoxLayout.Y_AXIS)
     }
-    val actionTypes = ActionType.values().takeLast(2).toTypedArray()
+    val actionTypes = ActionType.values().takeLast(3).toTypedArray()
     val rbPanel = JPanel(BorderLayout()).apply {
         border = JBUI.Borders.empty()
         val newButton = JButton("New").apply {
@@ -164,6 +164,13 @@ class StringSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState)
         keeper.createComboboxComponent(
             mSettings::showFilenameForRegexMatch, ShowFilenamePolicy.values(), builder,
             "Show filename in regex search", """
+                    Show filename in the result list""".trimIndent())
+
+        builder.addComponent(JBLabel("<html><strong>Code element search settings</strong></html>"))
+            .addSeparator()
+        keeper.createComboboxComponent(
+            mSettings::showFilenameForPsiSearch, ShowFilenamePolicy.values(), builder,
+            "Show filename in code element search", """
                     Show filename in the result list""".trimIndent())
 
         builder.addComponent(JBLabel("<html><strong>Live grep settings</strong></html>"))

@@ -2,7 +2,6 @@ package com.fuzzyfilesearch.actions
 
 import com.fuzzyfilesearch.searchbox.getAllFilesInRoot
 import com.fuzzyfilesearch.settings.GlobalSettings
-import com.fuzzyfilesearch.settings.ShowFilenamePolicy
 import com.fuzzyfilesearch.settings.ShowSearchDirectoryPolicy
 import com.fuzzyfilesearch.showErrorNotification
 import com.fuzzyfilesearch.showTimedNotification
@@ -133,6 +132,7 @@ object utils {
                     ActionType.SEARCH_FILE_MATCHING_PATTERN -> SearchFilesWithPatternAction.register(action, settings)
                     ActionType.REGEX_SEARCH_IN_FILES        -> RegexMatchInFiles.register(action, settings)
                     ActionType.GREP_IN_FILES                -> GrepInFiles.register(action, settings)
+                    ActionType.SEARCH_FOR_CODE_ELEMENTS     -> SearchForPsiElementsAction.register(action, settings)
                 }
             } catch (e: IllegalArgumentException) {
                 showErrorNotification("Error parsing setting", e.message.orEmpty())

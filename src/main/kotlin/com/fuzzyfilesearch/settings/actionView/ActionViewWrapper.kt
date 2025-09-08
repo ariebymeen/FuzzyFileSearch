@@ -11,12 +11,9 @@ import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.event.ItemEvent
-import java.awt.event.MouseAdapter
-import java.awt.event.MouseEvent
 import javax.swing.BoxLayout
 import javax.swing.JButton
 import javax.swing.JEditorPane
-import com.intellij.openapi.util.IconLoader
 import javax.swing.JPanel
 
 class MyEditorPane(type: String, text: String?) : JEditorPane(type, text) {
@@ -190,7 +187,8 @@ class ActionViewWrapper(
             ActionType.SEARCH_RECENT_FILES          -> SearchRecentFilesActionView()
             ActionType.SEARCH_OPEN_FILES            -> SearchOpenFilesActionView()
             ActionType.GREP_IN_FILES                -> GrepInFilesActionView()
-            ActionType.REGEX_SEARCH_IN_FILES        -> RegexMatchInFilesActionView()
+            ActionType.REGEX_SEARCH_IN_FILES    -> RegexMatchInFilesActionView()
+            ActionType.SEARCH_FOR_CODE_ELEMENTS -> SearchForPsiElementsActionView()
         }
         helpButton.toolTipText = if (item == null) "" else item!!.help()
     }

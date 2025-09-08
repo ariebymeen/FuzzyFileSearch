@@ -265,11 +265,13 @@ fun trySkip(input: String,
     // We may need to search for the uppercase letter again.
     if (!caseSensitive && b in 'a'.code.toByte()..'z'.code.toByte()) {
         if (idx > 0) {
+            // First check if lowercase letter is found
             byteArray.copyInto(byteArray, endIndex = idx)
         }
+        // Then search for upper case letter, take the instance that is first
         val uidx = byteArray.indexOf((b.toInt() - 32).toByte())
         if (uidx >= 0) {
-            idx = uidx
+            idx = if (idx >= 0) min(idx, uidx) else uidx
         }
     }
 

@@ -37,7 +37,7 @@ class FileSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState) {
     val actionsCollectionPanel = JPanel().apply {
         layout = BoxLayout(this, BoxLayout.Y_AXIS)
     }
-    val actionTypes = ActionType.values().take(ActionType.values().size - 2).toTypedArray()
+    val actionTypes = ActionType.values().take(ActionType.values().size - 3).toTypedArray()
     val rbPanel = JPanel(BorderLayout()).apply {
         border = JBUI.Borders.empty()
         val newButton = JButton("New").apply {
