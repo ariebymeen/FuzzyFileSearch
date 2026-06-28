@@ -4,10 +4,15 @@ import com.fuzzyfilesearch.renderers.FileInstanceItem
 import com.fuzzyfilesearch.searchbox.getAllFilesInRoot
 import com.fuzzyfilesearch.settings.GlobalSettings
 import com.fuzzyfilesearch.showTimedNotification
+import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.module.ModuleManager
+import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.openapi.vcs.changes.ChangeListManager
+import com.intellij.openapi.vfs.VfsUtilCore
 import kotlin.system.measureTimeMillis
 
 class SearchFileInPathAction(
@@ -18,7 +23,8 @@ class SearchFileInPathAction(
         var path: String,
         var extensionList: List<String>,
         var onlyVcsTracked: Boolean,
-        var searchModifiedOnly: Boolean)
+        var searchModifiedOnly: Boolean,
+        var searchLoadedModuleOnly: Boolean)
 
     val settings: Settings = parseSettings(actionSettings.generic)
     val searchForFiles = SearchForFiles(globalSettings)
@@ -57,10 +63,21 @@ class SearchFileInPathAction(
 
     fun getSearchPath(settings: Settings, project: Project, e: AnActionEvent): String? {
         val searchPath: String
+
+        val searchRoot = if (settings.searchLoadedModuleOnly) {
+            // TODO: Find out if this is even possible?
+        } else {
+            project.basePath
+        }
+
+        if (searchRoot == null) {
+            return null
+        }
+
         if (settings.path.isEmpty() || settings.path[0] == '/') { // Search from project root
-            searchPath = project.basePath + settings.path
+            searchPath = searchRoot + settings.path
         } else { // Search from current file
-            val currentFile = e.getData(com.intellij.openapi.actionSystem.CommonDataKeys.VIRTUAL_FILE)
+            val currentFile = e.getData(CommonDataKeys.VIRTUAL_FILE)
             if (currentFile == null) {
                 showTimedNotification(
                     "${actionSettings.name} no open file",
@@ -78,7 +95,8 @@ class SearchFileInPathAction(
                 path = actionSettings[0],
                 extensionList = utils.extractExtensions(actionSettings.getOrElse(1) { "" }),
                 onlyVcsTracked = actionSettings.getOrElse(2) { "true" }.toBoolean(),
-                searchModifiedOnly = actionSettings.getOrElse(3) { "false" }.toBoolean())
+                searchModifiedOnly = actionSettings.getOrElse(3) { "false" }.toBoolean(),
+                searchLoadedModuleOnly = actionSettings.getOrElse(4) { "false" }.toBoolean())
             return settings
         }
 

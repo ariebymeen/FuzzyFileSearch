@@ -35,6 +35,10 @@ class SearchRecentFilesAction(
             recentFiles += openFiles.filter { !recentFiles.contains(it) }
         }
 
+        if (recentFiles.distinct().size != recentFiles.size){
+            println("ERROR!! Not all files are unique")
+        }
+
         var filteredFiles = recentFiles.filter { file -> isFileExtensionIncluded(file) }
         if (settings.searchModifiedOnly) {
             filteredFiles = filteredFiles.filter { utils.isFileModifiedOrAdded(project, it) }

@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.fuzzyfilesearch"
-version = "1.3.0-rc1"
+version = "1.3.3"
 
 repositories {
     mavenCentral()
@@ -16,9 +16,9 @@ repositories {
 
 dependencies {
     intellijPlatform {
-//        create("CL", "2025.1.1")
-        create("IC", "2025.1.1")
-        testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
+        create("CL", "2025.1.1")
+//        create("IC", "2025.1.3")
+//        testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
 
         // Add necessary plugin dependencies for compilation here, example:
         // bundledPlugin("com.intellij.java")

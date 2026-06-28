@@ -18,6 +18,7 @@ import com.intellij.openapi.vcs.FileStatusManager
 import com.intellij.openapi.vcs.changes.ChangeListManager
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
+import com.jetbrains.rd.util.remove
 import java.util.regex.PatternSyntaxException
 import javax.swing.KeyStroke
 import kotlin.io.path.Path
@@ -118,6 +119,7 @@ object utils {
     }
 
     fun registerActionsFromSettings(actions: Array<Array<String>>, settings: GlobalSettings.SettingsState) {
+        val toRemove = mutableListOf<Array<String>>()
         actions.forEach { action ->
             try {
                 val type = ActionType.valueOf(action[0])
@@ -136,8 +138,10 @@ object utils {
                 }
             } catch (e: IllegalArgumentException) {
                 showErrorNotification("Error parsing setting", e.message.orEmpty())
+                toRemove.add(action)
             }
         }
+        toRemove.forEach { actions.remove(it) }
     }
 
     fun unregisterActions(

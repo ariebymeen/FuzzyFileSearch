@@ -74,7 +74,10 @@ class SearchForPsiElementsAction(
             settings.path,
             globalSettings,
             settings.extensionList,
-            settings.onlyVcsTracked); mResultsCache.clear(); val timeTaken = measureTimeMillis { filenames.forEach { file -> mPsiElements.clear()
+            settings.onlyVcsTracked)
+        mResultsCache.clear()
+        val timeTaken = measureTimeMillis {
+            filenames.forEach { file -> mPsiElements.clear()
                 val psiFile = PsiManager.getInstance(project).findFile(file)
                 if (psiFile != null) {
                     getChildrenOfType(psiFile)
@@ -182,7 +185,10 @@ class SearchForPsiElementsAction(
             from += settings.displayFrom.length
         }
         from.coerceAtLeast(0)
-        var to = element.text.indexOf(settings.displayTo, from)
+        var to = element.text.length
+        if (settings.displayTo.isNotEmpty()) {
+            to = element.text.indexOf(settings.displayTo, from)
+        }
         if (to < 0) to = element.text.length
         val output = element.text.substring(from, to).replace('\n', ' ').replace('\t', ' ')
         return Pair(output.trim().replace("\\s+".toRegex(), " "), from)
@@ -198,17 +204,17 @@ class SearchForPsiElementsAction(
     }
 
     private fun getChildrenOfType(element: PsiElement) {
-        val cached = settings.psiElementTypes.contains(element.elementType.toString().lowercase())
-        if (cached) {
+        val included = settings.psiElementTypes.contains(element.elementType.toString().lowercase())
+        if (included) {
             mPsiElements.add(element)
         }
-        else {
+//        else {
             // FIXME: This does not support nested types in the tree, but is necessary for now to get some speedup
             // Recurse into children
             for (child in element.children) {
                 getChildrenOfType(child)
             }
-        }
+//        }
     }
 
     companion object {

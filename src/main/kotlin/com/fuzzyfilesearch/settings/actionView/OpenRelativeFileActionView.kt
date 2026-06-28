@@ -68,6 +68,7 @@ class OpenRelativeFileActionView() : ActionViewBase() {
 
     override fun help(): String {
         return """
+                <b>Quickly jump to a file that is related to the current file</b><br>
                 Open a file that is related to the currently open file. If no regex is entered, %name% is set to the name of the current file (without extension).
                 If not empty, %rname% is set to the name of the file that matches the regex that is closest to the currently open file (without extension).
                 The action to open the file starts from the reference file directory, so enter a relative path.
@@ -75,7 +76,12 @@ class OpenRelativeFileActionView() : ActionViewBase() {
                 If a file in the directory matches partly, it is considered to be the same
                 (if the current filename is MyFileTest it will open the file MyFile unless MyFileTest also exists in the open path).
                 Note that %rname% and %cname% cannot be used at the same time. If you want to have multiple options use the | to split them. The options
-                are evaluated in order""${'"'}
+                are evaluated in order""${'"'}<br><br>
+                
+            <b>Action name:</b> Enter a unique name, this is used to register the action in the intellij framework. The action will be registered as <i>com.fuzzyfilesearch.%NAME%</i><br>
+            <b>Regex (optional): </b> Enter a regex to search the directory tree for a matching file. Is used to set the %name%. If empty, the currently open file is used<br>
+            <b>File pattern: </b> Enter a pattern to open (split multiple options with '|')
+            <b>Shortcut (optional):</b> Enter a shortcut to trigger the action (switch to the file satisfying this pattern) <br>
         """.trimIndent()
     }
 }

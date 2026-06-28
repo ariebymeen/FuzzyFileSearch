@@ -6,8 +6,9 @@ import com.fuzzyfilesearch.showTimedNotification
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.fileEditor.FileEditorManager
+import kotlin.collections.map
 
-data class OpenFileMatchingPatternSettings(val pattern: String, val otherPatterns: List<String>)
+data class OpenFileMatchingPatternSettings(val patterns: List<String>, val otherPatterns: List<String>)
 data class OpenFileMatchingPatternAction(val name: String, val shortcut: String, val settings: OpenFileMatchingPatternSettings)
 
 class OpenFileMatchingPattern(var actionSettings: OpenFileMatchingPatternAction,
@@ -17,46 +18,44 @@ class OpenFileMatchingPattern(var actionSettings: OpenFileMatchingPatternAction,
     val settings = actionSettings.settings
 
     override fun actionPerformed(e: AnActionEvent) {
-        println("Action ${actionSettings.name}, pattern: ${settings.pattern}")
-
         val project = e.project ?: return
-
         val currentFile = e.getData(com.intellij.openapi.actionSystem.CommonDataKeys.VIRTUAL_FILE)
         if (currentFile == null) {
             showTimedNotification("${actionSettings.name} no open file", "Cannot perform action when no file is opened")
             return
         }
 
-        println("Current file: ${currentFile.name}")
-
         // Resolve which pattern am I? This way I can know what %name% should be
         val matchingTokens = settings.otherPatterns.map { pattern ->
             getMatchingTokens(currentFile.name, pattern)
         }
 
-        println("Matching tokens: $matchingTokens")
         if (matchingTokens.max() == 0) {
-            if (getMatchingTokens(currentFile.name, settings.pattern) == 0) {
+            val currentFileMatch = settings.patterns.maxOfOrNull { pattern -> getMatchingTokens(currentFile.name, pattern) }
+            if (currentFileMatch == 0 || currentFileMatch == null) {
                 // Only show notification if current file is not already the target file
                 showTimedNotification("${actionSettings.name} no match found", "Could not match any of the following patterns to the current file name: ${settings.otherPatterns.joinToString(",")}}")
             }
             return
         }
 
-        val match = settings.otherPatterns[matchingTokens.indexOf(matchingTokens.max())]
+        val match = settings.otherPatterns[matchingTokens.indexOf(matchingTokens.filter { it > 0 }.min())]
         val start = match.split("%name%").take(1).getOrElse(0) { "" }
         val stop  = match.split("%name%").takeLast(1).getOrElse(0) { "" }
         val name = currentFile.name.substring(start.length, currentFile.name.length - stop.length)
-        val fileNameToOpen = settings.pattern.replace("%name%", name)
-        println("Matching pattern: $match, %name%=$name, trying to open file $fileNameToOpen")
 
-        val file = getFileWithName(project, currentFile.parent, fileNameToOpen)
-        if (file == null) {
-            showTimedNotification("${actionSettings.name} no file not found", "Could not find file with name ${fileNameToOpen}")
-            return
+        for (pattern in settings.patterns) {
+            val fileNameToOpen = pattern.replace("%name%", name)
+
+            val file = getFileWithName(project, currentFile.parent, fileNameToOpen)
+            if (file != null) {
+                FileEditorManager.getInstance(project).openFile(file, true)
+                return
+            }
         }
 
-        FileEditorManager.getInstance(project).openFile(file, true)
+        // No file opened, so throw an error
+        showTimedNotification("${actionSettings.name} no file not found", "Could not find file matching pattern for %name% = $name")
     }
 
     private fun getMatchingTokens(filename: String, pattern: String): Int {
@@ -86,12 +85,15 @@ class OpenFileMatchingPattern(var actionSettings: OpenFileMatchingPatternAction,
 
             val allPatterns = getListOfPatterns(actionSettings)
             for (i in 0 until nofActions)  {
+                val pattern  = actionSettings[i * 3 + 1]
+                val patterns = pattern.split('|', ',', ';', ':').map { it.trim() }
+
                 val action = OpenFileMatchingPatternAction(
                     name      = actionSettings[i * 3 + 0],
                     shortcut  = actionSettings[i * 3 + 2],
                     settings  = OpenFileMatchingPatternSettings(
-                        pattern = actionSettings[i * 3 + 1], // TODO: Support multiple patterns?
-                        otherPatterns = allPatterns.filter { pattern -> pattern != actionSettings[i * 3 + 1] }))
+                        patterns = patterns,
+                        otherPatterns = allPatterns.filter { pattern -> pattern != actionSettings[i * 3 + 1] }.flatMap { pattern -> pattern.split('|', ',', ';', ':').map { it.trim() } },))
                 actions.add(action)
             }
 

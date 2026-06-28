@@ -21,6 +21,9 @@ class SearchFileInPathActionView() : ActionViewBase() {
     val vcsTrackedOnlyCheckbox = WrappedCheckbox(
         "Only search files tracked by vcs",
         "If selected, only search files that are tracked by vcs")
+    val moduleSearchOnlyCheckbox= WrappedCheckbox(
+        "Search only in currently loaded module",
+        "If selected, only search for files in the loaded module. Otherwise search in the loaded project root")
     val modifiedFilesOnlyCheckbox = WrappedCheckbox(
         "Only search files that have been modified",
         "If selected, only search through recent files that have been edited", false)
@@ -31,6 +34,7 @@ class SearchFileInPathActionView() : ActionViewBase() {
         panel.add(extensionFilterField)
         panel.add(shortcutField)
         panel.add(vcsTrackedOnlyCheckbox)
+//        panel.add(moduleSearchOnlyCheckbox) // TODO: Currently not supported, seems not to be working quite right
         panel.add(modifiedFilesOnlyCheckbox)
     }
 
@@ -43,6 +47,7 @@ class SearchFileInPathActionView() : ActionViewBase() {
         extensionFilterField.textField.text =
                 if (custom.extensionList.isEmpty()) "" else custom.extensionList.joinToString(", ")
         vcsTrackedOnlyCheckbox.box.isSelected = custom.onlyVcsTracked
+        moduleSearchOnlyCheckbox.box.isSelected = custom.searchLoadedModuleOnly
         modifiedFilesOnlyCheckbox.box.isSelected = custom.searchModifiedOnly
 
         initialSettings = this.getStored()
@@ -72,7 +77,8 @@ class SearchFileInPathActionView() : ActionViewBase() {
             pathField.text(),
             extensionFilterField.text(),
             vcsTrackedOnlyCheckbox.box.isSelected.toString(),
-            modifiedFilesOnlyCheckbox.box.isSelected.toString())
+            modifiedFilesOnlyCheckbox.box.isSelected.toString(),
+            moduleSearchOnlyCheckbox.box.isSelected.toString())
     }
 
     override fun help(): String {

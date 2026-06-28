@@ -7,6 +7,7 @@ import com.fuzzyfilesearch.settings.GlobalSettings
 import com.fuzzyfilesearch.settings.PathDisplayType
 import com.fuzzyfilesearch.showErrorNotification
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.LocalFileSystem
 import kotlin.math.min
 import kotlin.system.measureTimeMillis
 
@@ -35,7 +36,7 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
             return
         }
 
-        mFiles = files
+        mFiles = files.distinct()
         mProject = project
 
         mFileNames = mFiles.map { file -> file.vf.name }
@@ -70,7 +71,7 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
                 val (filteredPaths, _) = fzfSearchAction!!.search(query)
                 val visibleList = filteredPaths.subList(0, min(filteredPaths.size, settings.file.numberOfFilesInSearchView))
                 visibleFiles = visibleList
-                    .map { file -> mFilePaths!!.indexOfFirst { name -> name == file } }
+                    .map { file -> mFilePaths!!.indexOfFirst { name -> name == file} }
                     .map { index ->
                         if (index >= 0) {
                             mFiles[index]
@@ -103,6 +104,12 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
 
     fun openFile(item: FileInstanceItem, location: OpenLocation) {
         mPreviousSearchQuery = mPopup?.getQuery() ?: ""
+        if (!item.vf.isValid) { // sometimes the files are refreshed causing these to not be valid
+            val vf = LocalFileSystem.getInstance().findFileByPath(item.vf.path)
+            if (vf != null) {
+                openFileWithLocation(vf, location, mProject!!)
+            }
+        }
         openFileWithLocation(item.vf, location, mProject!!)
     }
 

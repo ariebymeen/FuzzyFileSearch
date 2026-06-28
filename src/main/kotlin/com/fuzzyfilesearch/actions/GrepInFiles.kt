@@ -14,6 +14,7 @@ import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.jetbrains.rd.framework.base.deepClonePolymorphic
+import fleet.rpc.remoteApiDescriptor
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -117,7 +118,13 @@ class GrepInFiles(
             mMatches = mFileNames.deepClonePolymorphic()
         }
         mSearchQuery = trimmedQuery
-        return grepForString(trimmedQuery)
+
+        try {
+            return grepForString(trimmedQuery)
+        } catch (e: Exception) {
+            println("ERROR: Exception during grepForString: ${e.message}")
+            return emptyList()
+        }
     }
 
     private fun grepForString(query: String): List<StringMatchInstanceItem> {
@@ -130,10 +137,10 @@ class GrepInFiles(
             // Loop over all files and find regex matches. Store result into class variable to use in search
             if (globalSettings.string.searchMultiThreaded) {
                 runBlocking {
-                    mMatches.indices.chunked(10).map { chunk ->
+                    mMatches.indices.chunked(20).map { chunk ->
                         async(cpuDispatcher) {
                             for (index in chunk) {
-                                if (mMatches.size < index) continue
+                                if (index >= mMatches.size) break
                                 if (!findMatchesInFile(mMatches[index], query, result, itemsToRemove)) {
                                     break
                                 }
@@ -142,12 +149,21 @@ class GrepInFiles(
                     }.awaitAll()
                 }
             } else {
-                for (index in mMatches.indices)
+                for (index in mMatches.indices) {
+                    if (index >= mMatches.size) {
+                        println("ERROR: Index $index greater than the size of mMatches ${mMatches.size}")
+                        break
+                    } // TODO: How can this actually happen?
                     if (!findMatchesInFile(mMatches[index], query, result, itemsToRemove)) {
                         break
                     }
+                }
             }
-            mMatches.removeAll(itemsToRemove) // If no matches are found in a file, this file does not need to be searched for the next query (if query grows)
+            try {
+                mMatches.removeAll(itemsToRemove) // If no matches are found in a file, this file does not need to be searched for the next query (if query grows)
+            } catch (e: Exception) {
+                println("ERROR: Exception during remove all: ${e.message}")
+            }
 
             // We do this here to prevent doing this on the UI thread even though this is horrible and ugly
             result.forEach {
@@ -174,8 +190,9 @@ class GrepInFiles(
         query: String,
         matches: MutableList<StringMatchInstanceItem>,
         nonMatches: MutableList<VirtualFile>): Boolean {
-        println("File ${vf.name} len: ${vf.length}")
-        if (vf.name.endsWith("min.js") || vf.length > 50000) return true // Don't search through library files
+        if (vf.name.endsWith("min.js") || vf.length > 100000) {
+            return true
+        } // Don't search through library files
 
         val contents = readFileContents(vf)
         var match = contents.indexOf(query, 0, !globalSettings.common.searchCaseSensitivity)
@@ -236,7 +253,7 @@ class GrepInFiles(
             virtualFile.inputStream.bufferedReader().use { it.readText() }
         } else {
             println("Error reading file ${virtualFile.name}")
-            return ""
+            ""
         }
     }
 

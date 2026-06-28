@@ -72,7 +72,7 @@ class OpenFileMatchingPattern() : ActionViewBase() {
         custom.forEach {
             val entry = PatternEntryFields()
             entry.actionNameField.text = it.name
-            entry.patternField.text    = it.settings.pattern
+            entry.patternField.text    = it.settings.patterns.joinToString(",")
             entry.shortcutField.text   = it.shortcut
             actions.add(entry)
         }

@@ -108,13 +108,7 @@ class SearchForPsiElementsActionView() : ActionViewBase() {
             <li><b>KtClass:</b> Matches all classes</li>
             <li><b>FUN:</b> Matches all methods</li>
             </ul>
-            <br><br>
-            <b>C++:</b> <br>
-            <lu>
-            <li><b>OCStruct:</b> Matches all structs and classes</li>
-            <li><b>OCFunctionDeclaration:</b> Matches all function declarations</li>
-            </ul>
-            <br><br>
+            <br>
             Other types can be found in the intellij docs (Or go to 'Find Action' and search for PrintPsiElementTypes. This will print the code element types to the console).
             <br>
             This action does: <br>
@@ -123,7 +117,7 @@ class SearchForPsiElementsActionView() : ActionViewBase() {
             <br>
             <b>Name:</b> Enter a unique name, this is used to register the action in the intellij framework. The action will be registered as <i>com.fuzzyfilesearch.%NAME%</i><br>
             <b>Path (optional):</b> Enter a path, where '/' is the project root. To search relative to the open file, start with './'. If empty, only search through the current file<br>
-            <b>Type:</b> Provide a comma separated list of code elements to search for, e.g KTMethod to find all kotlin methods<br>
+            <b>Code element type:</b> Provide a comma separated list of code elements to search for, e.g KTMethod to find all kotlin methods<br>
             <b>Display from:</b> Display the text from this string in the search view. Example:<br> entering '::' will display the bold text: void <i>my_class::</i><b>my_method()</b><br>
             <b>Display to:</b> Display the text to this string in the search view. Example: entering '{' will display the bold text: void <b>my_method() </b>{ return \"my_method\"; }<br>
             <b>Extensions filter (optional):</b> List the extensions to search through, seperated by ','. If empty, all files in the (recursive) directory are included in the search. <br>
