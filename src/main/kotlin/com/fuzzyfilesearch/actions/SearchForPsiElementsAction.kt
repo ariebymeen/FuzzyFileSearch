@@ -15,6 +15,7 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.editor.ScrollType
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -80,16 +81,23 @@ class SearchForPsiElementsAction(
             filenames.forEach { file -> mPsiElements.clear()
                 val psiFile = PsiManager.getInstance(project).findFile(file)
                 if (psiFile != null) {
+                    val fileText = psiFile.text
                     getChildrenOfType(psiFile)
 
+                    val document = if (globalSettings.useFullEditorHighlighting) FileDocumentManager.getInstance().getDocument(file) else null
                     for (psiElement in mPsiElements) {
                         val tmp = cutStringText(psiElement)
-                        psiElement.startOffset
+                        val foundIndex = fileText.indexOf(tmp.first)
+                        val elementStart = psiElement.startOffset + tmp.second
+                        println("Psi start: ${psiElement.startOffset}, Psi start: ${psiElement.textRange.startOffset}, ${elementStart}, ${foundIndex}, ${fileText[elementStart]}: ${tmp.first}")
+                        val preceding = getPrecedingContext(fileText, elementStart)
                         mSearchItems.add(StringMatchInstanceItem(file,
-                                                psiElement.startOffset + tmp.second,
-                                                psiElement.startOffset + tmp.second + tmp.first.length,
-                                                utils.getLineNumberFromVirtualFile(file, psiElement.startOffset + tmp.second, globalSettings.common.enableDebugOptions)!!,
+                                                elementStart,
+                                                elementStart + tmp.first.length,
+                                                utils.getLineNumberFromVirtualFile(file, elementStart, globalSettings.common.enableDebugOptions)!!,
                                                tmp.first,
+                                                      document,
+                                                preceding,
                                                 file.fileType.icon))
                     }
                 }
@@ -185,13 +193,18 @@ class SearchForPsiElementsAction(
             from += settings.displayFrom.length
         }
         from.coerceAtLeast(0)
+        while (element.text[from] == ' ') {
+            from += 1
+        }
         var to = element.text.length
         if (settings.displayTo.isNotEmpty()) {
             to = element.text.indexOf(settings.displayTo, from)
         }
         if (to < 0) to = element.text.length
+        // TODO: This messes up the highlighting! Fix this
         val output = element.text.substring(from, to).replace('\n', ' ').replace('\t', ' ')
-        return Pair(output.trim().replace("\\s+".toRegex(), " "), from)
+//        return Pair(output.trim().replace("\\s+".toRegex(), " "), from)
+        return Pair(output, from)
     }
 
     private fun getCurrentFile(e: AnActionEvent): VirtualFile? {
@@ -215,6 +228,14 @@ class SearchForPsiElementsAction(
                 getChildrenOfType(child)
             }
 //        }
+    }
+
+    private fun getPrecedingContext(text: String, elementStart: Int, maxChars: Int = 256): String {
+        if (elementStart <= 0) return ""
+        val from = maxOf(0, elementStart - maxChars)
+        val slice = text.substring(from, elementStart)
+        val lastNewline = slice.lastIndexOf('\n')
+        return if (lastNewline >= 0) slice.substring(lastNewline + 1) else slice
     }
 
     companion object {

@@ -148,6 +148,10 @@ class StringSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState)
             mSettings::applySyntaxHighlightingOnTextSearch, builder, "Apply syntax highlighting on text search", """
                     If checked, apply syntax highlighting on text search results. If false, plain text is used""".trimIndent())
         keeper.createCheckboxComponent(
+            mSettings::useFullEditorHighlighting, builder, "Use full editor highlighting", """
+                    If checked, the same highlighter the file editor uses is applied (slower but most accurate).
+                    If unchecked, a fast lexer-based highlighter is used (default).""".trimIndent())
+        keeper.createCheckboxComponent(
             mSettings::showLineNumberWithFileName, builder, "Show the line number of the match", """
                 If checked, show the filename:line number of the matching line """.trimIndent())
         if (mSettings.common.enableDebugOptions) {

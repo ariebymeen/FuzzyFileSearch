@@ -10,6 +10,7 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.editor.ScrollType
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -70,7 +71,8 @@ class RegexMatchInFiles(
         val timeTaken = measureTimeMillis {
             // Loop over all files and find regex matches. Store result into class variable to use in search
             mFileNames.forEach { vf ->
-                val matches = settings.regex.findAll(readFileContents(vf)).toList()
+                val fileText = readFileContents(vf)
+                val matches = settings.regex.findAll(fileText).toList()
                 mSearchItems.addAll(matches.map { match ->
                     // Remove newlines and indenting for to make the view single line
                     // TODO: This may not be the most efficient way to do any of this
@@ -82,11 +84,13 @@ class RegexMatchInFiles(
                             .replace("   ", " ")
                             .replace("  ", " ")
                     }
+                    val preceding = getPrecedingContext(fileText, match.range.first)
                     val lineNr = utils.getLineNumberFromVirtualFile(
                         vf,
                         match.range.first,
                         globalSettings.common.enableDebugOptions) ?: 0
-                    StringMatchInstanceItem(vf, match.range.first, match.range.last, lineNr, newText)
+                    val document = if (globalSettings.useFullEditorHighlighting) FileDocumentManager.getInstance().getDocument(vf) else null
+                    StringMatchInstanceItem(vf, match.range.first, match.range.last, lineNr, newText, document,preceding)
                 })
 
             }
@@ -137,7 +141,6 @@ class RegexMatchInFiles(
 
     fun getSortedResult(query: String): List<StringMatchInstanceItem> {
         if (query.isNotEmpty()) {
-//            val filtered = fzfSearchAction!!.search(query)
             val filtered = searchFzf(mSearchItemStrings, query)
             val visibleList = filtered.subList(0, min(filtered.size, globalSettings.string.numberOfFilesInSearchView))
             val visibleItems = visibleList
@@ -192,8 +195,16 @@ class RegexMatchInFiles(
             virtualFile.inputStream.bufferedReader().use { it.readText() }
         } else {
             println("Error reading file ${virtualFile.name}")
-            return ""
+            ""
         }
+    }
+
+    private fun getPrecedingContext(text: String, matchStart: Int, maxChars: Int = 256): String {
+        if (matchStart <= 0) return ""
+        val from = maxOf(0, matchStart - maxChars)
+        val slice = text.substring(from, matchStart)
+        val lastNewline = slice.lastIndexOf('\n')
+        return if (lastNewline >= 0) slice.substring(lastNewline + 1) else slice
     }
 
     companion object {

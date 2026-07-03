@@ -1,17 +1,24 @@
 package com.fuzzyfilesearch.renderers
 
+import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.editor.colors.EditorColorsScheme
 import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.openapi.editor.ex.util.LexerEditorHighlighter
+import com.intellij.openapi.editor.impl.DocumentMarkupModel
+import com.intellij.openapi.editor.markup.TextAttributes
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.fileTypes.SyntaxHighlighter
 import com.intellij.openapi.fileTypes.SyntaxHighlighterFactory
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
+import java.awt.Color
 import java.awt.Font
 import java.awt.FontMetrics
 import javax.swing.JTextPane
 import javax.swing.text.*
+import kotlin.math.max
 
 fun computeNofCharsToRemove(textPane: JTextPane, maxWidth: Int): Pair<Int, Int> {
     val doc = textPane.styledDocument
@@ -28,7 +35,6 @@ fun computeNofCharsToRemove(textPane: JTextPane, maxWidth: Int): Pair<Int, Int> 
         val fontMetrics: FontMetrics = textPane.getFontMetrics(fontStyle)
         var segmentText = doc.getText(elem.startOffset, elem.endOffset - elem.startOffset)
         var segmentWidth = fontMetrics.stringWidth(segmentText)
-//        println("0: Segment text: ${segmentText} has width $segmentWidth")
         if (totalWidth > maxWidth) {
             charsToRemove += segmentText.length
             break
@@ -41,24 +47,15 @@ fun computeNofCharsToRemove(textPane: JTextPane, maxWidth: Int): Pair<Int, Int> 
                 (Math.max(segmentWidth + totalWidth - maxWidth, 1)) / segmentText.length)
             val segmentLen = segmentText.length
             try {
-//                segmentText = doc.getText(elem.startOffset, elem.endOffset - elem.startOffset)
                 segmentText = doc.getText(elem.startOffset, elem.endOffset - elem.startOffset - nofRemovedChars)
-//                segmentText = doc.getText(elem.startOffset, Math.max(0, elem.endOffset - elem.startOffset - nofRemovedChars))
                 segmentWidth = fontMetrics.stringWidth(segmentText)
-//                println("1: Segment text: ${segmentText} has width $segmentWidth")
             } catch (e: BadLocationException) {
-                println(
-                    "Exception thrown: ${e.toString()}, segment text: ${segmentText}, elem start: ${elem.startOffset}, elem emd: ${elem.endOffset}, text: ${
-                        doc.getText(
-                            0,
-                            doc.length)
-                    }")
+                println("Exception thrown: ${e.toString()}, segment text: ${segmentText}, elem start: ${elem.startOffset}, elem emd: ${elem.endOffset}, text: ${doc.getText(0, doc.length)}")
             }
             while (totalWidth + segmentWidth + dotsTextWidth * 2 > maxWidth && nofRemovedChars < segmentLen) {
                 // Iteratively move to the chars until the text including '...' fits into the max width
                 segmentWidth -= fontMetrics.stringWidth(segmentText.get(segmentLen - nofRemovedChars - 1).toString())
                 ++nofRemovedChars
-//                println("1: Segment text: ${segmentText} has width $segmentWidth. WL: ${totalWidth + segmentWidth + dotsTextWidth * 2}, nof rem cha: $nofRemovedChars, seg len: $segmentLen")
             }
             charsToRemove += nofRemovedChars
         }
@@ -71,7 +68,6 @@ fun computeNofCharsToRemove(textPane: JTextPane, maxWidth: Int): Pair<Int, Int> 
     val spaceLeft = Math.max(0, maxWidth - totalWidth)
     val nofDots = Math.floor(spaceLeft / dotsTextWidth.toDouble()).toInt()
 
-//    println("Text: ${doc.getText(0, doc.length)}, max width: ${maxWidth} space left: $spaceLeft, nof dots: $nofDots, dot w: $dotsTextWidth, nof chars to remove: $charsToRemove")
     return Pair(charsToRemove, nofDots)
 }
 
@@ -104,7 +100,6 @@ fun getFontFromAttributes(attrs: AttributeSet, defaultFont: Font): Font {
     return Font(fontFamily, style, fontSize)
 }
 
-// TODO: This returns a simple syntax highlighter based on token type, is it possible to highlight based on PSI with a annotator?
 fun getSyntaxHighlighterByExtension(project: Project, extension: String): SyntaxHighlighter? {
     val fileType = FileTypeManager.getInstance().getFileTypeByExtension(extension)
     return SyntaxHighlighterFactory.getSyntaxHighlighter(fileType, project, null)
@@ -114,29 +109,179 @@ fun getCurrentEditorColorScheme(): EditorColorsScheme {
     return EditorColorsManager.getInstance().globalScheme
 }
 
-fun highlightText(project: Project, doc: StyledDocument, startOffset: Int, text: String, extension: String?) {
+fun applyTextAttributesToStyle(style: SimpleAttributeSet, attrs: TextAttributes) {
+    if (attrs.foregroundColor != null) {
+        StyleConstants.setForeground(style, attrs.foregroundColor)
+    }
+    if (attrs.backgroundColor != null) {
+        StyleConstants.setBackground(style, attrs.backgroundColor)
+    }
+    val fontType = attrs.fontType
+    StyleConstants.setBold(style, fontType == Font.BOLD || fontType == (Font.BOLD or Font.ITALIC))
+    StyleConstants.setItalic(style, fontType == Font.ITALIC || fontType == (Font.BOLD or Font.ITALIC))
+}
+
+
+fun highlightText(
+    project: Project,
+    doc: StyledDocument,
+    startOffset: Int,
+    text: String,
+    extension: String?,
+    precedingContent: String = ""
+) {
     extension ?: return
+    if (text.isEmpty()) return
 
     val syntaxHighlighter = getSyntaxHighlighterByExtension(project, extension)
     if (syntaxHighlighter == null) {
-//        println("Error! Syntax highlighter not found for extension type: $text")
         return
     }
 
-    val highlighter = LexerEditorHighlighter(syntaxHighlighter, getCurrentEditorColorScheme())
-    highlighter.setText(text)
+    val scheme = getCurrentEditorColorScheme()
+//    val contextLen = precedingContent.length
+//    val fullText = precedingContent + text
+    val fullText = text
+    val textOffsetWithinFull = 0//contextLen
 
-    val iterator = highlighter.createIterator(0)
+    val editorHighlighter = LexerEditorHighlighter(syntaxHighlighter, scheme)
+    editorHighlighter.setText(fullText)
+
+    val iterator = editorHighlighter.createIterator(0)
     while (!iterator.atEnd()) {
-        val textAttributesKey: TextAttributesKey? =
-                syntaxHighlighter.getTokenHighlights(iterator.tokenType).firstOrNull()
-        val textAttributes = textAttributesKey?.defaultAttributes
-        if (textAttributes != null && textAttributes.foregroundColor != null) {
+        val startInFull = iterator.start
+        val endInFull = iterator.end
+        val len = endInFull - startInFull
+        if (len <= 0) {
+            iterator.advance()
+            continue
+        }
+
+        val visibleStart = startInFull - textOffsetWithinFull
+        val visibleEnd = endInFull - textOffsetWithinFull
+        val visibleStartClamped = max(0, visibleStart)
+        val visibleEndClamped = minOf(text.length, visibleEnd)
+        val visibleLen = visibleEndClamped - visibleStartClamped
+
+        if (visibleLen > 0) {
+            val attrs = iterator.textAttributes
             val style = SimpleAttributeSet()
-            StyleConstants.setForeground(style, textAttributes.foregroundColor)
-            doc.setCharacterAttributes(iterator.start + startOffset, iterator.end - iterator.start, style, false)
+            val keyArray: Array<TextAttributesKey> = iterator.textAttributesKeys
+            var resolved: TextAttributes? = attrs
+            if (resolved == null || resolved.isEmpty()) {
+                for (k in keyArray) {
+                    val v = scheme.getAttributes(k)
+                    if (v != null && !v.isEmpty) {
+                        resolved = v
+                        break
+                    }
+                }
+            }
+            if (resolved != null && !resolved.isEmpty) {
+                applyTextAttributesToStyle(style, resolved)
+            } else {
+                StyleConstants.setForeground(style, scheme.defaultForeground)
+            }
+            doc.setCharacterAttributes(startOffset + visibleStartClamped, visibleLen, style, true)
         }
 
         iterator.advance()
+    }
+}
+
+private data class EditorHighlighterCacheValue(val range: List<CachedRange>, val docModStamp: Long)
+private class EditorHighlighterCache {
+    private val cachedHighlighters = mutableMapOf<VirtualFile, EditorHighlighterCacheValue>()
+
+    fun getOrCreate(
+        project: Project,
+        file: VirtualFile,
+        document: Document,
+    ): List<CachedRange>? {
+        val stamp = document.modificationStamp
+        cachedHighlighters[file]?.let { if (it.docModStamp >= stamp) return it.range }
+
+        val rangeList = ReadAction.compute<List<CachedRange>, Throwable> {
+            val markup = DocumentMarkupModel.forDocument(document, project, true)
+
+            val scheme = getCurrentEditorColorScheme()
+            val result = mutableListOf<CachedRange>()
+            for (h in markup.allHighlighters) {
+                val hs = h.startOffset
+                val he = h.endOffset
+                val attrs: TextAttributes? = h.getTextAttributes(scheme)
+                if (attrs == null || attrs.isEmpty) {
+                    continue
+                }
+                val fg = attrs.foregroundColor
+                val bg = attrs.backgroundColor
+                val fontType = attrs.fontType
+                val isBold = fontType == Font.BOLD || fontType == (Font.BOLD or Font.ITALIC)
+                val isItalic = fontType == Font.ITALIC || fontType == (Font.BOLD or Font.ITALIC)
+                result.add(
+                    CachedRange(
+                        start = hs,
+                        end = he,
+                        fg = fg,
+                        bg = bg,
+                        isBold = isBold,
+                        isItalic = isItalic,
+                    )
+                )
+            }
+            result
+        }
+
+        cachedHighlighters[file] = EditorHighlighterCacheValue(rangeList, stamp)
+        return rangeList
+    }
+
+    fun dispose() {
+        cachedHighlighters.clear()
+    }
+}
+
+private data class CachedRange(
+    val start: Int,
+    val end: Int,
+    val fg: Color?,
+    val bg: Color?,
+    val isBold: Boolean,
+    val isItalic: Boolean,
+)
+
+private object EditorHighlighterCacheSingleton {
+    val cache = EditorHighlighterCache()
+}
+
+fun highlightTextWithEditor(
+    project: Project,
+    doc: StyledDocument,
+    startOffset: Int,
+    text: String,
+    file: VirtualFile,
+    itemStart: Int,
+    document: Document?
+) {
+    if (text.isEmpty()) return
+    if (document == null) return
+
+    val lineStart = itemStart
+    val ranges = try {
+        EditorHighlighterCacheSingleton.cache.getOrCreate(project, file, document)
+    } catch (_: Throwable) { null } ?: return
+
+    val scheme = getCurrentEditorColorScheme()
+    for (r in ranges) {
+        val visStart = max(0, r.start - lineStart)
+        val visEnd = minOf(text.length, r.end - lineStart)
+        if (visEnd <= visStart) continue
+        val style = SimpleAttributeSet()
+        if (r.fg != null) StyleConstants.setForeground(style, r.fg)
+        else StyleConstants.setForeground(style, scheme.defaultForeground)
+        if (r.bg != null) StyleConstants.setBackground(style, r.bg)
+        StyleConstants.setBold(style, r.isBold)
+        StyleConstants.setItalic(style, r.isItalic)
+        doc.setCharacterAttributes(startOffset + visStart, visEnd - visStart, style, true)
     }
 }

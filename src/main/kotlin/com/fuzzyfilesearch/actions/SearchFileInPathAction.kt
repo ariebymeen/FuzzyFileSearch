@@ -66,6 +66,7 @@ class SearchFileInPathAction(
 
         val searchRoot = if (settings.searchLoadedModuleOnly) {
             // TODO: Find out if this is even possible?
+            project.basePath
         } else {
             project.basePath
         }

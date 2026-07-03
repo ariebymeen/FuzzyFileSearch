@@ -2,6 +2,7 @@ package com.fuzzyfilesearch.renderers
 
 import com.fuzzyfilesearch.components.VerticallyCenteredTextPane
 import com.fuzzyfilesearch.components.ShrunkVerticallyCenteredTextPane
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.vfs.VirtualFile
 import javax.swing.Icon
 import javax.swing.JLabel
@@ -13,6 +14,8 @@ class StringMatchInstanceItem(val vf: VirtualFile,
                               val end: Int,
                               val line_nr: Int,
                               val text: String,
+                              val document: Document? = null, // Document only used for full editor syntax highlighting
+                              val precedingContent: String = "",
                               var icon: Icon? = null,
                               var mainPanel: JPanel? = null,
                               var iconLabel: JLabel? = null,

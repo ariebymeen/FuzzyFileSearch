@@ -8,6 +8,7 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.editor.ScrollType
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.fileTypes.PlainTextFileType
@@ -190,7 +191,7 @@ class GrepInFiles(
         query: String,
         matches: MutableList<StringMatchInstanceItem>,
         nonMatches: MutableList<VirtualFile>): Boolean {
-        if (vf.name.endsWith("min.js") || vf.length > 100000) {
+        if (vf.name.endsWith("min.js") || vf.length > 200000) {
             return true
         } // Don't search through library files
 
@@ -201,9 +202,11 @@ class GrepInFiles(
         }
         while (match >= 0 && matches.size < globalSettings.string.numberOfFilesInSearchView) {
             val text = findTextBetweenNewlines(contents, match)
-            val lineNr =
-                    utils.getLineNumberFromVirtualFile(vf, text.second, globalSettings.common.enableDebugOptions) ?: 0
-            matches.add(StringMatchInstanceItem(vf, text.second, text.third, lineNr, text.first.trim()))
+            val lineStart = text.second - 1
+            val preceding = getPrecedingContext(contents, lineStart)
+            val lineNr = utils.getLineNumberFromVirtualFile(vf, text.second, globalSettings.common.enableDebugOptions) ?: 0
+            val document = if (globalSettings.useFullEditorHighlighting) FileDocumentManager.getInstance().getDocument(vf) else null
+            matches.add(StringMatchInstanceItem(vf, text.second, text.third, lineNr, text.first.trim(), document, preceding))
             match = text.third
 
             // Skip a number of lines, these are not searched through
@@ -270,6 +273,14 @@ class GrepInFiles(
         val afterIndex = text.indexOf('\n', index).takeIf { it != -1 } ?: text.length
 
         return Triple(text.substring(beforeIndex, afterIndex).trim(), beforeIndex + 1, afterIndex)
+    }
+
+    private fun getPrecedingContext(text: String, lineStart: Int, maxChars: Int = 256): String {
+        if (lineStart <= 0) return ""
+        val from = maxOf(0, lineStart - maxChars)
+        val slice = text.substring(from, lineStart)
+        val lastNewline = slice.lastIndexOf('\n')
+        return if (lastNewline >= 0) slice.substring(lastNewline + 1) else slice
     }
 
     companion object {

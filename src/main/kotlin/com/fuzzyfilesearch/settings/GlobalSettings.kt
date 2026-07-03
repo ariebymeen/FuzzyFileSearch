@@ -117,6 +117,7 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
 
         // String search settings
         var applySyntaxHighlightingOnTextSearch = true
+        var useFullEditorHighlighting = false
         var showFilenameForGrepInFiles = true
         var showFilenameForRegexMatch = ShowFilenamePolicy.WHEN_SEARCHING_MULTIPLE_FILES
         var showFilenameForPsiSearch  = ShowFilenamePolicy.WHEN_SEARCHING_MULTIPLE_FILES

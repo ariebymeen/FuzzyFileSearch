@@ -107,7 +107,11 @@ class HighlightedStringCellRenderer(
         cutoffStringToMaxWidth(item.textPane!!, doc, maxWidth - iconW - fileNameW)
 
         if (mSettings.applySyntaxHighlightingOnTextSearch) {
-            highlightText(mProject, doc, highlightOffset, item.text, item.vf.extension)
+            // highlightText does syntax based highlighting, which highlights keywords
+            highlightText(mProject, doc, highlightOffset, item.text, item.vf.extension, item.precedingContent)
+            if (mSettings.useFullEditorHighlighting) {
+                highlightTextWithEditor(mProject, doc, highlightOffset, item.text, item.vf, item.start, item.document)
+            }
         }
     }
 
