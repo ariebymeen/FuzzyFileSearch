@@ -232,7 +232,11 @@ private class EditorHighlighterCache {
             result
         }
 
-        cachedHighlighters[file] = EditorHighlighterCacheValue(rangeList, stamp)
+        println("Created cache for file ${file.path} with ${rangeList.size} range(s)")
+
+        if (rangeList.isNotEmpty()) {
+            cachedHighlighters[file] = EditorHighlighterCacheValue(rangeList, stamp)
+        }
         return rangeList
     }
 

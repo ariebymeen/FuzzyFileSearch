@@ -201,9 +201,8 @@ class SearchForPsiElementsAction(
             to = element.text.indexOf(settings.displayTo, from)
         }
         if (to < 0) to = element.text.length
-        // TODO: This messes up the highlighting! Fix this
         val output = element.text.substring(from, to).replace('\n', ' ').replace('\t', ' ')
-//        return Pair(output.trim().replace("\\s+".toRegex(), " "), from)
+//        return Pair(output.trim().replace("\\s+".toRegex(), " "), from) // This removed double spaces but messes up syntax highlighting
         return Pair(output, from)
     }
 

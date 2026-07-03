@@ -9,6 +9,8 @@ import com.fuzzyfilesearch.showErrorNotification
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.ScrollType
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -72,6 +74,9 @@ class RegexMatchInFiles(
             // Loop over all files and find regex matches. Store result into class variable to use in search
             mFileNames.forEach { vf ->
                 val fileText = readFileContents(vf)
+                val document: Document? = if (globalSettings.useFullEditorHighlighting) {
+                    ReadAction.compute<Document?, Exception> { FileDocumentManager.getInstance().getDocument(vf) }
+                } else null
                 val matches = settings.regex.findAll(fileText).toList()
                 mSearchItems.addAll(matches.map { match ->
                     // Remove newlines and indenting for to make the view single line
@@ -89,7 +94,6 @@ class RegexMatchInFiles(
                         vf,
                         match.range.first,
                         globalSettings.common.enableDebugOptions) ?: 0
-                    val document = if (globalSettings.useFullEditorHighlighting) FileDocumentManager.getInstance().getDocument(vf) else null
                     StringMatchInstanceItem(vf, match.range.first, match.range.last, lineNr, newText, document,preceding)
                 })
 

@@ -7,6 +7,8 @@ import com.fuzzyfilesearch.settings.GlobalSettings
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
+import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.ScrollType
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
@@ -196,6 +198,9 @@ class GrepInFiles(
         } // Don't search through library files
 
         val contents = readFileContents(vf)
+        val document: Document? = if (globalSettings.useFullEditorHighlighting) {
+            ReadAction.compute<Document?, Exception> { FileDocumentManager.getInstance().getDocument(vf) }
+        } else null
         var match = contents.indexOf(query, 0, !globalSettings.common.searchCaseSensitivity)
         if (match < 0) {
             nonMatches.add(vf)
@@ -205,7 +210,6 @@ class GrepInFiles(
             val lineStart = text.second - 1
             val preceding = getPrecedingContext(contents, lineStart)
             val lineNr = utils.getLineNumberFromVirtualFile(vf, text.second, globalSettings.common.enableDebugOptions) ?: 0
-            val document = if (globalSettings.useFullEditorHighlighting) FileDocumentManager.getInstance().getDocument(vf) else null
             matches.add(StringMatchInstanceItem(vf, text.second, text.third, lineNr, text.first.trim(), document, preceding))
             match = text.third
 
@@ -269,7 +273,10 @@ class GrepInFiles(
             throw IndexOutOfBoundsException("Index is out of the string's range.")
         }
 
-        val beforeIndex = text.lastIndexOf('\n', index - 1).takeIf { it != -1 } ?: 0
+        var beforeIndex = text.lastIndexOf('\n', index - 1).takeIf { it != -1 } ?: 0
+        while (text[beforeIndex] == ' ') {  // cut off whitespace in front in a way in which the beforeIndex points to the first char in the line
+            beforeIndex += 1
+        }
         val afterIndex = text.indexOf('\n', index).takeIf { it != -1 } ?: text.length
 
         return Triple(text.substring(beforeIndex, afterIndex).trim(), beforeIndex + 1, afterIndex)
