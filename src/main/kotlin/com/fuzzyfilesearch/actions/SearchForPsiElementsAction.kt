@@ -7,6 +7,7 @@ import com.fuzzyfilesearch.searchbox.FuzzyMatchV1
 import com.fuzzyfilesearch.searchbox.FuzzyMatchV2
 import com.fuzzyfilesearch.searchbox.OpenLocation
 import com.fuzzyfilesearch.searchbox.SearchPopupInstance
+import com.fuzzyfilesearch.searchbox.mapVisibleItems
 import com.fuzzyfilesearch.searchbox.openFileWithLocation
 import com.fuzzyfilesearch.settings.GlobalSettings
 import com.fuzzyfilesearch.settings.ShowFilenamePolicy
@@ -128,21 +129,12 @@ class SearchForPsiElementsAction(
 
     private fun getSortedResult(query: String): List<StringMatchInstanceItem> {
         if (query.isNotEmpty()) {
-            val filtered = searchFzf(mSearchItemStrings, query)
-            val visibleList = filtered.subList(0, min(filtered.size, globalSettings.string.numberOfFilesInSearchView))
-            val visibleItems = visibleList
-                .map { file -> mSearchItemStrings.indexOfFirst { name -> name == file } }
-                .map { index ->
-                    if (index >= 0) {
-                        mSearchItems[index]
-                    } else {
-                        println("Error, unexpected index $index. Filtered files size: ${filtered.size}, file size: ${mSearchItems.size}")
-                        showErrorNotification(
-                            "Something went wrong searching",
-                            "Error searching mFiles: $visibleList, invalidating caches now")
-                        mSearchItems[0]
-                    }
-                }
+            val (_, sortedIndices) = searchFzf(mSearchItemStrings, query)
+            val visibleItems = mapVisibleItems(
+                sortedIndices,
+                globalSettings.string.numberOfFilesInSearchView,
+                mSearchItems,
+                mSearchItems[0])
             // We do this here to prevent doing this on the UI thread even though this is horrible and ugly
             visibleItems.forEach {
                 if (globalSettings.string.showFileIcon && it.icon == null) it.icon = it.vf.fileType.icon
@@ -153,22 +145,48 @@ class SearchForPsiElementsAction(
         }
     }
 
-    private fun searchFzf(strings: List<String>, query: String): List<String> {
+    private fun searchFzf(strings: List<String>, query: String): Pair<List<String>, IntArray> {
         var searchFunc = ::FuzzyMatchV2
         if (strings.size > 200) {
             searchFunc = ::FuzzyMatchV1
         }
 
         val queryNorm = if (globalSettings.common.searchCaseSensitivity) query else query.lowercase()
-        val scores = Array<Int>(strings.size) { 0 }
+        val scores = IntArray(strings.size)
         for (index in strings.indices) {
             scores[index] = searchFunc(globalSettings.common.searchCaseSensitivity, strings[index], queryNorm).score
         }
 
-        val filtered = scores.zip(strings).filter { (num, _) -> num != 0 }
-        val sorted = filtered.sortedByDescending { (num, _) -> num }
-        val (_, results) = sorted.unzip()
-        return results
+        // Single-pass collect: build a parallel (index, score) list of
+        // non-zero entries, sort by score desc, and return both the sorted
+        // paths and their original indices. The original-index list lets
+        // the caller map visible results back to mSearchItems in O(K) —
+        // replacing the previous O(K * M) indexOfFirst scan.
+        val n = strings.size
+        var nonZero = 0
+        for (i in 0 until n) {
+            if (scores[i] != 0) nonZero++
+        }
+        if (nonZero == 0) return Pair(emptyList(), IntArray(0))
+        val indices = IntArray(nonZero)
+        val filteredScores = IntArray(nonZero)
+        var k = 0
+        for (i in 0 until n) {
+            if (scores[i] != 0) {
+                indices[k] = i
+                filteredScores[k] = scores[i]
+                k++
+            }
+        }
+        val boxed = arrayOfNulls<Int>(nonZero)
+        for (i in 0 until nonZero) boxed[i] = indices[i]
+        java.util.Arrays.sort(boxed, 0, nonZero,
+            java.util.Comparator { a, b -> filteredScores[b!!] - filteredScores[a!!] })
+        for (i in 0 until nonZero) indices[i] = boxed[i]!!
+
+        val sortedStrings = ArrayList<String>(nonZero)
+        for (i in 0 until nonZero) sortedStrings.add(strings[indices[i]])
+        return Pair(sortedStrings, indices)
     }
 
     private fun moveToLocation(item: StringMatchInstanceItem, location: OpenLocation) {

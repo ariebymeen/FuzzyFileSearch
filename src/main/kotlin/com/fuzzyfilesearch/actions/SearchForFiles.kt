@@ -68,21 +68,17 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
         if (query.isNotEmpty()) {
             val visibleFiles: List<FileInstanceItem>
             val timeTaken = measureTimeMillis {
-                val (filteredPaths, _) = fzfSearchAction!!.search(query)
-                val visibleList = filteredPaths.subList(0, min(filteredPaths.size, settings.file.numberOfFilesInSearchView))
-                visibleFiles = visibleList
-                    .map { file -> mFilePaths!!.indexOfFirst { name -> name == file} }
-                    .map { index ->
-                        if (index >= 0) {
-                            mFiles[index]
-                        } else {
-                            println("Error, unexpected index $index. Filtered files size: ${filteredPaths.size}, file size: ${mFiles.size}")
-                            showErrorNotification(
-                                "Something went wrong searching",
-                                "Error searching mFiles: $visibleList, invalidating caches now")
-                            mFiles[0]
-                        }
-                    }
+                fzfSearchAction!!.search(query)
+                // The sort just published previousResultPaths (and the
+                // matching index list). Map the first K entries back to
+                // mFiles in O(K) using the index list, instead of the
+                // previous O(K * M) indexOfFirst scan.
+                val sortedIndices = fzfSearchAction!!.resultIndices()
+                visibleFiles = mapVisibleItems(
+                    sortedIndices,
+                    settings.file.numberOfFilesInSearchView,
+                    mFiles,
+                    mFiles[0])
                 // We do this here to prevent doing this on the UI thread even though this is horrible and ugly
                 visibleFiles.forEach {
                     if (settings.file.showFileIcon && it.icon == null) it.icon = it.vf.fileType.icon
