@@ -215,11 +215,21 @@ class RegexMatchInFiles(
     }
 
     private fun readFileContents(virtualFile: VirtualFile): String {
+        // See GrepInFiles.readFileContents: catch Throwable around the
+        // stream open + read so a stale VFS entry doesn't abort the search.
         return if (virtualFile.exists() && virtualFile.isValid) {
-            // Read the file content as a string
-            virtualFile.inputStream.bufferedReader().use { it.readText() }
+            try {
+                virtualFile.inputStream.bufferedReader().use { it.readText() }
+            } catch (e: Throwable) {
+                if (globalSettings.common.enableDebugOptions) {
+                    println("Error reading file ${virtualFile.name}: ${e.message}")
+                }
+                ""
+            }
         } else {
-            println("Error reading file ${virtualFile.name}")
+            if (globalSettings.common.enableDebugOptions) {
+                println("Error reading file ${virtualFile.name}: not valid or does not exist")
+            }
             ""
         }
     }

@@ -42,13 +42,15 @@ object utils {
         if (searchDirectory.takeLast(1)[0] == '/') {
             dir = dir.substring(0, dir.length - 1)
         }
+        if (searchDirectory.takeLast(2) == "/.") {
+            dir = dir.substring(0, dir.length - 2)
+        }
         var visualText: String
         when (settings.showSearchDirectoryPolicy) {
             ShowSearchDirectoryPolicy.SHOW_LAST_DIRECTORY_ONLY -> {
                 dir = if (dir.length >= projectBaseDir.length) dir.substring(projectBaseDir.length) else dir
                 val dirs = dir.split('/').filter { it.isNotEmpty() }
                 if (dirs.isNotEmpty()) {
-                    print(dirs)
                     val base = if (dirs.size == 1) "/" else "./"
                     visualText = base + dirs.takeLast(1)[0] + "/"
                 } else {
@@ -62,7 +64,6 @@ object utils {
 
         if (visualText.length > settings.showSearchDirectoryCutoffLen) {
             val start = (visualText.length - settings.showSearchDirectoryCutoffLen + 2)
-            println("Start: $start, vt: $visualText ${visualText.length}")
             visualText = ".." + visualText.substring(start.coerceAtLeast(0))
         }
         return visualText
@@ -218,15 +219,23 @@ object utils {
     }
 
     fun getLineNumberFromVirtualFile(vf: VirtualFile, offset: Int, printErr: Boolean): Int? {
+        // The VFS can be in an inconsistent state during project open /
+        // indexing: a VirtualFile we hold can refer to a path that has been
+        // deleted, moved, or whose document isn't loaded yet. Many of those
+        // cases surface as a non-IOOBE exception (IllegalArgumentException,
+        // IllegalStateException, …). Catch Throwable so one bad file never
+        // aborts the surrounding search loop and leaves the user with a
+        // half-populated popup.
         var lineNr: Int? = 0
         runReadAction {
             try {
                 val document = FileDocumentManager.getInstance().getDocument(vf)
                 lineNr = document?.getLineNumber(offset)?.plus(1)
-            } catch (e: IndexOutOfBoundsException) {
+            } catch (e: Throwable) {
                 if (printErr) {
                     println("Line number $offset could not be retrieved for file ${vf.name}: ${e.message}")
                 }
+                lineNr = null
             }
         }
         return lineNr

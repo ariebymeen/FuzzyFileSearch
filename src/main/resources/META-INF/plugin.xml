@@ -53,8 +53,9 @@
     <change-notes>
         <![CDATA[
         <ul>
-            <li>Fixes in search algorithm</li>
-            <li>Search for code elements</li>
+            <li>Speed improvements</li>
+            <li>Full syntax highlighting</li>
+            <li>Fix error messages</li>
         </ul>
         ]]>
     </change-notes>

@@ -352,42 +352,77 @@ class GrepInFiles(
         vf: VirtualFile,
         query: String,
         matches: MutableList<StringMatchInstanceItem>): Boolean {
-        if (vf.name.endsWith("min.js") || vf.length > 200000) {
-            return true
-        } // Don't search through library files
-
-        val contents = readFileContents(vf)
-        val document: Document? = if (globalSettings.useFullEditorHighlighting) {
-            ReadAction.compute<Document?, Exception> { FileDocumentManager.getInstance().getDocument(vf) }
-        } else null
-        var match = contents.indexOf(query, 0, !globalSettings.common.searchCaseSensitivity)
-        if (match < 0) {
-            // No match in this file: remove it from mMatches immediately so that
-            // the reduction is visible to the next keystroke even if this search
-            // is cancelled before it would normally apply the deferred removeAll.
-            // This is the core of the "skip files known to have no match when the
-            // query grows" optimisation: it must take effect synchronously, not at
-            // the end of an asynchronous search.
-            synchronized(mMatchesLock) {
-                mMatches.remove(vf)
+        // A stale VFS entry (file deleted / moved / not yet indexed during
+        // project open) can throw at any of the calls below. Wrap the whole
+        // body so one bad file is skipped and the rest of the search continues.
+        try {
+            if (vf.name.endsWith("min.js")) {
+                return true
             }
-        }
-        while (match >= 0 && matches.size < globalSettings.string.numberOfFilesInSearchView) {
-            val text = findTextBetweenNewlines(contents, match)
-            val lineNr = utils.getLineNumberFromVirtualFile(vf, text.second, globalSettings.common.enableDebugOptions) ?: 0
-            matches.add(StringMatchInstanceItem(vf, text.second, text.third, lineNr, text.first.trim(), document, ""))
-            match = text.third
-
-            // Skip a number of lines, these are not searched through
-            for (i in 0 until globalSettings.minNofLinesBetweenGrepResults) {
-                match = getStartOfNextNewline(contents, match + 1)
+            // vf.length can throw on a stale entry; treat as "skip" (return
+            // true so the search loop continues) rather than aborting.
+            val length = try { vf.length } catch (e: Throwable) {
+                if (globalSettings.common.enableDebugOptions) {
+                    println("GrepInFiles: skipping ${vf.name}: ${e.message}")
+                }
+                return true
             }
+            if (length > 200000) return true
 
-            match = contents.indexOf(query, match, !globalSettings.common.searchCaseSensitivity)
-
-            if (matches.size >= globalSettings.string.numberOfFilesInSearchView) {
-                return false
+            val contents = readFileContents(vf)
+            if (contents.isEmpty()) {
+                // File is unreadable or invalid; if we still have it in
+                // mMatches, drop it so the next keystroke doesn't try again.
+                synchronized(mMatchesLock) { mMatches.remove(vf) }
+                return true
             }
+            val document: Document? = if (globalSettings.useFullEditorHighlighting) {
+                try {
+                    ReadAction.compute<Document?, Exception> { FileDocumentManager.getInstance().getDocument(vf) }
+                } catch (e: Throwable) {
+                    if (globalSettings.common.enableDebugOptions) {
+                        println("GrepInFiles: no document for ${vf.name}: ${e.message}")
+                    }
+                    null
+                }
+            } else null
+            var match = contents.indexOf(query, 0, !globalSettings.common.searchCaseSensitivity)
+            if (match < 0) {
+                // No match in this file: remove it from mMatches immediately so that
+                // the reduction is visible to the next keystroke even if this search
+                // is cancelled before it would normally apply the deferred removeAll.
+                // This is the core of the "skip files known to have no match when the
+                // query grows" optimisation: it must take effect synchronously, not at
+                // the end of an asynchronous search.
+                synchronized(mMatchesLock) {
+                    mMatches.remove(vf)
+                }
+            }
+            while (match >= 0 && matches.size < globalSettings.string.numberOfFilesInSearchView) {
+                val text = findTextBetweenNewlines(contents, match)
+                val lineNr = utils.getLineNumberFromVirtualFile(vf, text.second, globalSettings.common.enableDebugOptions) ?: 0
+                matches.add(StringMatchInstanceItem(vf, text.second, text.third, lineNr, text.first.trim(), document, ""))
+                match = text.third
+
+                // Skip a number of lines, these are not searched through
+                for (i in 0 until globalSettings.minNofLinesBetweenGrepResults) {
+                    match = getStartOfNextNewline(contents, match + 1)
+                }
+
+                match = contents.indexOf(query, match, !globalSettings.common.searchCaseSensitivity)
+
+                if (matches.size >= globalSettings.string.numberOfFilesInSearchView) {
+                    return false
+                }
+            }
+        } catch (e: Throwable) {
+            // Last-resort safety net: any platform call that escaped the
+            // narrower try/catches above (e.g. text comparison on a
+            // half-loaded document) shouldn't abort the parallel search.
+            if (globalSettings.common.enableDebugOptions) {
+                println("GrepInFiles: skipping ${vf.name} due to: ${e.message}")
+            }
+            synchronized(mMatchesLock) { mMatches.remove(vf) }
         }
         return true
     }
@@ -420,11 +455,25 @@ class GrepInFiles(
     }
 
     private fun readFileContents(virtualFile: VirtualFile): String {
+        // The exists()/isValid() check is necessary but not sufficient during
+        // project open / indexing: the VFS can mark a file valid while the
+        // underlying file has been deleted or is locked. The actual stream
+        // open + read can still throw IOException, IllegalArgumentException,
+        // or AssertionError. Catch Throwable so the caller sees an empty
+        // string instead of aborting the whole search.
         return if (virtualFile.exists() && virtualFile.isValid) {
-            // Read the file content as a string
-            virtualFile.inputStream.bufferedReader().use { it.readText() }
+            try {
+                virtualFile.inputStream.bufferedReader().use { it.readText() }
+            } catch (e: Throwable) {
+                if (globalSettings.common.enableDebugOptions) {
+                    println("Error reading file ${virtualFile.name}: ${e.message}")
+                }
+                ""
+            }
         } else {
-            println("Error reading file ${virtualFile.name}")
+            if (globalSettings.common.enableDebugOptions) {
+                println("Error reading file ${virtualFile.name}: not valid or does not exist")
+            }
             ""
         }
     }
