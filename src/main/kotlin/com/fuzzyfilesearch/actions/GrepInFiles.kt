@@ -17,21 +17,19 @@ import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
-import com.jetbrains.rd.framework.base.deepClonePolymorphic
-import fleet.rpc.remoteApiDescriptor
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.*
+import java.util.Collections
 import java.util.concurrent.Executors
 import kotlin.system.measureTimeMillis
 
@@ -71,6 +69,10 @@ class GrepInFiles(
     var mSelectedText: String? = ""
     var mProject: Project? = null
 
+    // Bounded LRU content cache: avoids re-reading every file from disk on
+    // every keystroke. Sized in MB via the user setting.
+    private val mContentCache = ContentCache(globalSettings.string.contentCacheMaxMB.toLong() * 1024L * 1024L)
+
     val cpuDispatcher = Executors.newFixedThreadPool(
         Runtime.getRuntime().availableProcessors()
                                                     ).asCoroutineDispatcher()
@@ -105,6 +107,10 @@ class GrepInFiles(
         mSearchJob?.cancel()
         mSearchJob = null
         mFileNamesWalkJob?.cancel()
+
+        // Sync cache size to current setting (user may have changed it between
+        // popup opens).
+        mContentCache.setMaxBytes(globalSettings.string.contentCacheMaxMB.toLong() * 1024L * 1024L)
 
         val previousSearchQuery = mHistory?.query ?: ""
         mPopup = SearchPopupInstance(
@@ -169,7 +175,7 @@ class GrepInFiles(
                     mMatches.clear()
                     mMatches.addAll(files)
                 }
-            } catch (e: kotlinx.coroutines.CancellationException) {
+            } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 println("ERROR: Exception during file walk: ${e.message}")
@@ -261,7 +267,7 @@ class GrepInFiles(
                 val r = grepForString(trimmedQuery, filesToSearch)
                 mLastResult = r
                 r
-            } catch (e: kotlinx.coroutines.CancellationException) {
+            } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 println("ERROR: Exception during grepForString: ${e.message}")
@@ -291,20 +297,26 @@ class GrepInFiles(
     }
 
     private suspend fun grepForString(query: String, filesToSearch: List<VirtualFile>): List<StringMatchInstanceItem> {
-        // TODO: Support wildcards
         val result = Collections.synchronizedList(mutableListOf<StringMatchInstanceItem>())
         val nofFilesToSearch = filesToSearch.size
+        val cap = globalSettings.string.numberOfFilesInSearchView
 
         val timeTaken = measureTimeMillis {
-            // Loop over all files and find regex matches. Store result into class variable to use in search
             if (globalSettings.string.searchMultiThreaded) {
+                // Cooperative cancellation: when one chunk signals that the
+                // result cap is reached, sibling chunks stop at the next
+                // isActive check instead of finishing their full file scan.
+                // The cap-bound work is O(chunk_size) per chunk (currently
+                // 20), which is small compared to the O(matches_capped) work
+                // the chunk that hit the cap has already done.
                 coroutineScope {
                     filesToSearch.indices.chunked(20).map { chunk ->
                         async(cpuDispatcher) {
                             for (index in chunk) {
                                 if (!currentCoroutineContext().isActive) return@async
                                 if (index >= filesToSearch.size) break
-                                if (!findMatchesInFile(filesToSearch[index], query, result)) {
+                                if (!findMatchesInFile(
+                                        filesToSearch[index], query, result, cap)) {
                                     return@async
                                 }
                             }
@@ -314,7 +326,7 @@ class GrepInFiles(
             } else {
                 for (index in filesToSearch.indices) {
                     if (!currentCoroutineContext().isActive) break
-                    if (!findMatchesInFile(filesToSearch[index], query, result)) {
+                    if (!findMatchesInFile(filesToSearch[index], query, result, cap)) {
                         break
                     }
                 }
@@ -348,10 +360,17 @@ class GrepInFiles(
         return fileType is PlainTextFileType || fileType.isBinary.not()
     }
 
+    /**
+     * Search a single file for [query] and append up to [cap] matches to [matches].
+     * Returns false once the cap is reached so the caller can stop scheduling
+     * more files. Stale / unreadable files are dropped from mMatches so the
+     * next keystroke doesn't repeat the work.
+     */
     fun findMatchesInFile(
         vf: VirtualFile,
         query: String,
-        matches: MutableList<StringMatchInstanceItem>): Boolean {
+        matches: MutableList<StringMatchInstanceItem>,
+        cap: Int): Boolean {
         // A stale VFS entry (file deleted / moved / not yet indexed during
         // project open) can throw at any of the calls below. Wrap the whole
         // body so one bad file is skipped and the rest of the search continues.
@@ -367,15 +386,28 @@ class GrepInFiles(
                 }
                 return true
             }
-            if (length > 200000) return true
+            val sizeCap = globalSettings.string.maxFileSizeMB.toLong() * 1024L * 1024L
+            if (sizeCap > 0L && length > sizeCap) return true
 
-            val contents = readFileContents(vf)
-            if (contents.isEmpty()) {
-                // File is unreadable or invalid; if we still have it in
-                // mMatches, drop it so the next keystroke doesn't try again.
-                synchronized(mMatchesLock) { mMatches.remove(vf) }
-                return true
+            // Read text via the content cache when possible. The cache stores
+            // a precomputed newline-offset array so the per-match line
+            // computation is a binary search instead of a runReadAction call.
+            val cachedText = mContentCache.get(vf)
+            val fromCache = cachedText != null
+            val contents: String = if (fromCache) {
+                cachedText!!
+            } else {
+                val read = readFileContents(vf)
+                if (read.isEmpty()) {
+                    // File is unreadable or invalid; if we still have it in
+                    // mMatches, drop it so the next keystroke doesn't try again.
+                    synchronized(mMatchesLock) { mMatches.remove(vf) }
+                    return true
+                }
+                mContentCache.put(vf, read)
+                read
             }
+
             val document: Document? = if (globalSettings.useFullEditorHighlighting) {
                 try {
                     ReadAction.compute<Document?, Exception> { FileDocumentManager.getInstance().getDocument(vf) }
@@ -386,34 +418,50 @@ class GrepInFiles(
                     null
                 }
             } else null
-            var match = contents.indexOf(query, 0, !globalSettings.common.searchCaseSensitivity)
-            if (match < 0) {
-                // No match in this file: remove it from mMatches immediately so that
-                // the reduction is visible to the next keystroke even if this search
-                // is cancelled before it would normally apply the deferred removeAll.
-                // This is the core of the "skip files known to have no match when the
-                // query grows" optimisation: it must take effect synchronously, not at
-                // the end of an asynchronous search.
-                synchronized(mMatchesLock) {
-                    mMatches.remove(vf)
+
+            val caseSensitive = globalSettings.common.searchCaseSensitivity
+            val skipLines = globalSettings.minNofLinesBetweenGrepResults
+
+            // Flat character-stream scan, matching the original semantics:
+            //  - indexOf from the current position,
+            //  - record the match, then advance past `skipLines` newlines,
+            //  - resume searching from the start of the next line.
+            // We do this on the cached String (no per-match I/O), and the
+            // per-match line number is either a binary search on the cache
+            // (cheap) or, for cache misses, a single runReadAction (same as
+            // before but only one call per file because the file was just read).
+            var searchFrom = 0
+            var firstMatch = -1
+            while (searchFrom <= contents.length) {
+                val pos = contents.indexOf(query, searchFrom, !caseSensitive)
+                if (pos < 0) break
+                if (firstMatch < 0) firstMatch = pos
+                if (matches.size >= cap) return false
+                val lineNr = lineNumberForMatch(vf, pos, fromCache)
+                val (lineText, displayStart, displayEnd) = extractLine(contents, pos)
+                matches.add(StringMatchInstanceItem(
+                    vf, displayStart, displayEnd, lineNr, lineText, document, ""))
+
+                // Skip `skipLines` newlines before searching again.
+                var advance = pos + query.length
+                var skipped = 0
+                while (skipped < skipLines) {
+                    val nl = contents.indexOf('\n', advance)
+                    if (nl < 0) {
+                        // No more newlines in the file: no more matches.
+                        return true
+                    }
+                    advance = nl + 1
+                    skipped++
                 }
+                searchFrom = advance
             }
-            while (match >= 0 && matches.size < globalSettings.string.numberOfFilesInSearchView) {
-                val text = findTextBetweenNewlines(contents, match)
-                val lineNr = utils.getLineNumberFromVirtualFile(vf, text.second, globalSettings.common.enableDebugOptions) ?: 0
-                matches.add(StringMatchInstanceItem(vf, text.second, text.third, lineNr, text.first.trim(), document, ""))
-                match = text.third
 
-                // Skip a number of lines, these are not searched through
-                for (i in 0 until globalSettings.minNofLinesBetweenGrepResults) {
-                    match = getStartOfNextNewline(contents, match + 1)
-                }
-
-                match = contents.indexOf(query, match, !globalSettings.common.searchCaseSensitivity)
-
-                if (matches.size >= globalSettings.string.numberOfFilesInSearchView) {
-                    return false
-                }
+            // No-match reduction for the next keystroke (only when the file
+            // was read from disk on this call — if it was a cache hit, the
+            // previous caller already had the chance to reduce).
+            if (firstMatch < 0 && !fromCache) {
+                synchronized(mMatchesLock) { mMatches.remove(vf) }
             }
         } catch (e: Throwable) {
             // Last-resort safety net: any platform call that escaped the
@@ -425,6 +473,43 @@ class GrepInFiles(
             synchronized(mMatchesLock) { mMatches.remove(vf) }
         }
         return true
+    }
+
+    /**
+     * Line-number lookup for a match. If the file was loaded from the
+     * content cache, the line number is a binary search over the cached
+     * newline-offset array. Otherwise we fall back to the existing
+     * runReadAction-based path (only happens for the very first read of a
+     * file in this popup's lifetime).
+     */
+    private fun lineNumberForMatch(
+        vf: VirtualFile,
+        offset: Int,
+        fromCache: Boolean): Int {
+        if (fromCache) {
+            return mContentCache.lineNumberAt(vf, offset)
+        }
+        // Cold path: no cache entry. Use the original read-action lookup.
+        return utils.getLineNumberFromVirtualFile(
+            vf, offset, globalSettings.common.enableDebugOptions) ?: 1
+    }
+
+    /**
+     * Returns (displayText, displayStart, displayEnd) for the line containing
+     * [matchOffset] in [contents]. The display text has leading and trailing
+     * whitespace stripped (mirrors the original findTextBetweenNewlines).
+     */
+    private fun extractLine(
+        contents: String,
+        matchOffset: Int): Triple<String, Int, Int> {
+        val beforeNl = contents.lastIndexOf('\n', matchOffset - 1).let { if (it < 0) 0 else it + 1 }
+        val afterNl = contents.indexOf('\n', matchOffset).let { if (it < 0) contents.length else it }
+        var displayStart = beforeNl
+        while (displayStart < afterNl && contents[displayStart] == ' ') displayStart++
+        return Triple(
+            contents.substring(displayStart, afterNl).trim(),
+            displayStart,
+            afterNl)
     }
 
     fun moveToLocation(item: StringMatchInstanceItem, location: OpenLocation) {
@@ -478,33 +563,6 @@ class GrepInFiles(
         }
     }
 
-    private fun getStartOfNextNewline(text: String, index: Int): Int {
-        return text.indexOf('\n', index).takeIf { it != -1 } ?: text.length
-    }
-
-    private fun findTextBetweenNewlines(text: String, index: Int): Triple<String, Int, Int> {
-        if (index < 0 || index >= text.length) {
-            throw IndexOutOfBoundsException("Index is out of the string's range.")
-        }
-
-        val beforeIndex = text.lastIndexOf('\n', index - 1).takeIf { it != -1 } ?: 0
-        var startIndex = beforeIndex + 1
-        while (startIndex < text.length && text[startIndex] == ' ') {
-            startIndex += 1
-        }
-        val afterIndex = text.indexOf('\n', index).takeIf { it != -1 } ?: text.length
-
-        return Triple(text.substring(startIndex, afterIndex).trim(), startIndex, afterIndex)
-    }
-
-    private fun getPrecedingContext(text: String, lineStart: Int, maxChars: Int = 256): String {
-        if (lineStart <= 0) return ""
-        val from = maxOf(0, lineStart - maxChars)
-        val slice = text.substring(from, lineStart)
-        val lastNewline = slice.lastIndexOf('\n')
-        return if (lastNewline >= 0) slice.substring(lastNewline + 1) else slice
-    }
-
     companion object {
         fun parseSettings(actionSettings: List<String>): Settings {
             val settings = Settings(
@@ -519,5 +577,4 @@ class GrepInFiles(
             utils.registerAction(settings.name, settings.shortcut, action)
         }
     }
-
 }

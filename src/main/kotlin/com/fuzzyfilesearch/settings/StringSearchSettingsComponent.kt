@@ -161,6 +161,27 @@ class StringSearchSettingsComponent(val mSettings: GlobalSettings.SettingsState)
                 "Testoption, search multithreaded",
                 "")
         }
+        keeper.createCheckboxComponent(
+            mSettings.string::searchMultiThreaded,
+            builder,
+            "Search multithreaded",
+            """
+                    When enabled, the per-keystroke content search runs file scans in
+                    parallel across all available CPU cores""".trimIndent())
+        keeper.createJBIntSpinnerComponent(
+            mSettings.string::contentCacheMaxMB, 50, 0, 2048, 1, builder,
+            "Content cache size (MB)",
+            """
+                    Bounded LRU cache (in megabytes) used to memoize file contents
+                    across keystrokes. Speeds up repeated queries, history recall
+                    and incremental typing. Set to 0 to disable the cache.""".trimIndent())
+        keeper.createJBIntSpinnerComponent(
+            mSettings.string::maxFileSizeMB, 2, 0, 256, 1, builder,
+            "Max searched file size (MB)",
+            """
+                    Files larger than this are skipped silently during text/regex
+                    searches. Defaults to 2 MB. Set to 0 to skip the size check
+                    entirely (not recommended for very large files).""".trimIndent())
 
         // Create Relative file opening actions
         builder.addComponent(JBLabel("<html><strong>Regex search settings</strong></html>"))

@@ -16,9 +16,20 @@ import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
+import java.util.Collections
+import java.util.concurrent.Executors
 import kotlin.math.min
 import kotlin.system.measureTimeMillis
 
@@ -48,6 +59,21 @@ class RegexMatchInFiles(
     var mSearchItemStrings = emptyList<String>()
     var mProject: Project? = null
 
+    // Bounded LRU content cache shared with GrepInFiles-style flows.
+    private val mContentCache = ContentCache(globalSettings.string.contentCacheMaxMB.toLong() * 1024L * 1024L)
+
+    val cpuDispatcher = Executors.newFixedThreadPool(
+        Runtime.getRuntime().availableProcessors()
+    ).asCoroutineDispatcher()
+
+    private val mSearchDispatcher = Executors.newSingleThreadExecutor { r ->
+        Thread(r, "RegexMatchInFiles-search").apply { isDaemon = true }
+    }.asCoroutineDispatcher()
+
+    private val mSearchScope = CoroutineScope(SupervisorJob() + mSearchDispatcher)
+    private var mScanJob: Deferred<Unit>? = null
+    private var mFileNamesWalkJob: Deferred<Unit>? = null
+
     override fun actionPerformed(e: AnActionEvent) {
         if (settings.regex.pattern.isEmpty()) {
             showErrorNotification("Invalid regex", "Regex for ${actionSettings.name} is invalid")
@@ -60,55 +86,13 @@ class RegexMatchInFiles(
         mEvent = e
         mFileNames.clear()
         mSearchItems.clear()
-
         mProject = project
-        val files = utils.getAllFilesInLocation(
-            curFile,
-            project,
-            settings.path,
-            globalSettings,
-            settings.extensionList,
-            settings.onlyVcsTracked)
-        mFileNames.clear()
-        mFileNames.addAll(files)
+        mContentCache.setMaxBytes(globalSettings.string.contentCacheMaxMB.toLong() * 1024L * 1024L)
 
-        val timeTaken = measureTimeMillis {
-            // Loop over all files and find regex matches. Store result into class variable to use in search
-            mFileNames.forEach { vf ->
-                val fileText = readFileContents(vf)
-                val document: Document? = if (globalSettings.useFullEditorHighlighting) {
-                    ReadAction.compute<Document?, Exception> { FileDocumentManager.getInstance().getDocument(vf) }
-                } else null
-                val matches = settings.regex.findAll(fileText).toList()
-                mSearchItems.addAll(matches.map { match ->
-                    // Remove newlines and indenting for to make the view single line
-                    // TODO: This may not be the most efficient way to do any of this
-                    var oldText = match.value.replace('\n', ' ')
-                    var newText = oldText.replace("  ", " ")
-                    while (newText != oldText) {
-                        oldText = newText
-                        newText = newText.replace("    ", " ")
-                            .replace("   ", " ")
-                            .replace("  ", " ")
-                    }
-                    val preceding = getPrecedingContext(fileText, match.range.first)
-                    val lineNr = utils.getLineNumberFromVirtualFile(
-                        vf,
-                        match.range.first,
-                        globalSettings.common.enableDebugOptions) ?: 0
-                    StringMatchInstanceItem(vf, match.range.first, match.range.last, lineNr, newText, document,preceding)
-                })
-
-            }
-            mSearchItemStrings = mSearchItems.map { item -> item.text }
-        }
-
-        if (globalSettings.common.enableDebugOptions) {
-            println("Elapsed time: $timeTaken ms")
-            println(
-                "RegexMatchInFiles: ${mSearchItems.size}. Nof files to search: ${mFileNames.size}, regex: ${settings.regex.pattern}, " +
-                "action: ${actionSettings.name}")
-        }
+        // Cancel any in-flight scan from a previous invocation.
+        mScanJob?.cancel()
+        mScanJob = null
+        mFileNamesWalkJob?.cancel()
 
         val showFileName = globalSettings.showFilenameForRegexMatch == ShowFilenamePolicy.ALWAYS ||
                            (globalSettings.showFilenameForRegexMatch == ShowFilenamePolicy.WHEN_SEARCHING_MULTIPLE_FILES && mFileNames.size > 1)
@@ -124,7 +108,174 @@ class RegexMatchInFiles(
             "Regex search",
             "",
             mPreviousSearchQuery)
-        mPopup!!.showPopupInstance("", mSearchItems.size)
+        mPopup!!.showPopupInstance("", 0)
+
+        // Kick off the file walk on the search dispatcher. The actual scan
+        // (apply the regex) starts after the walk completes.
+        val myWalkJob: Deferred<Unit> = mSearchScope.async {
+            try {
+                val files = utils.getAllFilesInLocation(
+                    curFile,
+                    project,
+                    settings.path,
+                    globalSettings,
+                    settings.extensionList,
+                    settings.onlyVcsTracked)
+                synchronized(this@RegexMatchInFiles) {
+                    mFileNames = files
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                println("ERROR: Exception during regex file walk: ${e.message}")
+            }
+        }
+        mFileNamesWalkJob = myWalkJob
+
+        val cap = globalSettings.string.numberOfFilesInSearchView
+        val myScanJob: Deferred<Unit> = mSearchScope.async {
+            // Wait for the file walk (5s soft cap, matching GrepInFiles).
+            val w = mFileNamesWalkJob
+            if (w != null) {
+                runBlocking { withTimeoutOrNull(5000) { w.await() } }
+            }
+            val filesSnapshot = synchronized(this@RegexMatchInFiles) { mFileNames.toList() }
+            val items = runScan(filesSnapshot, cap)
+            synchronized(this@RegexMatchInFiles) {
+                mSearchItems.clear()
+                mSearchItems.addAll(items)
+                mSearchItemStrings = items.map { it.text }
+            }
+        }
+        mScanJob = myScanJob
+
+        val app = com.intellij.openapi.application.ApplicationManager.getApplication()
+        myScanJob.invokeOnCompletion {
+            if (myScanJob.isCancelled) return@invokeOnCompletion
+            app.invokeLater {
+                val popup = mPopup
+                if (mScanJob === myScanJob && popup != null && popup.isOpen()) {
+                    popup.updateListedItems()
+                }
+            }
+        }
+    }
+
+    private suspend fun runScan(files: List<VirtualFile>, cap: Int): List<StringMatchInstanceItem> {
+        val result = Collections.synchronizedList(mutableListOf<StringMatchInstanceItem>())
+        val nofFiles = files.size
+        val regex = settings.regex
+
+        val timeTaken = measureTimeMillis {
+            if (globalSettings.string.searchMultiThreaded) {
+                coroutineScope {
+                    files.indices.chunked(20).map { chunk ->
+                        async(cpuDispatcher) {
+                            for (index in chunk) {
+                                if (!currentCoroutineContext().isActive) return@async
+                                if (index >= files.size) break
+                                if (!findMatchesInFile(files[index], regex, result, cap)) {
+                                    return@async
+                                }
+                            }
+                        }
+                    }.awaitAll()
+                }
+            } else {
+                for (index in files.indices) {
+                    if (!currentCoroutineContext().isActive) break
+                    if (!findMatchesInFile(files[index], regex, result, cap)) {
+                        break
+                    }
+                }
+            }
+            if (!currentCoroutineContext().isActive) return result
+
+            result.forEach {
+                if (globalSettings.string.showFileIcon && it.icon == null) it.icon = it.vf.fileType.icon
+            }
+        }
+
+        if (globalSettings.common.enableDebugOptions && nofFiles > 0) {
+            println("RegexMatchInFiles: ${result.size} in $timeTaken ms. Nof files: $nofFiles, regex: ${regex.pattern}, action: ${actionSettings.name}")
+        }
+
+        return result
+    }
+
+    /**
+     * Apply [regex] to [vf] and append up to [cap] matches to [result]. Returns
+     * false once the cap is reached so the caller can stop scheduling more
+     * files. Uses the content cache to avoid re-reading files; uses the
+     * cached newline array to compute line numbers without a runReadAction.
+     */
+    private fun findMatchesInFile(
+        vf: VirtualFile,
+        regex: Regex,
+        result: MutableList<StringMatchInstanceItem>,
+        cap: Int): Boolean {
+        try {
+            val length = try { vf.length } catch (e: Throwable) {
+                if (globalSettings.common.enableDebugOptions) {
+                    println("RegexMatchInFiles: skipping ${vf.name}: ${e.message}")
+                }
+                return true
+            }
+            val sizeCap = globalSettings.string.maxFileSizeMB.toLong() * 1024L * 1024L
+            if (sizeCap > 0L && length > sizeCap) return true
+
+            val cached = mContentCache.get(vf)
+            val fromCache = cached != null
+            val text: String = if (fromCache) {
+                cached!!
+            } else {
+                val read = readFileContents(vf)
+                if (read.isEmpty()) return true
+                mContentCache.put(vf, read)
+                read
+            }
+
+            val document: Document? = if (globalSettings.useFullEditorHighlighting) {
+                try {
+                    ReadAction.compute<Document?, Exception> { FileDocumentManager.getInstance().getDocument(vf) }
+                } catch (e: Throwable) {
+                    if (globalSettings.common.enableDebugOptions) {
+                        println("RegexMatchInFiles: no document for ${vf.name}: ${e.message}")
+                    }
+                    null
+                }
+            } else null
+
+            val matches = regex.findAll(text)
+            for (m in matches) {
+                if (result.size >= cap) return false
+                val matchStart = m.range.first
+                val preceding = getPrecedingContext(text, matchStart)
+                val lineNr = if (fromCache) {
+                    mContentCache.lineNumberAt(vf, matchStart)
+                } else {
+                    utils.getLineNumberFromVirtualFile(
+                        vf, matchStart, globalSettings.common.enableDebugOptions) ?: 1
+                }
+                // Collapse whitespace runs (newlines + multi-spaces) so the
+                // popup shows a single line per match.
+                var collapsed = m.value.replace('\n', ' ')
+                var prev = ""
+                while (prev != collapsed) {
+                    prev = collapsed
+                    collapsed = collapsed.replace("    ", " ")
+                        .replace("   ", " ")
+                        .replace("  ", " ")
+                }
+                result.add(StringMatchInstanceItem(
+                    vf, matchStart, m.range.last + 1, lineNr, collapsed, document, preceding))
+            }
+        } catch (e: Throwable) {
+            if (globalSettings.common.enableDebugOptions) {
+                println("RegexMatchInFiles: skipping ${vf.name} due to: ${e.message}")
+            }
+        }
+        return true
     }
 
     private fun searchFzf(strings: List<String>, query: String): Pair<List<String>, IntArray> {
@@ -257,5 +408,4 @@ class RegexMatchInFiles(
             utils.registerAction(settings.name, settings.shortcut, action)
         }
     }
-
 }

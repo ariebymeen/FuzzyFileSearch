@@ -87,7 +87,15 @@ class GlobalSettings : PersistentStateComponent<GlobalSettings.SettingsState> {
         var showEditorPreview = true
         var editorPreviewLocation = EditorLocation.EDITOR_BELOW
         var editorSizeRatio = 0.5
-        var searchMultiThreaded = false
+        var searchMultiThreaded = true
+        // Bounded LRU cache (in MB) used by the per-keystroke content cache
+        // shared by GrepInFiles / RegexMatchInFiles. Larger values speed up
+        // repeated queries across keystrokes at the cost of heap pressure.
+        // 0 disables the cache entirely.
+        var contentCacheMaxMB: Int = 50
+        // Hard cap on the size of files we'll open during a text/regex search.
+        // Files larger than this (in MB) are silently skipped. 0 disables the cap.
+        var maxFileSizeMB: Int = 2
     }
 
     class SettingsState {
