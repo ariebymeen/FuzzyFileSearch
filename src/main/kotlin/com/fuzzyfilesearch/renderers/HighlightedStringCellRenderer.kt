@@ -35,49 +35,7 @@ class HighlightedStringCellRenderer(
         cellHasFocus: Boolean
                                              ): Component {
         if (value.mainPanel == null) {
-            value.mainPanel = JPanel(BorderLayout())
-            if (mSettings.string.showFileIcon) {
-                value.iconLabel = JBLabel()
-                value.iconLabel!!.border = JBUI.Borders.emptyLeft(5)
-                value.iconLabel!!.icon = value.vf.fileType.icon
-                value.mainPanel?.add(value.iconLabel!!, BorderLayout.WEST)
-            }
-            value.textPane = VerticallyCenteredTextPane(mSettings.string.searchItemHeight)
-            value.textPane!!.text = ""
-            value.textPane!!.isOpaque = false
-            value.textPane?.font = font
-            normalStyle = value.textPane!!.addStyle("Normal", null).apply {}
-            tinyStyle = value.textPane!!.addStyle("Tiny", null).apply {
-                StyleConstants.setItalic(this, false)
-                StyleConstants.setFontSize(this, StyleConstants.getFontSize(normalStyle) - 1)
-            }
-
-            if (mShowFileName) {
-                value.fileNameTextPane = ShrunkVerticallyCenteredTextPane(mSettings.string.searchItemHeight)
-                value.fileNameTextPane!!.text = ""
-                value.fileNameTextPane!!.font = font
-                value.fileNameTextPane!!.isOpaque = false
-                value.fileNameTextPane!!.styledDocument.insertString(0, value.vf.name, tinyStyle)
-                if (mSettings.showLineNumberWithFileName) {
-                    value.fileNameTextPane!!.styledDocument.insertString(
-                        value.fileNameTextPane!!.styledDocument.length,
-                        ":" + value.line_nr.toString(),
-                        tinyStyle)
-                }
-                value.mainPanel?.add(value.fileNameTextPane!!, BorderLayout.EAST)
-                val fontMetrics: FontMetrics = value.fileNameTextPane!!.getFontMetrics(
-                    Font(
-                        font.family,
-                        Font.PLAIN,
-                        StyleConstants.getFontSize(tinyStyle)))
-                value.fileNameWidth =
-                        fontMetrics.stringWidth(value.fileNameTextPane!!.text) + value.fileNameTextPane!!.margin.left + value.fileNameTextPane!!.margin.right
-                value.fileNameTextPane!!.setWidth(value.fileNameWidth)
-            }
-
-            setText(value, index)
-            value.mainPanel?.add(value.textPane!!, BorderLayout.CENTER)
-
+            buildCell(value, index)
         } else if (mSettings.string.showNumberInSearchView) {
             val formattedNumber = String.format(" %02d - ", index)
             value.textPane!!.styledDocument.remove(0, formattedNumber.length)
@@ -88,6 +46,60 @@ class HighlightedStringCellRenderer(
         value.mainPanel!!.foreground = if (isSelected) list.selectionForeground else list.foreground
 
         return value.mainPanel!!
+    }
+
+    // Trigger the lazy-init + setText pipeline for one item off the paint path.
+    // Call from the EDT (e.g. inside SearchPopupInstance.updateListedItems) for
+    // items that are about to become visible, so the first paint doesn't block
+    // on syntax-highlight lexing per visible row. Idempotent: items that are
+    // already built are no-ops.
+    override fun precompute(item: StringMatchInstanceItem, index: Int) {
+        if (item.mainPanel == null) buildCell(item, index)
+    }
+
+    private fun buildCell(value: StringMatchInstanceItem, index: Int) {
+        value.mainPanel = JPanel(BorderLayout())
+        if (mSettings.string.showFileIcon) {
+            value.iconLabel = JBLabel()
+            value.iconLabel!!.border = JBUI.Borders.emptyLeft(5)
+            value.iconLabel!!.icon = value.vf.fileType.icon
+            value.mainPanel?.add(value.iconLabel!!, BorderLayout.WEST)
+        }
+        value.textPane = VerticallyCenteredTextPane(mSettings.string.searchItemHeight)
+        value.textPane!!.text = ""
+        value.textPane!!.isOpaque = false
+        value.textPane?.font = font
+        normalStyle = value.textPane!!.addStyle("Normal", null).apply {}
+        tinyStyle = value.textPane!!.addStyle("Tiny", null).apply {
+            StyleConstants.setItalic(this, false)
+            StyleConstants.setFontSize(this, StyleConstants.getFontSize(normalStyle) - 1)
+        }
+
+        if (mShowFileName) {
+            value.fileNameTextPane = ShrunkVerticallyCenteredTextPane(mSettings.string.searchItemHeight)
+            value.fileNameTextPane!!.text = ""
+            value.fileNameTextPane!!.font = font
+            value.fileNameTextPane!!.isOpaque = false
+            value.fileNameTextPane!!.styledDocument.insertString(0, value.vf.name, tinyStyle)
+            if (mSettings.showLineNumberWithFileName) {
+                value.fileNameTextPane!!.styledDocument.insertString(
+                    value.fileNameTextPane!!.styledDocument.length,
+                    ":" + value.line_nr.toString(),
+                    tinyStyle)
+            }
+            value.mainPanel?.add(value.fileNameTextPane!!, BorderLayout.EAST)
+            val fontMetrics: FontMetrics = value.fileNameTextPane!!.getFontMetrics(
+                Font(
+                    font.family,
+                    Font.PLAIN,
+                    StyleConstants.getFontSize(tinyStyle)))
+            value.fileNameWidth =
+                    fontMetrics.stringWidth(value.fileNameTextPane!!.text) + value.fileNameTextPane!!.margin.left + value.fileNameTextPane!!.margin.right
+            value.fileNameTextPane!!.setWidth(value.fileNameWidth)
+        }
+
+        setText(value, index)
+        value.mainPanel?.add(value.textPane!!, BorderLayout.CENTER)
     }
 
     fun setText(item: StringMatchInstanceItem, index: Int) {

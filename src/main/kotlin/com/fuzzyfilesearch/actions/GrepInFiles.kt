@@ -15,6 +15,7 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.VirtualFile
 import com.jetbrains.rd.framework.base.deepClonePolymorphic
 import fleet.rpc.remoteApiDescriptor
@@ -28,6 +29,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.*
 import java.util.concurrent.Executors
 import kotlin.system.measureTimeMillis
@@ -53,6 +56,10 @@ class GrepInFiles(
     // mMatches.clear()/addAll() on another thread when the query is reset. Both
     // must be serialised so the ArrayList is not corrupted.
     private val mMatchesLock = Any()
+    // Guards mFileNames. The walk job writes it (once per walk) on mSearchDispatcher;
+    // the popup's pooled thread reads it via getSortedResult. Serialise so the
+    // read sees a consistent list and the reference itself isn't torn.
+    private val mFileNamesLock = Any()
     var mPopup: SearchPopupInstance<StringMatchInstanceItem>? = null
     var mEvent: AnActionEvent? = null
     var mHistory: History? = null
@@ -78,6 +85,11 @@ class GrepInFiles(
 
     private val mSearchScope = CoroutineScope(SupervisorJob() + mSearchDispatcher)
     private var mSearchJob: Deferred<List<StringMatchInstanceItem>>? = null
+    // Background walk that populates mFileNames/mMatches at popup-open time.
+    // Runs on mSearchDispatcher (same single-thread as the per-query search);
+    // the search job queues behind it, so a slow walk delays the first search
+    // but doesn't lose it.
+    private var mFileNamesWalkJob: Deferred<Unit>? = null
     private var mLastResult: List<StringMatchInstanceItem> = emptyList()
 
     override fun actionPerformed(e: AnActionEvent) {
@@ -87,23 +99,12 @@ class GrepInFiles(
         mFileNames.clear()
         mProject = project
 
-        // Cancel any in-flight search from a previous popup invocation so it can't
-        // post a stale result back to the new popup.
+        // Cancel any in-flight search and any in-flight walk from a previous
+        // popup invocation so they can't post a stale result back to the new
+        // popup.
         mSearchJob?.cancel()
         mSearchJob = null
-
-        mFileNames = utils.getAllFilesInLocation(
-            curFile,
-            project,
-            settings.path,
-            globalSettings,
-            settings.extensionList,
-            settings.onlyVcsTracked,
-            ::isTextOrCodeFile)
-        synchronized(mMatchesLock) {
-            mMatches.clear()
-            mMatches.addAll(mFileNames)
-        }
+        mFileNamesWalkJob?.cancel()
 
         val previousSearchQuery = mHistory?.query ?: ""
         mPopup = SearchPopupInstance(
@@ -118,6 +119,17 @@ class GrepInFiles(
             "Live grep",
             "",
             previousSearchQuery)
+
+        // Cancel the walk if the popup is disposed (user closed it before the
+        // walk finished, popup was cancelled by re-invocation, etc.). The walk
+        // is cancelable because VfsUtilCore.visitChildrenRecursively checks
+        // coroutine cancellation between nodes via the underlying VFS API.
+        // mPopup is a SearchPopupInstance; the underlying JBPopup (which is
+        // Disposable) is mPopup!!.mPopup.
+        val jbPopup = mPopup!!.mPopup
+        if (jbPopup != null) {
+            Disposer.register(jbPopup) { mFileNamesWalkJob?.cancel() }
+        }
 
         // Get search history and select from history or selected text (or empty)
         var initialQuery = ""
@@ -135,6 +147,46 @@ class GrepInFiles(
         }
 
         mPopup!!.showPopupInstance(initialQuery)
+
+        // Now that the popup is up, do the (potentially slow) VFS walk on
+        // mSearchDispatcher. The walk populates mFileNames/mMatches and then
+        // refreshes the popup. If the user types before the walk finishes,
+        // getSortedResult will wait up to 5s for this job.
+        val myWalkJob: Deferred<Unit> = mSearchScope.async {
+            try {
+                val files = utils.getAllFilesInLocation(
+                    curFile,
+                    project,
+                    settings.path,
+                    globalSettings,
+                    settings.extensionList,
+                    settings.onlyVcsTracked,
+                    ::isTextOrCodeFile)
+                synchronized(mFileNamesLock) {
+                    mFileNames = files
+                }
+                synchronized(mMatchesLock) {
+                    mMatches.clear()
+                    mMatches.addAll(files)
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                println("ERROR: Exception during file walk: ${e.message}")
+            }
+        }
+        mFileNamesWalkJob = myWalkJob
+
+        val app = com.intellij.openapi.application.ApplicationManager.getApplication()
+        myWalkJob.invokeOnCompletion {
+            if (myWalkJob.isCancelled) return@invokeOnCompletion
+            app.invokeLater {
+                val popup = mPopup
+                if (mFileNamesWalkJob === myWalkJob && popup != null && popup.isOpen()) {
+                    popup.updateListedItems()
+                }
+            }
+        }
     }
 
     fun getSortedResult(query: String): List<StringMatchInstanceItem> {
@@ -144,13 +196,27 @@ class GrepInFiles(
         if (trimmedQuery.isEmpty()) {
             mSearchJob?.cancel()
             mSearchJob = null
-            synchronized(mMatchesLock) {
-                mMatches.clear()
-                mMatches.addAll(mFileNames)
+            synchronized(mFileNamesLock) {
+                synchronized(mMatchesLock) {
+                    mMatches.clear()
+                    mMatches.addAll(mFileNames)
+                }
             }
             mSearchQuery = trimmedQuery
             mLastResult = emptyList()
             return emptyList()
+        }
+
+        // For non-empty queries, wait for the file walk to finish (5s soft cap)
+        // so the search runs over the full file list. The empty-query path above
+        // deliberately does NOT wait — the popup's first refresh fires with an
+        // empty query while the walk may still be in flight, and waiting there
+        // would freeze the popup's list (showing nothing for up to 5s) even
+        // though the popup itself is already visible. The walk's
+        // invokeOnCompletion handler refreshes the popup when it finishes.
+        val walkJob = mFileNamesWalkJob
+        if (walkJob != null) {
+            runBlocking { withTimeoutOrNull(5000) { walkJob.await() } }
         }
 
         // Short-circuit: if the popup re-invokes us with the same query (e.g. when our
@@ -170,9 +236,11 @@ class GrepInFiles(
         // has to be re-examined.
         if (mSearchQuery.isEmpty() || !trimmedQuery.startsWith(mSearchQuery)) {
             // New query needs to search all files
-            synchronized(mMatchesLock) {
-                mMatches.clear()
-                mMatches.addAll(mFileNames)
+            synchronized(mFileNamesLock) {
+                synchronized(mMatchesLock) {
+                    mMatches.clear()
+                    mMatches.addAll(mFileNames)
+                }
             }
         }
         mSearchQuery = trimmedQuery

@@ -40,6 +40,11 @@ import kotlin.math.min
 
 abstract class CustomRenderer<T> : ListCellRenderer<T> {
     var maxWidth = 0
+    // Optional precompute hook: the popup calls this off the paint path (still
+    // on the EDT) for items that are about to become visible, so the cell
+    // renderer's first-paint slow work is hoisted out of the paint pass.
+    // Default: no-op for renderers that don't need it.
+    open fun precompute(item: T, index: Int) {}
 }
 
 enum class OpenLocation {
@@ -110,6 +115,10 @@ class SearchPopupInstance<ListItemType>(
     var mLastClickedIndex: Int = -1
     var mMaxCellRendererWidthOffset = 24
     var mTitleBarHeight = 0
+    // Path of the file currently shown in the editor preview. Used to skip the
+    // (synchronous read-action + write-action) update when the top result file
+    // doesn't change between keystrokes.
+    private var mPreviewedFilePath: String? = null
 
     init {
         createPopupInstance()
@@ -232,40 +241,69 @@ class SearchPopupInstance<ListItemType>(
             val items = mGetSearchResultCallback.invoke(mSearchField.text)
 
             SwingUtilities.invokeLater {
-                // update list items. This is optimized for performance as clearing the list model gives problems
-                val commonCount = min(items.size, mListModel.size())
-                for (idx in 0 until commonCount) {
-                    mListModel[idx] = items[idx]
+                // Precompute the visible cells off the paint path: the cell
+                // renderer's first-paint work (JPanel build, font, style,
+                // syntax-highlight lexer iter, markup-model read action) is
+                // hoisted here so the subsequent paint only does the cheap
+                // background/foreground update. Compute the visible row
+                // estimate from the popup dimensions.
+                val visibleRowCount = computeVisibleRowCount()
+                val precomputeEnd = min(items.size, visibleRowCount)
+                for (idx in 0 until precomputeEnd) {
+                    val item = items[idx]
+                    mCellRenderer.precompute(item, idx)
                 }
 
-                val itemsToAddCount = if (items.size > commonCount) items.size - commonCount else 0
-                if (itemsToAddCount > 0) {
-                    mListModel.addAll(items.slice(commonCount until commonCount + itemsToAddCount))
-                }
-
-                val itemsToRemoveCount = if (items.size < mListModel.size) mListModel.size() - items.size else 0
-                if (itemsToRemoveCount > 0) {
-                    mListModel.removeRange(items.size, items.size + itemsToRemoveCount - 1)
-                }
+                // Batch model update: clear + addAll fires 2 ListDataEvents
+                // (vs. N+2 for the per-index set / addAll(slice) / removeRange
+                // dance), and lets the JXList produce a single repaint.
+                mListModel.clear()
+                if (items.isNotEmpty()) mListModel.addAll(items)
 
                 mResultsList.selectedIndex = 0
                 mResultsList.ensureIndexIsVisible(0)
+
+                // Only update the editor preview when the top file actually
+                // changes between keystrokes. SearchBoxEditor.updateFile
+                // acquires a read action + a write command action; skipping
+                // the call when the path is the same avoids that overhead
+                // for prefixes where the top result is stable.
                 if (mPopupSettings.showEditorPreview && mResultsList.selectedIndex >= 0) {
                     val selectedFile = mGetFileAndLocationCallback(mResultsList.selectedValue as ListItemType)
-                    if (selectedFile != null) mEditorView.updateFile(selectedFile.vf, selectedFile.caretOffset)
-                } else {
+                    val newPath = selectedFile?.vf?.path
+                    if (newPath != null && newPath != mPreviewedFilePath) {
+                        mPreviewedFilePath = newPath
+                        mEditorView.updateFile(selectedFile.vf, selectedFile.caretOffset)
+                    } else if (newPath == null) {
+                        mPreviewedFilePath = null
+                        mEditorView.updateFile(null, 0)
+                    }
+                } else if (mPreviewedFilePath != null) {
+                    mPreviewedFilePath = null
                     mEditorView.updateFile(null, 0)
                 }
 
                 if (mPopupSettings.shrinkViewDynamically && !inhibitShrinkView) {
                     val popupHeight = min(mMaxPopupHeight!!,
-                                          computeHeightFromNofItems(mListModel.size))
+                                          computeHeightFromNofItems(mListModel.size()))
                     mPopup!!.size = Dimension(mPopup!!.width, popupHeight)
                     mResultsList.revalidate()
                     mResultsList.repaint()
                 }
             }
         }
+    }
+
+    // Number of rows that fit in the popup's list area. Computed from
+    // mMaxPopupHeight (total popup height) minus the search bar and title
+    // bar, divided by the configured row height. Falls back to 30 when the
+    // popup dimensions aren't known yet.
+    private fun computeVisibleRowCount(): Int {
+        val itemHeight = mPopupSettings.searchItemHeight.coerceAtLeast(1)
+        val totalHeight = mMaxPopupHeight ?: return 30
+        val listAreaHeight = totalHeight - mPopupSettings.searchBarHeight - mTitleBarHeight
+        if (listAreaHeight <= 0) return 30
+        return (listAreaHeight / itemHeight).coerceAtLeast(1)
     }
 
     private fun keyTypedEvent(e: KeyEvent) {
@@ -343,16 +381,6 @@ class SearchPopupInstance<ListItemType>(
         mSearchField.preferredSize = Dimension(0, mPopupSettings.searchBarHeight)
         mExtensionField.preferredSize = Dimension(0, mPopupSettings.searchBarHeight)
         mSearchDirField.preferredSize = Dimension(0, mPopupSettings.searchBarHeight)
-    }
-
-    private fun getFont(settings: GlobalSettings.SettingsState): Font {
-        var fontName: String
-        if (settings.common.useDefaultFont) {
-            fontName = UIManager.getFont("Label.font").fontName
-        } else {
-            fontName = settings.common.selectedFontName
-        }
-        return Font(fontName, Font.PLAIN, settings.common.fontSize)
     }
 
     private fun setSearchDirField(searchDir: String) {
