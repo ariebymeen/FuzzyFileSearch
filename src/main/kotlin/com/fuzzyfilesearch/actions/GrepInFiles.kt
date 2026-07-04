@@ -18,10 +18,16 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.jetbrains.rd.framework.base.deepClonePolymorphic
 import fleet.rpc.remoteApiDescriptor
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import java.util.*
 import java.util.concurrent.Executors
 import kotlin.system.measureTimeMillis
@@ -42,6 +48,11 @@ class GrepInFiles(
     /* List of files to search in. For now only support the current file */
     var mFileNames: MutableList<VirtualFile> = mutableListOf()
     var mMatches: MutableList<VirtualFile> = mutableListOf()
+    // Guards mutations of mMatches. The search coroutine reduces mMatches eagerly
+    // (see findMatchesInFile) on its own thread, while the popup may call
+    // mMatches.clear()/addAll() on another thread when the query is reset. Both
+    // must be serialised so the ArrayList is not corrupted.
+    private val mMatchesLock = Any()
     var mPopup: SearchPopupInstance<StringMatchInstanceItem>? = null
     var mEvent: AnActionEvent? = null
     var mHistory: History? = null
@@ -57,12 +68,29 @@ class GrepInFiles(
         Runtime.getRuntime().availableProcessors()
                                                     ).asCoroutineDispatcher()
 
+    // Single-threaded dispatcher used to run the per-query search. A dedicated thread
+    // (not shared with the IDEA write-lock pool) is required so the popup's pooled
+    // thread can safely wait for the current query's result without deadlocking
+    // the EDT's write-lock acquisition, which also needs free pooled threads.
+    private val mSearchDispatcher = Executors.newSingleThreadExecutor { r ->
+        Thread(r, "GrepInFiles-search").apply { isDaemon = true }
+    }.asCoroutineDispatcher()
+
+    private val mSearchScope = CoroutineScope(SupervisorJob() + mSearchDispatcher)
+    private var mSearchJob: Deferred<List<StringMatchInstanceItem>>? = null
+    private var mLastResult: List<StringMatchInstanceItem> = emptyList()
+
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
         val curFile = getCurrentFile(e) ?: return
         mEvent = e
         mFileNames.clear()
         mProject = project
+
+        // Cancel any in-flight search from a previous popup invocation so it can't
+        // post a stale result back to the new popup.
+        mSearchJob?.cancel()
+        mSearchJob = null
 
         mFileNames = utils.getAllFilesInLocation(
             curFile,
@@ -72,7 +100,10 @@ class GrepInFiles(
             settings.extensionList,
             settings.onlyVcsTracked)
         mFileNames = mFileNames.filter { file -> isTextOrCodeFile(file) }.toMutableList()
-        mMatches = mFileNames.deepClonePolymorphic()
+        synchronized(mMatchesLock) {
+            mMatches.clear()
+            mMatches.addAll(mFileNames)
+        }
 
         val previousSearchQuery = mHistory?.query ?: ""
         mPopup = SearchPopupInstance(
@@ -111,62 +142,116 @@ class GrepInFiles(
 
         mHistory = History(trimmedQuery, timeMs = System.currentTimeMillis())
         if (trimmedQuery.isEmpty()) {
-            mMatches = mFileNames.deepClonePolymorphic()
+            mSearchJob?.cancel()
+            mSearchJob = null
+            synchronized(mMatchesLock) {
+                mMatches.clear()
+                mMatches.addAll(mFileNames)
+            }
             mSearchQuery = trimmedQuery
+            mLastResult = emptyList()
             return emptyList()
         }
 
-        if (mSearchQuery.isEmpty() || !trimmedQuery.contains(mSearchQuery)) {
+        // Short-circuit: if the popup re-invokes us with the same query (e.g. when our
+        // invokeOnCompletion handler triggers a list refresh), don't relaunch a new
+        // search and don't queue another completion handler — that would loop forever.
+        // Return the last completed result, which is what the popup should display.
+        if (trimmedQuery == mSearchQuery) {
+            return mLastResult
+        }
+
+        // Reset the file list to all files only when the new query is not a
+        // strict extension of the previous one. If the user only appended
+        // characters to the previous query, files already known to have no
+        // match can be skipped (mMatches still holds the reduced set from
+        // the previous search). When the user removes or changes characters
+        // (i.e. the new query does not start with the old one), every file
+        // has to be re-examined.
+        if (mSearchQuery.isEmpty() || !trimmedQuery.startsWith(mSearchQuery)) {
             // New query needs to search all files
-            mMatches = mFileNames.deepClonePolymorphic()
+            synchronized(mMatchesLock) {
+                mMatches.clear()
+                mMatches.addAll(mFileNames)
+            }
         }
         mSearchQuery = trimmedQuery
 
-        try {
-            return grepForString(trimmedQuery)
-        } catch (e: Exception) {
-            println("ERROR: Exception during grepForString: ${e.message}")
-            return emptyList()
+        // Cancel any in-flight search from a previous keystroke and start a fresh one.
+        // The search runs on a dedicated single-threaded dispatcher (mSearchDispatcher)
+        // that is NOT part of IDEA's pooled-threads (which the platform needs to grant
+        // write permits for the EDT). This callback MUST be non-blocking: the popup
+        // invokes us on its own pooled thread, and blocking it would starve the EDT's
+        // write-lock acquisition and freeze the IDE. We return the previous completed
+        // result immediately, then trigger a popup refresh when the new result is ready.
+        mSearchJob?.cancel()
+        val myJob = mSearchScope.async {
+            try {
+                // Snapshot mMatches under the lock so we get a consistent view
+                // of the (possibly already partially reduced) file list.
+                val filesToSearch = synchronized(mMatchesLock) { mMatches.toList() }
+                val r = grepForString(trimmedQuery, filesToSearch)
+                mLastResult = r
+                r
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                println("ERROR: Exception during grepForString: ${e.message}")
+                emptyList()
+            }
         }
+        mSearchJob = myJob
+
+        // Notify the popup on the EDT so the list model updates with the fresh result.
+        // Only refresh if this is still the latest search, otherwise a newer keystroke's
+        // search is in flight and we don't want to overwrite its pending UI update.
+        // The popup re-invokes us from updateListedItems with the same query string,
+        // which now short-circuits to mLastResult above, breaking the loop. Also skip
+        // the refresh if the popup has been disposed in the meantime.
+        val app = com.intellij.openapi.application.ApplicationManager.getApplication()
+        myJob.invokeOnCompletion {
+            if (myJob.isCancelled) return@invokeOnCompletion
+            app.invokeLater {
+                val popup = mPopup
+                if (mSearchJob === myJob && popup != null && popup.isOpen()) {
+                    popup.updateListedItems()
+                }
+            }
+        }
+
+        return mLastResult
     }
 
-    private fun grepForString(query: String): List<StringMatchInstanceItem> {
+    private suspend fun grepForString(query: String, filesToSearch: List<VirtualFile>): List<StringMatchInstanceItem> {
         // TODO: Support wildcards
         val result = Collections.synchronizedList(mutableListOf<StringMatchInstanceItem>())
-        val itemsToRemove = Collections.synchronizedList(mutableListOf<VirtualFile>())
-        val nofFilesToSearch = mMatches.size
+        val nofFilesToSearch = filesToSearch.size
 
         val timeTaken = measureTimeMillis {
             // Loop over all files and find regex matches. Store result into class variable to use in search
             if (globalSettings.string.searchMultiThreaded) {
-                runBlocking {
-                    mMatches.indices.chunked(20).map { chunk ->
+                coroutineScope {
+                    filesToSearch.indices.chunked(20).map { chunk ->
                         async(cpuDispatcher) {
                             for (index in chunk) {
-                                if (index >= mMatches.size) break
-                                if (!findMatchesInFile(mMatches[index], query, result, itemsToRemove)) {
-                                    break
+                                if (!currentCoroutineContext().isActive) return@async
+                                if (index >= filesToSearch.size) break
+                                if (!findMatchesInFile(filesToSearch[index], query, result)) {
+                                    return@async
                                 }
                             }
                         }
                     }.awaitAll()
                 }
             } else {
-                for (index in mMatches.indices) {
-                    if (index >= mMatches.size) {
-                        println("ERROR: Index $index greater than the size of mMatches ${mMatches.size}")
-                        break
-                    } // TODO: How can this actually happen?
-                    if (!findMatchesInFile(mMatches[index], query, result, itemsToRemove)) {
+                for (index in filesToSearch.indices) {
+                    if (!currentCoroutineContext().isActive) break
+                    if (!findMatchesInFile(filesToSearch[index], query, result)) {
                         break
                     }
                 }
             }
-            try {
-                mMatches.removeAll(itemsToRemove) // If no matches are found in a file, this file does not need to be searched for the next query (if query grows)
-            } catch (e: Exception) {
-                println("ERROR: Exception during remove all: ${e.message}")
-            }
+            if (!currentCoroutineContext().isActive) return result
 
             // We do this here to prevent doing this on the UI thread even though this is horrible and ugly
             result.forEach {
@@ -191,8 +276,7 @@ class GrepInFiles(
     fun findMatchesInFile(
         vf: VirtualFile,
         query: String,
-        matches: MutableList<StringMatchInstanceItem>,
-        nonMatches: MutableList<VirtualFile>): Boolean {
+        matches: MutableList<StringMatchInstanceItem>): Boolean {
         if (vf.name.endsWith("min.js") || vf.length > 200000) {
             return true
         } // Don't search through library files
@@ -203,14 +287,20 @@ class GrepInFiles(
         } else null
         var match = contents.indexOf(query, 0, !globalSettings.common.searchCaseSensitivity)
         if (match < 0) {
-            nonMatches.add(vf)
+            // No match in this file: remove it from mMatches immediately so that
+            // the reduction is visible to the next keystroke even if this search
+            // is cancelled before it would normally apply the deferred removeAll.
+            // This is the core of the "skip files known to have no match when the
+            // query grows" optimisation: it must take effect synchronously, not at
+            // the end of an asynchronous search.
+            synchronized(mMatchesLock) {
+                mMatches.remove(vf)
+            }
         }
         while (match >= 0 && matches.size < globalSettings.string.numberOfFilesInSearchView) {
             val text = findTextBetweenNewlines(contents, match)
-            val lineStart = text.second - 1
-            val preceding = getPrecedingContext(contents, lineStart)
             val lineNr = utils.getLineNumberFromVirtualFile(vf, text.second, globalSettings.common.enableDebugOptions) ?: 0
-            matches.add(StringMatchInstanceItem(vf, text.second, text.third, lineNr, text.first.trim(), document, preceding))
+            matches.add(StringMatchInstanceItem(vf, text.second, text.third, lineNr, text.first.trim(), document, ""))
             match = text.third
 
             // Skip a number of lines, these are not searched through
@@ -273,13 +363,14 @@ class GrepInFiles(
             throw IndexOutOfBoundsException("Index is out of the string's range.")
         }
 
-        var beforeIndex = text.lastIndexOf('\n', index - 1).takeIf { it != -1 } ?: 0
-        while (text[beforeIndex] == ' ') {  // cut off whitespace in front in a way in which the beforeIndex points to the first char in the line
-            beforeIndex += 1
+        val beforeIndex = text.lastIndexOf('\n', index - 1).takeIf { it != -1 } ?: 0
+        var startIndex = beforeIndex + 1
+        while (startIndex < text.length && text[startIndex] == ' ') {
+            startIndex += 1
         }
         val afterIndex = text.indexOf('\n', index).takeIf { it != -1 } ?: text.length
 
-        return Triple(text.substring(beforeIndex, afterIndex).trim(), beforeIndex + 1, afterIndex)
+        return Triple(text.substring(startIndex, afterIndex).trim(), startIndex, afterIndex)
     }
 
     private fun getPrecedingContext(text: String, lineStart: Int, maxChars: Int = 256): String {

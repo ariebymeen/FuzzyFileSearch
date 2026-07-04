@@ -10,7 +10,6 @@ import com.fuzzyfilesearch.settings.ModifierKey
 import com.fuzzyfilesearch.settings.PopupSizePolicy
 import com.intellij.openapi.actionSystem.CustomShortcutSet
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.JBPopup
@@ -208,6 +207,8 @@ class SearchPopupInstance<ListItemType>(
         mProject.service<PopupMediator>().popupOpened(this) // Register as opened popup
     }
 
+    fun isOpen(): Boolean = mPopup != null && !mPopup!!.isDisposed
+
     fun handleActionShortcut(type: ShortcutType) {
         if (mPopup == null || mPopup!!.isDisposed) {
             return
@@ -224,13 +225,11 @@ class SearchPopupInstance<ListItemType>(
         return mPopupSettings.searchBarHeight + nofItems * mPopupSettings.searchItemHeight + 6 + mTitleBarHeight
     }
 
-    private fun updateListedItems(inhibitShrinkView: Boolean = false /* When called before rendered this should be true*/) {
+    fun updateListedItems(inhibitShrinkView: Boolean = false /* When called before rendered this should be true*/) {
         // TODO: Add indication that not all files are listed
         ApplicationManager.getApplication().executeOnPooledThread {
             mNofTimesClicked = 0 // Reset nof times clicked counter
-            val items = ReadAction.compute<List<ListItemType>, Exception> {
-                mGetSearchResultCallback.invoke(mSearchField.text)
-            }
+            val items = mGetSearchResultCallback.invoke(mSearchField.text)
 
             SwingUtilities.invokeLater {
                 // update list items. This is optimized for performance as clearing the list model gives problems

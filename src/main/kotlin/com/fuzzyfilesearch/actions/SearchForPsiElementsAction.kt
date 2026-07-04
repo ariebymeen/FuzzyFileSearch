@@ -87,9 +87,7 @@ class SearchForPsiElementsAction(
                     val document = if (globalSettings.useFullEditorHighlighting) FileDocumentManager.getInstance().getDocument(file) else null
                     for (psiElement in mPsiElements) {
                         val tmp = cutStringText(psiElement)
-                        val foundIndex = fileText.indexOf(tmp.first)
                         val elementStart = psiElement.startOffset + tmp.second
-                        println("Psi start: ${psiElement.startOffset}, Psi start: ${psiElement.textRange.startOffset}, ${elementStart}, ${foundIndex}, ${fileText[elementStart]}: ${tmp.first}")
                         val preceding = getPrecedingContext(fileText, elementStart)
                         mSearchItems.add(StringMatchInstanceItem(file,
                                                 elementStart,

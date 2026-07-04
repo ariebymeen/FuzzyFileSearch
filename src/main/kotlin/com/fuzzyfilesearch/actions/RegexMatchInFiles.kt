@@ -62,13 +62,15 @@ class RegexMatchInFiles(
         mSearchItems.clear()
 
         mProject = project
-        mFileNames = utils.getAllFilesInLocation(
+        val files = utils.getAllFilesInLocation(
             curFile,
             project,
             settings.path,
             globalSettings,
             settings.extensionList,
             settings.onlyVcsTracked)
+        mFileNames.clear()
+        mFileNames.addAll(files)
 
         val timeTaken = measureTimeMillis {
             // Loop over all files and find regex matches. Store result into class variable to use in search
