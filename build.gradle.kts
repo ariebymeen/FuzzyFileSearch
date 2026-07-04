@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "com.fuzzyfilesearch"
-version = "1.3.3-rc1"
+version = "1.4.0-rc1"
 
 repositories {
     mavenCentral()
