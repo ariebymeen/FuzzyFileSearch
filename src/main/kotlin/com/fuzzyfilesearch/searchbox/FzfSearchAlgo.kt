@@ -1,8 +1,6 @@
 package com.fuzzyfilesearch.searchbox
 
-import com.intellij.util.io.toByteArray
 import java.io.File
-import java.nio.CharBuffer
 import kotlin.math.min
 
 // Constants:
@@ -242,34 +240,24 @@ fun calculateScore(
 //    return null
 //}
 
-fun asBytes(input: String, from: Int = 0) : ByteArray {
-    val charBuffer = CharBuffer.wrap(input)
-    val byteBuffer = Charsets.UTF_8.encode(charBuffer)
-    val bytes = byteBuffer.toByteArray(isClear = false)
-    val byteArray = bytes.copyOfRange(from, bytes.size)
-    return byteArray
-}
-
 fun trySkip(input: String,
             caseSensitive: Boolean,
             b: Byte,
             from: Int): Int {
-    val byteArray = asBytes(input, from)
-    var idx = byteArray.indexOf(b)
+    // Convert byte back to char for String.indexOf. For ASCII bytes the
+    // conversion is a sign extension that we mask off.
+    val bc = (b.toInt() and 0xFF).toChar()
+    var idx = input.indexOf(bc, from)
 
-    if (idx == 0) {
-        // Can't skip any further
+    if (idx == from) {
+        // Can't skip any further (the byte is at position 'from')
         return from
     }
 
     // We may need to search for the uppercase letter again.
-    if (!caseSensitive && b in 'a'.code.toByte()..'z'.code.toByte()) {
-        if (idx > 0) {
-            // First check if lowercase letter is found
-            byteArray.copyInto(byteArray, endIndex = idx)
-        }
-        // Then search for upper case letter, take the instance that is first
-        val uidx = byteArray.indexOf((b.toInt() - 32).toByte())
+    if (!caseSensitive && bc in 'a'..'z') {
+        val upperBc = (bc.code - 32).toChar()
+        val uidx = input.indexOf(upperBc, from)
         if (uidx >= 0) {
             idx = if (idx >= 0) min(idx, uidx) else uidx
         }
@@ -279,7 +267,7 @@ fun trySkip(input: String,
         return -1
     }
 
-    return from + idx
+    return idx
 }
 
 fun asciiFuzzyIndex(input: String,
@@ -305,16 +293,23 @@ fun asciiFuzzyIndex(input: String,
         idx++
     }
 
-    // Find the last appearance of the last character of the pattern to limit the search scope
-    var bu = b
-    if (!caseSensitive && b in 'a'.code..'z'.code) {
-        bu = (b.toInt() - 32).toByte() // Convert to uppercase
+    // Find the last appearance of the last character of the pattern to limit
+    // the search scope. Walk the String directly with String.lastIndexOf for
+    // the lowercase byte and (when relevant) the uppercase byte.
+    val bc = (b.toInt() and 0xFF).toChar()
+    val upperBc: Char? = if (!caseSensitive && bc in 'a'..'z') (bc.code - 32).toChar() else null
+    if (upperBc == null) {
+        val pos = input.lastIndexOf(bc, input.length - 1)
+        return if (pos >= lastIdx) Pair(firstIdx, pos + 1) else Pair(firstIdx, lastIdx + 1)
     }
-    val byteArray = asBytes(input, 0)
-    val scope = byteArray.copyOfRange(lastIdx, byteArray.size)
-    for (offset in scope.indices.reversed()) {
-        if (scope[offset] == b || scope[offset] == bu) {
-            return Pair(firstIdx, lastIdx + offset + 1)
+    // Search backwards from the end for either case, pick the first match
+    // at or after lastIdx.
+    var pos = input.length
+    while (pos > lastIdx) {
+        pos--
+        val c = input[pos]
+        if (c == bc || c == upperBc) {
+            return Pair(firstIdx, pos + 1)
         }
     }
     return Pair(firstIdx, lastIdx + 1)
@@ -348,19 +343,15 @@ fun FuzzyMatchV2(
     }
     N = maxIdx - minIdx
 
-    val H0 = Array<Short>(N) {0}
-    val C0 = Array<Short>(N) {0}
+    val H0 = ShortArray(N)
+    val C0 = ShortArray(N)
     // Bonus point for each position
-    val B = Array<Short>(N) {0}
+    val B = ShortArray(N)
     // The first occurrence of each character in the pattern
-    val F = Array<Int>(M) {0}
-    val T = Array<Char>(N) {' '}
-    for (off in T.indices) {
-        T[off] = input[off + minIdx]
-    }
+    val F = IntArray(M)
 
     // Phase 2. Calculate bonus for each point
-    var maxScore: Short = 0
+    var maxScore: Int = 0
     var maxScorePos = 0
     var pidx = 0
     var lastIdx = 0
@@ -370,16 +361,33 @@ fun FuzzyMatchV2(
         pchar0 = pchar0.lowercaseChar()
         pchar = pchar.lowercaseChar()
     }
-    var prevH0: Short = 0
+    var prevH0: Int = 0
     var prevClass = initialCharClass
     var inGap = false
 
-    for (off in T.indices) {
-        val char = if (!caseSensitive) T[off].lowercaseChar() else T[off]
-        val cClass: CharClass = if (char.code <= 127) {
-            asciiCharClasses[char.lowercaseChar().code]
+    for (off in 0 until N) {
+        val rawChar = input[off + minIdx]
+        val char: Char
+        val cClass: CharClass
+        if (caseSensitive) {
+            val code = rawChar.code
+            if (code <= 127) {
+                char = rawChar
+                cClass = asciiCharClasses[code]
+            } else {
+                char = normalizeRune(rawChar)
+                cClass = charClassOfNonAscii(char)
+            }
         } else {
-            charClassOfNonAscii(char)
+            val lc = rawChar.lowercaseChar()
+            val code = lc.code
+            if (code <= 127) {
+                char = lc
+                cClass = asciiCharClasses[code]
+            } else {
+                char = normalizeRune(lc)
+                cClass = charClassOfNonAscii(char)
+            }
         }
 
         B[off] = bonusMatrix[prevClass][cClass]
@@ -389,14 +397,16 @@ fun FuzzyMatchV2(
             if (pidx < M) {
                 F[pidx] = off
                 pidx++
-                pchar = pattern[min(pidx, M-1)]
+                // Once pidx reaches M the next pchar stays at the last
+                // pattern char, so hoist that out of the loop.
+                pchar = if (pidx < M) pattern[pidx] else pchar
             }
             lastIdx = off
         }
 
         if (char == pchar0) {
-            val score = (scoreMatch + B[off] * bonusFirstCharMultiplier).toShort()
-            H0[off] = score
+            val score = scoreMatch + B[off] * bonusFirstCharMultiplier
+            H0[off] = score.toShort()
             C0[off] = 1
             if (M == 1 && score > maxScore) {
                 maxScore = score
@@ -407,15 +417,12 @@ fun FuzzyMatchV2(
             }
             inGap = false
         } else {
-            H0[off] = if (inGap) {
-                maxOf(prevH0 + scoreGapExtension, 0).toShort()
-            } else {
-                maxOf(prevH0 + scoreGapStart, 0).toShort()
-            }
+            val gap = if (inGap) scoreGapExtension else scoreGapStart
+            H0[off] = maxOf(prevH0 + gap, 0).toShort()
             C0[off] = 0
             inGap = true
         }
-        prevH0 = H0[off]
+        prevH0 = H0[off].toInt()
     }
 
 //    if (pidx != M) {
@@ -423,19 +430,18 @@ fun FuzzyMatchV2(
 //    }
 
     if (M == 1) {
-        val result = Result(minIdx + maxScorePos, minIdx + maxScorePos + 1, maxScore.toInt())
-        return result
+        return Result(minIdx + maxScorePos, minIdx + maxScorePos + 1, maxScore)
     }
 
     // Phase 3. Fill in score matrix (H)
     // Unlike the original algorithm, we do not allow omission.
     val f0 = F[0] // First matching index
     val width = lastIdx - f0 + 1
-    val H = Array<Short>(width * M) { 0 }
+    val H = ShortArray(width * M)
     System.arraycopy(H0, f0, H, 0, lastIdx - f0 + 1)
 
     // Possible length of consecutive chunk at each position.
-    val C = Array<Short>(width * M) { 0 }
+    val C = ShortArray(width * M)
     System.arraycopy(C0, f0, C, 0, lastIdx - f0 + 1)
 
     val Fsub = F.copyOfRange(1, F.size)
@@ -452,17 +458,17 @@ fun FuzzyMatchV2(
         val row = pidx * width
         inGap = false
 
-        val Tsub = T.copyOfRange(f, lastIdx + 1)
-        val Bsub = B.copyOfRange(f, minOf(f + Tsub.size, B.size))
+        val TsubLen = lastIdx + 1 - f
+        val Bsub = B.copyOfRange(f, minOf(f + TsubLen, B.size))
         val CsubOffset = row + f - f0
         val CdiagOffset = row + f - f0 - 1 - width
         val HsubOffset = row + f - f0
         val HdiagOffset = row + f - f0 - 1 - width
-        val Hleft = H.copyOfRange(row + f - f0 - 1, minOf(row + f - f0 - 1 + Tsub.size, H.size))
+        val Hleft = H.copyOfRange(row + f - f0 - 1, minOf(row + f - f0 - 1 + TsubLen, H.size))
         Hleft[0] = 0
 
-        for (offT in Tsub.indices) {
-            val char = if (!caseSensitive) Tsub[offT].lowercaseChar() else Tsub[offT]
+        for (offT in 0 until TsubLen) {
+            val char = if (!caseSensitive) input[offT + f + minIdx].lowercaseChar() else input[offT + f + minIdx]
             val col = offT + f
             var s1: Short = 0
             var s2: Short
@@ -497,19 +503,19 @@ fun FuzzyMatchV2(
             C[CsubOffset + offT] = consecutive
 
             inGap = s1 < s2
-            val score = maxOf(maxOf(s1, s2), 0)
+            val score = maxOf(maxOf(s1.toInt(), s2.toInt()), 0)
             if (pidx == M - 1 && score > maxScore) {
                 maxScore = score
                 maxScorePos = col
             }
-            H[HsubOffset + offT] = score
+            H[HsubOffset + offT] = score.toShort()
         }
     }
 
     // Start offset we return here is only relevant when begin tiebreak is used.
     // However, finding the accurate offset requires backtracking, and we don't
     // want to pay extra cost for the option that has lost its importance.
-    return Result(minIdx + f0, minIdx + maxScorePos + 1, maxScore.toInt())
+    return Result(minIdx + f0, minIdx + maxScorePos + 1, maxScore)
 }
 
 

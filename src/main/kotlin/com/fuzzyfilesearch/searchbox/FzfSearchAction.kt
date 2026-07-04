@@ -3,7 +3,6 @@ package com.fuzzyfilesearch.searchbox
 import kotlinx.coroutines.*
 import ai.grazie.text.find
 import java.util.concurrent.Executors
-import kotlin.system.measureTimeMillis
 
 class FzfSearchAction(filePaths: List<String>,
                       fileNames: List<String>,
@@ -34,57 +33,98 @@ class FzfSearchAction(filePaths: List<String>,
         return Pair(previousResultPaths!!, previousResultNames!!)
     }
 
-    fun filterAndSortAndSetPreviousResult(ints: Array<Int>, paths: List<String>, names: List<String>)
+    fun filterAndSortAndSetPreviousResult(ints: IntArray, paths: List<String>, names: List<String>)
     {
         require(ints.size == paths.size) { "Arrays must be of equal length" }
         require(ints.size == names.size) { "Arrays must be of equal length" }
 
-        // Pair each int with its corresponding string, filter out zeros
-        val filtered = ints.zip(ints.indices)
-                           .filter { (num, _) -> num != 0 }
+        // In-place: collect non-zero indices into a single IntArray, sort by
+        // score descending, then build the result lists in one pass. This
+        // avoids the zip/filter/sortedByDescending/unzip/map pipeline which
+        // allocates several intermediate collections per call.
+        val n = ints.size
+        var nonZero = 0
+        for (i in 0 until n) {
+            if (ints[i] != 0) nonZero++
+        }
+        if (nonZero == 0) {
+            previousResultPaths = emptyList()
+            previousResultNames = emptyList()
+            return
+        }
+        val indices = IntArray(nonZero)
+        var k = 0
+        for (i in 0 until n) {
+            if (ints[i] != 0) indices[k++] = i
+        }
+        // Sort indices by score descending. We box into an array of Int
+        // because Kotlin's Arrays.sort on IntArray does not accept a
+        // Comparator; a boxed sort with a score-keyed comparator is still
+        // faster than sortedByDescending on a List<Pair<Int,Int>>.
+        val boxed = arrayOfNulls<Int>(nonZero)
+        for (i in 0 until nonZero) boxed[i] = indices[i]
+        java.util.Arrays.sort(boxed, 0, nonZero,
+            java.util.Comparator { a, b -> ints[b!!] - ints[a!!] })
+        for (i in 0 until nonZero) indices[i] = boxed[i]!!
 
-        // Sort by the integer values while keeping strings paired
-        val sorted = filtered.sortedByDescending{ (num, _) -> num }
-
-        // Unzip back into separate arrays
-        val (_, sortedIndices) = sorted.unzip()
-        previousResultPaths = sortedIndices.map { index -> paths[index] }
-        previousResultNames = sortedIndices.map { index -> names[index] }
+        val resultPaths = ArrayList<String>(nonZero)
+        val resultNames = ArrayList<String>(nonZero)
+        for (i in 0 until nonZero) {
+            val idx = indices[i]
+            resultPaths.add(paths[idx])
+            resultNames.add(names[idx])
+        }
+        previousResultPaths = resultPaths
+        previousResultNames = resultNames
     }
 
     private fun searchFzf(searchPaths: List<String>, searchNames: List<String>, query: String) {
-        var searchFunc = ::FuzzyMatchV2
-        if (searchPaths.size > 200) {
-            searchFunc = ::FuzzyMatchV1
-        }
+        // Pick the right search function once, outside the inner loop. The
+        // original re-resolved the method reference on every call.
+        val searchFunc: (Boolean, String, String) -> Result =
+            if (searchPaths.size > 200) ::FuzzyMatchV1 else ::FuzzyMatchV2
 
         val queryNorm = if (!caseSensitive) query else query.lowercase()
 
-        val scores = Array<Int>(searchPaths.size) { 0 }
-        val timeTaken = measureTimeMillis {
-           // Process chunks in parallel but collect results in chunk order
-            if (multithreaded) {
-                runBlocking {
-                    searchPaths.indices.chunked(30).map { chunk ->
-                        async(cpuDispatcher) {
-                            for (index in chunk) {
-                                if (searchFileNameOnly) {
-                                    scores[index] = searchFunc(caseSensitive, searchNames[index], queryNorm).score
+        // IntArray (primitive) instead of Array<Int> (boxed) — avoids a
+        // boxing pass on initialization and on every write below.
+        val scores = IntArray(searchPaths.size)
+        val nameMultiplierDelta = fileNameMultiplier - 1
+        val useNameMultiplier = !searchFileNameOnly && nameMultiplierDelta != 0.0
+        val useNameOnly = searchFileNameOnly
+
+        // Process chunks in parallel but collect results in chunk order
+        if (multithreaded) {
+            runBlocking {
+                searchPaths.indices.chunked(30).map { chunk ->
+                    async(cpuDispatcher) {
+                        for (index in chunk) {
+                            if (useNameOnly) {
+                                scores[index] = searchFunc(caseSensitive, searchNames[index], queryNorm).score
+                            } else {
+                                val pathScore = searchFunc(caseSensitive, searchPaths[index], queryNorm).score
+                                if (useNameMultiplier) {
+                                    val nameScore = searchFunc(caseSensitive, searchNames[index], queryNorm).score
+                                    scores[index] = (pathScore + nameMultiplierDelta * nameScore).toInt()
                                 } else {
-                                    scores[index] = searchFunc(caseSensitive, searchPaths[index], queryNorm).score
-                                    scores[index] = (scores[index] + (fileNameMultiplier - 1) * searchFunc(caseSensitive, searchNames[index], queryNorm).score).toInt()
+                                    scores[index] = pathScore
                                 }
                             }
                         }
-                    }.awaitAll()
-                }
-            } else {
-                for (index in searchPaths.indices) {
-                    if (searchFileNameOnly) {
-                        scores[index] = searchFunc(caseSensitive, searchNames[index], queryNorm).score
+                    }
+                }.awaitAll()
+            }
+        } else {
+            for (index in searchPaths.indices) {
+                if (useNameOnly) {
+                    scores[index] = searchFunc(caseSensitive, searchNames[index], queryNorm).score
+                } else {
+                    val pathScore = searchFunc(caseSensitive, searchPaths[index], queryNorm).score
+                    if (useNameMultiplier) {
+                        val nameScore = searchFunc(caseSensitive, searchNames[index], queryNorm).score
+                        scores[index] = (pathScore + nameMultiplierDelta * nameScore).toInt()
                     } else {
-                        scores[index] = searchFunc(caseSensitive, searchPaths[index], queryNorm).score
-                        scores[index] = (scores[index] + (fileNameMultiplier - 1) * searchFunc(caseSensitive, searchNames[index], queryNorm).score).toInt()
+                        scores[index] = pathScore
                     }
                 }
             }
