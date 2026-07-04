@@ -1,6 +1,7 @@
 package com.fuzzyfilesearch.actions
 
 import com.fuzzyfilesearch.searchbox.getAllFilesInRoot
+import com.fuzzyfilesearch.searchbox.getAllVirtualFilesInRoot
 import com.fuzzyfilesearch.settings.GlobalSettings
 import com.fuzzyfilesearch.settings.ShowSearchDirectoryPolicy
 import com.fuzzyfilesearch.showErrorNotification
@@ -191,7 +192,8 @@ object utils {
         location: String,
         settings: GlobalSettings.SettingsState,
         extensions: List<String>,
-        onlyVcsTrackedFiles: Boolean): MutableList<VirtualFile> {
+        onlyVcsTrackedFiles: Boolean,
+        extraFilter: ((VirtualFile) -> Boolean)? = null): MutableList<VirtualFile> {
         val searchPath: String
         val files = mutableListOf<VirtualFile>()
         if (location.isEmpty() || (location[0] == '.' && location.length == 1)) {
@@ -205,8 +207,12 @@ object utils {
             }
             val vfPath = getVirtualFileFromPath(searchPath) ?: return mutableListOf()
             val changeListManager = if (onlyVcsTrackedFiles) ChangeListManager.getInstance(project) else null
-            val allFiles = getAllFilesInRoot(vfPath, settings.common.excludedDirs, extensions, changeListManager)
-            files.addAll(allFiles.map { file -> file.vf })
+            // Walk the VFS once, returning VirtualFile directly so we skip the
+            // FileInstanceItem allocation that the previous chain discarded at
+            // the .map step.
+            val extSet: Set<String>? = if (extensions.isEmpty()) null else extensions.toHashSet()
+            files.addAll(getAllVirtualFilesInRoot(
+                vfPath, settings.common.excludedDirs, extSet, changeListManager, extraFilter))
         }
         return files
     }

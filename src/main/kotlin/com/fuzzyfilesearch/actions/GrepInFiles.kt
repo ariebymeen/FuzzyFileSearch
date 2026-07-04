@@ -98,8 +98,8 @@ class GrepInFiles(
             settings.path,
             globalSettings,
             settings.extensionList,
-            settings.onlyVcsTracked)
-        mFileNames = mFileNames.filter { file -> isTextOrCodeFile(file) }.toMutableList()
+            settings.onlyVcsTracked,
+            ::isTextOrCodeFile)
         synchronized(mMatchesLock) {
             mMatches.clear()
             mMatches.addAll(mFileNames)
@@ -267,9 +267,16 @@ class GrepInFiles(
     }
 
     fun isTextOrCodeFile(file: VirtualFile): Boolean {
-        if (!file.isValid || file.isDirectory) return false
-
-        val fileType = FileTypeManager.getInstance().getFileTypeByFile(file)
+        val fileTypeManager = FileTypeManager.getInstance()
+        val ext = file.extension
+        // Fast path: hashmap lookup by extension. For extensionless files
+        // (Dockerfile, Makefile, .env, LICENSE, …) fall back to the slower
+        // content-aware detector so we don't drop them.
+        val fileType = if (!ext.isNullOrEmpty()) {
+            fileTypeManager.getFileTypeByExtension(ext)
+        } else {
+            fileTypeManager.getFileTypeByFile(file)
+        }
         return fileType is PlainTextFileType || fileType.isBinary.not()
     }
 

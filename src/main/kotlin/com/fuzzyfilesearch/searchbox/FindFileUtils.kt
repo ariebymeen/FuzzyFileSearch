@@ -8,6 +8,8 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectRootManager
 import com.intellij.openapi.vcs.changes.ChangeListManager
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.VirtualFileVisitor
+import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.isFile
 import java.security.MessageDigest
 import javax.swing.SwingConstants
@@ -162,18 +164,55 @@ fun getAllFilesInRoot(root: VirtualFile,
                       extensions: List<String>,
                       vcsManager: ChangeListManager? = null) : ArrayList<FileInstanceItem> {
     val files: ArrayList<FileInstanceItem> = ArrayList()
-    if (!root.isDirectory) files.add(FileInstanceItem(root))
+    val extSet: Set<String>? = if (extensions.isEmpty()) null else extensions.toHashSet()
+    collectFilesRecursively(root, excludedDirectoryList, extSet, vcsManager) { vf -> files.add(FileInstanceItem(vf)) }
+    return files
+}
 
-    for (child in root.children!!) {
-        if (vcsManager != null && vcsManager.isIgnoredFile(child)) continue
+// Walks the VFS once and invokes `accept` with every matching VirtualFile.
+// Uses VfsUtilCore.visitChildrenRecursively (the platform's iterative visitor)
+// so we don't blow the stack on deeply nested trees. The visitor's
+// SKIP_CHILDREN return value preserves the previous recursive semantics:
+// we don't recurse into ignored/excluded directories.
+internal fun collectFilesRecursively(
+    root: VirtualFile,
+    excludedDirectoryList: Set<String>?,
+    extensions: Set<String>?,
+    vcsManager: ChangeListManager?,
+    accept: (VirtualFile) -> Unit) {
+    if (!root.isDirectory) {
+        if (matches(root, extensions)) accept(root)
+        return
+    }
+    VfsUtilCore.visitChildrenRecursively(root, object : VirtualFileVisitor<Void>() {
+        override fun visitFileEx(file: VirtualFile): VirtualFileVisitor.Result {
+            if (vcsManager != null && vcsManager.isIgnoredFile(file)) {
+                return VirtualFileVisitor.SKIP_CHILDREN
+            }
+            if (file.isDirectory) {
+                if (excludedDirectoryList != null && excludedDirectoryList.contains(file.name)) {
+                    return VirtualFileVisitor.SKIP_CHILDREN
+                }
+                return VirtualFileVisitor.CONTINUE
+            }
+            if (matches(file, extensions)) accept(file)
+            return VirtualFileVisitor.CONTINUE
+        }
+    })
+}
 
-        if (child.isFile && (extensions.isEmpty() || extensions.contains(child.extension))) {
-            files.add(FileInstanceItem(child))
-        }
-        if (child.isDirectory) {
-            if (excludedDirectoryList != null && excludedDirectoryList.contains(child.name)) continue
-            files.addAll(getAllFilesInRoot(child, excludedDirectoryList, extensions, vcsManager))
-        }
+private fun matches(file: VirtualFile, extensions: Set<String>?): Boolean =
+    extensions == null || extensions.contains(file.extension)
+
+fun getAllVirtualFilesInRoot(
+    root: VirtualFile,
+    excludedDirectoryList: Set<String>? = null,
+    extensions: Set<String>? = null,
+    vcsManager: ChangeListManager? = null,
+    extraFilter: ((VirtualFile) -> Boolean)? = null): ArrayList<VirtualFile> {
+    val files: ArrayList<VirtualFile> = ArrayList()
+    collectFilesRecursively(root, excludedDirectoryList, extensions, vcsManager) { vf ->
+        if (extraFilter == null || extraFilter(vf)) files.add(vf)
     }
     return files
 }
