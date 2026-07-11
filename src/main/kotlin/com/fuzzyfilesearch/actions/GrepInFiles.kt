@@ -107,6 +107,15 @@ class GrepInFiles(
         mSearchJob?.cancel()
         mSearchJob = null
         mFileNamesWalkJob?.cancel()
+        mFileNamesWalkJob = null
+        // Reset the per-query search state so the new popup's initial
+        // refresh doesn't short-circuit against the query/result left over
+        // from the previous invocation (the same GrepInFiles instance is
+        // reused across popup opens) and so the walk-completion refresh
+        // (registered below) doesn't return a stale empty mLastResult when
+        // the popup was opened with an initial query.
+        mSearchQuery = ""
+        mLastResult = emptyList()
 
         // Sync cache size to current setting (user may have changed it between
         // popup opens).
@@ -220,9 +229,28 @@ class GrepInFiles(
         // would freeze the popup's list (showing nothing for up to 5s) even
         // though the popup itself is already visible. The walk's
         // invokeOnCompletion handler refreshes the popup when it finishes.
+        //
+        // If the walk hasn't completed by the time we get here (either
+        // because mFileNamesWalkJob is still null — the popup's first
+        // updateListedItems fired before actionPerformed registered the
+        // walk — or because the 5s soft cap elapsed while the walk is
+        // still running), return the last result WITHOUT advancing
+        // mSearchQuery or launching a search over the (still empty or
+        // partial) mFileNames. Otherwise the empty-file search would
+        // poison mSearchQuery, and the walk-completion refresh would
+        // short-circuit on `trimmedQuery == mSearchQuery` and keep
+        // returning the stale empty mLastResult — visibly, the popup
+        // never reflects the initial query's matches until the user
+        // starts typing. Returning here lets the walk-completion handler
+        // (registered in actionPerformed) refresh the popup with a real
+        // search once the file list is populated.
         val walkJob = mFileNamesWalkJob
-        if (walkJob != null) {
-            runBlocking { withTimeoutOrNull(5000) { walkJob.await() } }
+        if (walkJob == null) {
+            return mLastResult
+        }
+        val walkDone = runBlocking { withTimeoutOrNull(5000) { walkJob.await() } } != null
+        if (!walkDone) {
+            return mLastResult
         }
 
         // Short-circuit: if the popup re-invokes us with the same query (e.g. when our
