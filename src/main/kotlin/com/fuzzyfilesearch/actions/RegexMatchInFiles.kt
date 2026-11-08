@@ -88,6 +88,7 @@ class RegexMatchInFiles(
         mSearchItems.clear()
         mProject = project
         mContentCache.setMaxBytes(globalSettings.string.contentCacheMaxMB.toLong() * 1024L * 1024L)
+        mContentCache.clear()
 
         // Cancel any in-flight scan from a previous invocation.
         mScanJob?.cancel()
@@ -224,16 +225,11 @@ class RegexMatchInFiles(
             val sizeCap = globalSettings.string.maxFileSizeMB.toLong() * 1024L * 1024L
             if (sizeCap > 0L && length > sizeCap) return true
 
-            val cached = mContentCache.get(vf)
-            val fromCache = cached != null
-            val text: String = if (fromCache) {
-                cached!!
-            } else {
-                val read = readFileContents(vf)
-                if (read.isEmpty()) return true
-                mContentCache.put(vf, read)
-                read
-            }
+            // Prefer the in-memory document (unsaved edits) and fall back to
+            // the VFS copy; see loadFileText.
+            val fileText = loadFileText(
+                mContentCache, vf, globalSettings.common.enableDebugOptions) ?: return true
+            val text = fileText.text
 
             val document: Document? = if (globalSettings.useFullEditorHighlighting) {
                 try {
@@ -251,12 +247,10 @@ class RegexMatchInFiles(
                 if (result.size >= cap) return false
                 val matchStart = m.range.first
                 val preceding = getPrecedingContext(text, matchStart)
-                val lineNr = if (fromCache) {
-                    mContentCache.lineNumberAt(vf, matchStart)
-                } else {
-                    utils.getLineNumberFromVirtualFile(
+                val lineNr = mContentCache.lineNumberAt(
+                    vf, matchStart, fileText.documentStamp, fileText.vfsStamp)
+                    ?: utils.getLineNumberFromVirtualFile(
                         vf, matchStart, globalSettings.common.enableDebugOptions) ?: 1
-                }
                 // Collapse whitespace runs (newlines + multi-spaces) so the
                 // popup shows a single line per match.
                 var collapsed = m.value.replace('\n', ' ')
@@ -363,26 +357,6 @@ class RegexMatchInFiles(
     private fun getCurrentFile(e: AnActionEvent): VirtualFile? {
         val editor = e.getData(CommonDataKeys.EDITOR)
         return editor?.virtualFile
-    }
-
-    private fun readFileContents(virtualFile: VirtualFile): String {
-        // See GrepInFiles.readFileContents: catch Throwable around the
-        // stream open + read so a stale VFS entry doesn't abort the search.
-        return if (virtualFile.exists() && virtualFile.isValid) {
-            try {
-                virtualFile.inputStream.bufferedReader().use { it.readText() }
-            } catch (e: Throwable) {
-                if (globalSettings.common.enableDebugOptions) {
-                    println("Error reading file ${virtualFile.name}: ${e.message}")
-                }
-                ""
-            }
-        } else {
-            if (globalSettings.common.enableDebugOptions) {
-                println("Error reading file ${virtualFile.name}: not valid or does not exist")
-            }
-            ""
-        }
     }
 
     private fun getPrecedingContext(text: String, matchStart: Int, maxChars: Int = 256): String {
