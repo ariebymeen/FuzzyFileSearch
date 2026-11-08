@@ -118,8 +118,12 @@ class GrepInFiles(
         mLastResult = emptyList()
 
         // Sync cache size to current setting (user may have changed it between
-        // popup opens).
+        // popup opens) and drop stale entries. Version stamps already protect
+        // against returning old content after an edit/save, but clearing here
+        // also covers external changes whose VFS stamp was not refreshed yet
+        // and keeps the cache from growing across many popup invocations.
         mContentCache.setMaxBytes(globalSettings.string.contentCacheMaxMB.toLong() * 1024L * 1024L)
+        mContentCache.clear()
 
         val previousSearchQuery = mHistory?.query ?: ""
         mPopup = SearchPopupInstance(
@@ -417,24 +421,27 @@ class GrepInFiles(
             val sizeCap = globalSettings.string.maxFileSizeMB.toLong() * 1024L * 1024L
             if (sizeCap > 0L && length > sizeCap) return true
 
-            // Read text via the content cache when possible. The cache stores
-            // a precomputed newline-offset array so the per-match line
-            // computation is a binary search instead of a runReadAction call.
-            val cachedText = mContentCache.get(vf)
-            val fromCache = cachedText != null
-            val contents: String = if (fromCache) {
-                cachedText!!
-            } else {
-                val read = readFileContents(vf)
-                if (read.isEmpty()) {
-                    // File is unreadable or invalid; if we still have it in
-                    // mMatches, drop it so the next keystroke doesn't try again.
-                    synchronized(mMatchesLock) { mMatches.remove(vf) }
-                    return true
-                }
-                mContentCache.put(vf, read)
-                read
+            // Read text via the content cache when possible. loadFileText
+            // prefers the in-memory Document (so unsaved edits are searched)
+            // and falls back to the VFS copy. The cache stores a precomputed
+            // newline-offset array so the per-match line computation is a
+            // binary search instead of a runReadAction call.
+            val fileText = loadFileText(
+                mContentCache, vf, globalSettings.common.enableDebugOptions)
+            if (fileText == null) {
+                // File is unreadable or invalid; if we still have it in
+                // mMatches, drop it so the next keystroke doesn't try again.
+                synchronized(mMatchesLock) { mMatches.remove(vf) }
+                return true
             }
+            val contents = fileText.text
+            if (contents.isEmpty()) {
+                // Nothing can match an empty file. Drop it from the candidate
+                // list; it is re-added on the next popup open.
+                synchronized(mMatchesLock) { mMatches.remove(vf) }
+                return true
+            }
+            val fromCache = fileText.fromCache
 
             val document: Document? = if (globalSettings.useFullEditorHighlighting) {
                 try {
@@ -455,9 +462,9 @@ class GrepInFiles(
             //  - record the match, then advance past `skipLines` newlines,
             //  - resume searching from the start of the next line.
             // We do this on the cached String (no per-match I/O), and the
-            // per-match line number is either a binary search on the cache
-            // (cheap) or, for cache misses, a single runReadAction (same as
-            // before but only one call per file because the file was just read).
+            // per-match line number is a binary search over the newline
+            // offsets stored by the cache. Only a disabled/evicted entry falls
+            // back to a read-action lookup.
             var searchFrom = 0
             var firstMatch = -1
             while (searchFrom <= contents.length) {
@@ -465,7 +472,7 @@ class GrepInFiles(
                 if (pos < 0) break
                 if (firstMatch < 0) firstMatch = pos
                 if (matches.size >= cap) return false
-                val lineNr = lineNumberForMatch(vf, pos, fromCache)
+                val lineNr = lineNumberForMatch(vf, pos, fileText)
                 val (lineText, displayStart, displayEnd) = extractLine(contents, pos)
                 matches.add(StringMatchInstanceItem(
                     vf, displayStart, displayEnd, lineNr, lineText, document, ""))
@@ -486,7 +493,7 @@ class GrepInFiles(
             }
 
             // No-match reduction for the next keystroke (only when the file
-            // was read from disk on this call — if it was a cache hit, the
+            // was freshly read on this call — if it was a cache hit, the
             // previous caller already had the chance to reduce).
             if (firstMatch < 0 && !fromCache) {
                 synchronized(mMatchesLock) { mMatches.remove(vf) }
@@ -504,22 +511,20 @@ class GrepInFiles(
     }
 
     /**
-     * Line-number lookup for a match. If the file was loaded from the
-     * content cache, the line number is a binary search over the cached
-     * newline-offset array. Otherwise we fall back to the existing
-     * runReadAction-based path (only happens for the very first read of a
-     * file in this popup's lifetime).
+     * Line-number lookup for a match. Normally this is a binary search over
+     * the newline offsets stored by the content cache. The cache entry is
+     * inserted by loadFileText even on the first read, so this path covers
+     * cold reads too. Fall back to the original read-action lookup only when
+     * the cache is disabled or the entry was evicted / too large to cache.
      */
     private fun lineNumberForMatch(
         vf: VirtualFile,
         offset: Int,
-        fromCache: Boolean): Int {
-        if (fromCache) {
-            return mContentCache.lineNumberAt(vf, offset)
-        }
-        // Cold path: no cache entry. Use the original read-action lookup.
-        return utils.getLineNumberFromVirtualFile(
-            vf, offset, globalSettings.common.enableDebugOptions) ?: 1
+        fileText: FileText): Int {
+        return mContentCache.lineNumberAt(
+            vf, offset, fileText.documentStamp, fileText.vfsStamp)
+            ?: utils.getLineNumberFromVirtualFile(
+                vf, offset, globalSettings.common.enableDebugOptions) ?: 1
     }
 
     /**
@@ -565,30 +570,6 @@ class GrepInFiles(
     fun getSelectedText(e: AnActionEvent): String? {
         val editor = e.getData(CommonDataKeys.EDITOR) ?: return null
         return editor.selectionModel.selectedText
-    }
-
-    private fun readFileContents(virtualFile: VirtualFile): String {
-        // The exists()/isValid() check is necessary but not sufficient during
-        // project open / indexing: the VFS can mark a file valid while the
-        // underlying file has been deleted or is locked. The actual stream
-        // open + read can still throw IOException, IllegalArgumentException,
-        // or AssertionError. Catch Throwable so the caller sees an empty
-        // string instead of aborting the whole search.
-        return if (virtualFile.exists() && virtualFile.isValid) {
-            try {
-                virtualFile.inputStream.bufferedReader().use { it.readText() }
-            } catch (e: Throwable) {
-                if (globalSettings.common.enableDebugOptions) {
-                    println("Error reading file ${virtualFile.name}: ${e.message}")
-                }
-                ""
-            }
-        } else {
-            if (globalSettings.common.enableDebugOptions) {
-                println("Error reading file ${virtualFile.name}: not valid or does not exist")
-            }
-            ""
-        }
     }
 
     companion object {

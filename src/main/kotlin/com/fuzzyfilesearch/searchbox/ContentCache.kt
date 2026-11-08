@@ -1,15 +1,24 @@
 package com.fuzzyfilesearch.searchbox
 
 import com.intellij.openapi.vfs.VirtualFile
-import java.util.Collections
+import java.util.LinkedHashMap
 
 /**
  * Bounded LRU cache of file contents, shared by GrepInFiles and RegexMatchInFiles
  * to avoid re-reading files from disk on every keystroke.
  *
- * Entries are keyed by (vf.url, vf.modificationStamp). When the file's stamp
- * changes (e.g. after an edit) the entry is automatically invalidated on the
- * next lookup.
+ * Entries are keyed by:
+ *  - the file URL,
+ *  - the [com.intellij.openapi.editor.Document.getModificationStamp] of the
+ *    file's in-memory document (when the file is open in an editor), and
+ *  - the [VirtualFile.getModificationStamp] of the file itself.
+ *
+ * The document stamp is essential. A VirtualFile's stamp only changes when the
+ * file is written to disk, while an editor Document's stamp changes on every
+ * keystroke. If the cache were keyed on the VirtualFile stamp alone, a file
+ * with unsaved edits would keep returning stale content until the user saved
+ * it (or until the LRU evicted the entry), which is exactly the "grep results
+ * don't update after I edit a file" symptom.
  *
  * Each entry stores the file text plus a precomputed IntArray of newline
  * offsets so that [lineNumberAt] is a binary search — this is what makes
@@ -19,11 +28,19 @@ import java.util.Collections
  * projects that mix many small files with a few very large ones. A
  * maxBytes <= 0 disables the cache and turns all get() calls into misses.
  *
- * Thread-safe: backing map is a synchronized LinkedHashMap with accessOrder=true.
+ * Thread-safe: all state is guarded by this object's monitor. A plain
+ * LinkedHashMap is used (instead of Collections.synchronizedMap) because the
+ * trim and invalidate paths need to iterate the map atomically with the
+ * counter updates.
  */
 class ContentCache(initialMaxBytes: Long) {
 
-    private data class Key(val url: String, val stamp: Long)
+    private data class Key(
+        val url: String,
+        // null when the content was read from the VFS rather than from an
+        // in-memory Document.
+        val documentStamp: Long?,
+        val vfsStamp: Long)
 
     private class Entry(
         val text: String,
@@ -32,8 +49,9 @@ class ContentCache(initialMaxBytes: Long) {
         val newlines: IntArray)
 
     private var maxBytes: Long = initialMaxBytes
-    private val entries: MutableMap<Key, Entry> =
-        Collections.synchronizedMap(object : LinkedHashMap<Key, Entry>(64, 0.75f, true) {})
+    // Access-ordered: least-recently-used entry first. All access must happen
+    // while holding this object's monitor (the methods below are synchronized).
+    private val entries = LinkedHashMap<Key, Entry>(64, 0.75f, true)
     private var currentBytes: Long = 0L
 
     /** Resize the cache. Drops the entire cache if the new size is smaller than
@@ -47,20 +65,37 @@ class ContentCache(initialMaxBytes: Long) {
         }
     }
 
-    /** Returns the cached text for [vf], or null on miss / disabled / invalid. */
-    fun get(vf: VirtualFile): String? {
+    /**
+     * Returns the cached text for [vf] at the given versions, or null on miss /
+     * disabled / invalid.
+     *
+     * @param documentStamp [com.intellij.openapi.editor.Document.getModificationStamp]
+     *        when the text was read from an in-memory document, null when it
+     *        was read from the VFS.
+     * @param vfsStamp the file's VFS stamp at the time the text was read. Pass
+     *        the value captured before reading so a concurrent save cannot
+     *        associate old text with a new stamp. Defaults to the current stamp.
+     */
+    @Synchronized
+    fun get(vf: VirtualFile, documentStamp: Long?, vfsStamp: Long? = null): String? {
         if (maxBytes <= 0L) return null
-        return entries[keyOf(vf)]?.text
+        return entries[keyOf(vf, documentStamp, vfsStamp ?: vf.modificationStamp)]?.text
     }
 
     /**
-     * Returns the 1-based line number containing the character at byte offset
-     * [offset] in [vf], using the cached newline offsets. Returns 1 if the
-     * file is not cached.
+     * Returns the 1-based line number containing the character at offset
+     * [offset] in [vf], using the cached newline offsets, or null if the
+     * matching version is not cached (cache disabled, entry evicted, or file
+     * too large to cache).
      */
-    fun lineNumberAt(vf: VirtualFile, offset: Int): Int {
-        if (maxBytes <= 0L) return 1
-        val e = entries[keyOf(vf)] ?: return 1
+    @Synchronized
+    fun lineNumberAt(
+        vf: VirtualFile,
+        offset: Int,
+        documentStamp: Long?,
+        vfsStamp: Long? = null): Int? {
+        if (maxBytes <= 0L) return null
+        val e = entries[keyOf(vf, documentStamp, vfsStamp ?: vf.modificationStamp)] ?: return null
         val newlines = e.newlines
         // Binary search for the index of the first newline strictly > offset.
         // That index equals the number of newlines strictly before `offset`.
@@ -73,31 +108,52 @@ class ContentCache(initialMaxBytes: Long) {
         return lo + 1
     }
 
-    /** Insert or replace an entry. Recomputes the byte budget under the map's lock. */
-    fun put(vf: VirtualFile, text: String) {
+    /** Insert or replace an entry. Recomputes the byte budget under the lock. */
+    @Synchronized
+    fun put(
+        vf: VirtualFile,
+        text: String,
+        documentStamp: Long?,
+        vfsStamp: Long? = null) {
         if (maxBytes <= 0L) return
-        val key = keyOf(vf)
+        val key = keyOf(vf, documentStamp, vfsStamp ?: vf.modificationStamp)
         val newlines = buildNewlineOffsets(text)
         val entryBytes = text.length.toLong() * 2L + newlines.size.toLong() * 4L
         // Don't cache files bigger than the entire budget on their own.
         if (entryBytes > maxBytes) return
 
-        synchronized(this) {
-            val existing = entries[key]
-            if (existing != null) {
-                currentBytes -= bytesOf(existing)
-            }
-            val newEntry = Entry(text, newlines)
-            entries[key] = newEntry
-            currentBytes += bytesOf(newEntry)
+        val existing = entries[key]
+        if (existing != null) {
+            currentBytes -= bytesOf(existing)
+        }
+        val newEntry = Entry(text, newlines)
+        entries[key] = newEntry
+        currentBytes += bytesOf(newEntry)
 
-            if (currentBytes > maxBytes) trimToSize()
+        if (currentBytes > maxBytes) trimToSize()
+    }
+
+    /**
+     * Drops every cached version of [vf], e.g. after a VFS/Document change
+     * event for that file.
+     */
+    @Synchronized
+    fun invalidate(vf: VirtualFile) {
+        val url = vf.url
+        val it = entries.entries.iterator()
+        while (it.hasNext()) {
+            val e = it.next()
+            if (e.key.url == url) {
+                currentBytes -= bytesOf(e.value)
+                it.remove()
+            }
         }
     }
 
     private fun bytesOf(e: Entry): Long =
         e.text.length.toLong() * 2L + e.newlines.size.toLong() * 4L
 
+    // Must be called while holding this object's monitor.
     private fun trimToSize() {
         // Iteration order with accessOrder=true is least-recently-accessed first.
         val it = entries.entries.iterator()
@@ -109,15 +165,18 @@ class ContentCache(initialMaxBytes: Long) {
     }
 
     /** Drop all entries. */
+    @Synchronized
     fun clear() {
         entries.clear()
         currentBytes = 0L
     }
 
     /** Number of cached entries. Visible for tests. */
+    @Synchronized
     fun size(): Int = entries.size
 
-    private fun keyOf(vf: VirtualFile) = Key(vf.url, vf.modificationStamp)
+    private fun keyOf(vf: VirtualFile, documentStamp: Long?, vfsStamp: Long) =
+        Key(vf.url, documentStamp, vfsStamp)
 
     private fun buildNewlineOffsets(text: String): IntArray {
         // Count newlines first to size the IntArray exactly.
