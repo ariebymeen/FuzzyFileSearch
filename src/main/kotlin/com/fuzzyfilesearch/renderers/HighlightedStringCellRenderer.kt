@@ -1,5 +1,6 @@
 package com.fuzzyfilesearch.renderers
 
+import com.fuzzyfilesearch.components.RoundedCellPanel
 import com.fuzzyfilesearch.components.ShrunkVerticallyCenteredTextPane
 import com.fuzzyfilesearch.components.VerticallyCenteredTextPane
 import com.fuzzyfilesearch.searchbox.CustomRenderer
@@ -15,7 +16,6 @@ import java.awt.Component
 import java.awt.Font
 import java.awt.FontMetrics
 import javax.swing.JList
-import javax.swing.JPanel
 import javax.swing.text.Style
 import javax.swing.text.StyleConstants
 
@@ -42,10 +42,14 @@ class HighlightedStringCellRenderer(
             value.textPane!!.styledDocument.insertString(0, formattedNumber, value.textPane!!.getStyle("Tiny"))
         }
 
-        value.mainPanel!!.background = if (isSelected) list.selectionBackground else list.background
-        value.mainPanel!!.foreground = if (isSelected) list.selectionForeground else list.foreground
+        val panel = value.mainPanel as RoundedCellPanel
+        panel.background = list.background
+        panel.foreground = if (isSelected) list.selectionForeground else list.foreground
+        panel.selectionColor = list.selectionBackground
+        panel.selected = isSelected
+        panel.hovered = index == hoveredIndex
 
-        return value.mainPanel!!
+        return panel
     }
 
     // Trigger the lazy-init + setText pipeline for one item off the paint path.
@@ -58,7 +62,7 @@ class HighlightedStringCellRenderer(
     }
 
     private fun buildCell(value: StringMatchInstanceItem, index: Int) {
-        value.mainPanel = JPanel(BorderLayout())
+        value.mainPanel = RoundedCellPanel()
         if (mSettings.string.showFileIcon) {
             value.iconLabel = JBLabel()
             value.iconLabel!!.border = JBUI.Borders.emptyLeft(5)

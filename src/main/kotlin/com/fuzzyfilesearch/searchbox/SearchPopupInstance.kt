@@ -40,6 +40,9 @@ import kotlin.math.min
 
 abstract class CustomRenderer<T> : ListCellRenderer<T> {
     var maxWidth = 0
+    // Index of the row under the mouse, or -1. The popup updates this from a
+    // mouse-motion listener; renderers use it to paint a subtle hover state.
+    var hoveredIndex = -1
     // Optional precompute hook: the popup calls this off the paint path (still
     // on the EDT) for items that are about to become visible, so the cell
     // renderer's first-paint slow work is hoisted out of the paint pass.
@@ -259,6 +262,7 @@ class SearchPopupInstance<ListItemType>(
                 // dance), and lets the JXList produce a single repaint.
                 mListModel.clear()
                 if (items.isNotEmpty()) mListModel.addAll(items)
+                mCellRenderer.hoveredIndex = -1
 
                 mResultsList.selectedIndex = 0
                 mResultsList.ensureIndexIsVisible(0)
@@ -459,9 +463,28 @@ class SearchPopupInstance<ListItemType>(
 
         mResultsList.cellRenderer = mCellRenderer
         mResultsList.selectionBackground = getForegroundColor(mSettings)
+        // The custom renderer paints its own rounded hover; disable SwingX's
+        // full-width rollover so the two don't fight.
+        mResultsList.setRolloverEnabled(false)
         mResultsList.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent?) {
                 mouseClickedEvent()
+            }
+
+            override fun mouseExited(e: MouseEvent?) {
+                if (mCellRenderer.hoveredIndex != -1) {
+                    mCellRenderer.hoveredIndex = -1
+                    mResultsList.repaint()
+                }
+            }
+        })
+        mResultsList.addMouseMotionListener(object : MouseAdapter() {
+            override fun mouseMoved(e: MouseEvent?) {
+                val index = hoveredIndexAt(e?.point)
+                if (index != mCellRenderer.hoveredIndex) {
+                    mCellRenderer.hoveredIndex = index
+                    mResultsList.repaint()
+                }
             }
         })
         val scrollPanel = JBScrollPane(mResultsList)
@@ -502,6 +525,14 @@ class SearchPopupInstance<ListItemType>(
             if (selectedFile != null) mEditorView.updateFile(selectedFile.vf, selectedFile.caretOffset)
             else mEditorView.updateFile(null, 0)
         }
+    }
+
+    private fun hoveredIndexAt(point: Point?): Int {
+        if (point == null) return -1
+        val index = mResultsList.locationToIndex(point)
+        if (index < 0) return -1
+        val bounds = mResultsList.getCellBounds(index, index) ?: return -1
+        return if (bounds.contains(point)) index else -1
     }
 
     private fun addTitleBar(font: Font, headerBar: JPanel) {

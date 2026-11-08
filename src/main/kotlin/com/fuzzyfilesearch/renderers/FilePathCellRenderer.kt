@@ -1,5 +1,6 @@
 package com.fuzzyfilesearch.renderers
 
+import com.fuzzyfilesearch.components.RoundedCellPanel
 import com.fuzzyfilesearch.components.VerticallyCenteredTextPane
 import com.fuzzyfilesearch.searchbox.CustomRenderer
 import com.fuzzyfilesearch.searchbox.getFont
@@ -9,10 +10,10 @@ import com.intellij.openapi.project.Project
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.util.preferredWidth
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
 import java.awt.Component
 import javax.swing.JList
-import javax.swing.JPanel
 import javax.swing.text.Style
 import javax.swing.text.StyleConstants
 
@@ -39,7 +40,7 @@ class FilePathCellRenderer(
         cellHasFocus: Boolean): Component {
 
         if (value.textPane == null) {
-            value.mainPanel = JPanel(BorderLayout())
+            value.mainPanel = RoundedCellPanel()
             if (mSettings.file.showFileIcon) {
                 value.iconLabel = JBLabel()
                 value.iconLabel!!.border = JBUI.Borders.emptyLeft(5)
@@ -52,6 +53,7 @@ class FilePathCellRenderer(
             value.textPane?.font = font
             italicStyle = value.textPane!!.addStyle("Italic", null).apply {
                 StyleConstants.setItalic(this, true)
+                StyleConstants.setForeground(this, UIUtil.getContextHelpForeground())
             }
             boldStyle = value.textPane!!.addStyle("Bold", null).apply {
                 StyleConstants.setBold(this, true)
@@ -68,10 +70,14 @@ class FilePathCellRenderer(
             value.textPane!!.styledDocument.insertString(0, formattedNumber, value.textPane!!.getStyle("Tiny"))
         }
 
-        value.mainPanel!!.background = if (isSelected) list.selectionBackground else list.background
-        value.mainPanel!!.foreground = if (isSelected) list.selectionForeground else list.foreground
+        val panel = value.mainPanel as RoundedCellPanel
+        panel.background = list.background
+        panel.foreground = if (isSelected) list.selectionForeground else list.foreground
+        panel.selectionColor = list.selectionBackground
+        panel.selected = isSelected
+        panel.hovered = index == hoveredIndex
 
-        return value.mainPanel!!
+        return panel
     }
 
     fun setText(item: FileInstanceItem, index: Int) {
