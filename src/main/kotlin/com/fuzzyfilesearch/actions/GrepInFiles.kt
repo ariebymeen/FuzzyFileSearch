@@ -117,13 +117,11 @@ class GrepInFiles(
         mSearchQuery = ""
         mLastResult = emptyList()
 
-        // Sync cache size to current setting (user may have changed it between
-        // popup opens) and drop stale entries. Version stamps already protect
-        // against returning old content after an edit/save, but clearing here
-        // also covers external changes whose VFS stamp was not refreshed yet
-        // and keeps the cache from growing across many popup invocations.
+        // Sync the cache size to the current setting. Keep the cache warm
+        // across popup invocations: entries are versioned by document + VFS
+        // stamps, so an edit or save cannot return stale text, and re-reading
+        // every file on each popup open is what made opening slow.
         mContentCache.setMaxBytes(globalSettings.string.contentCacheMaxMB.toLong() * 1024L * 1024L)
-        mContentCache.clear()
 
         val previousSearchQuery = mHistory?.query ?: ""
         mPopup = SearchPopupInstance(

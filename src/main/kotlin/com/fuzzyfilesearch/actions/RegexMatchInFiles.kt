@@ -87,8 +87,9 @@ class RegexMatchInFiles(
         mFileNames.clear()
         mSearchItems.clear()
         mProject = project
+        // Keep the versioned content cache warm across popup invocations; the
+        // stamps invalidate edited/saved files without a full cache reset.
         mContentCache.setMaxBytes(globalSettings.string.contentCacheMaxMB.toLong() * 1024L * 1024L)
-        mContentCache.clear()
 
         // Cancel any in-flight scan from a previous invocation.
         mScanJob?.cancel()

@@ -1,7 +1,6 @@
 package com.fuzzyfilesearch.searchbox
 
 import com.intellij.openapi.application.ReadAction
-import com.intellij.openapi.editor.Document
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.vfs.VirtualFile
@@ -52,10 +51,11 @@ fun loadFileText(
         return null
     }
 
+    // getCachedDocument is a plain cache lookup (it does not load a document),
+    // so it does not need a read action. Avoiding a ReadAction per file matters
+    // for large searches: this path runs for every file on every keystroke.
     val document = try {
-        ReadAction.compute<Document?, Throwable> {
-            FileDocumentManager.getInstance().getCachedDocument(virtualFile)
-        }
+        FileDocumentManager.getInstance().getCachedDocument(virtualFile)
     } catch (e: ProcessCanceledException) {
         throw e
     } catch (e: Throwable) {
