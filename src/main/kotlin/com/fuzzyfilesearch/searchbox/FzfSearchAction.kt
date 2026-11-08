@@ -2,7 +2,6 @@ package com.fuzzyfilesearch.searchbox
 
 import kotlinx.coroutines.*
 import ai.grazie.text.find
-import java.util.concurrent.Executors
 
 class FzfSearchAction(filePaths: List<String>,
                       fileNames: List<String>,
@@ -22,10 +21,6 @@ class FzfSearchAction(filePaths: List<String>,
     // result back to its source item in O(1) instead of doing an O(M) string
     // equality search per result.
     private var mResultIndices: IntArray = IntArray(0)
-
-    val cpuDispatcher = Executors.newFixedThreadPool(
-        Runtime.getRuntime().availableProcessors()
-    ).asCoroutineDispatcher()
 
     fun search(query: String) : Pair<List<String>, List<String>> {
         if (previousQuery != null
@@ -114,7 +109,7 @@ class FzfSearchAction(filePaths: List<String>,
         if (multithreaded) {
             runBlocking {
                 searchPaths.indices.chunked(30).map { chunk ->
-                    async(cpuDispatcher) {
+                    async(Dispatchers.Default) {
                         for (index in chunk) {
                             if (useNameOnly) {
                                 scores[index] = searchFunc(caseSensitive, searchNames[index], queryNorm).score

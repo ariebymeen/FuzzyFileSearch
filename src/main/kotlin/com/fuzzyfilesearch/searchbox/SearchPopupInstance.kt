@@ -472,19 +472,12 @@ class SearchPopupInstance<ListItemType>(
             }
 
             override fun mouseExited(e: MouseEvent?) {
-                if (mCellRenderer.hoveredIndex != -1) {
-                    mCellRenderer.hoveredIndex = -1
-                    mResultsList.repaint()
-                }
+                updateHoveredIndex(-1)
             }
         })
         mResultsList.addMouseMotionListener(object : MouseAdapter() {
             override fun mouseMoved(e: MouseEvent?) {
-                val index = hoveredIndexAt(e?.point)
-                if (index != mCellRenderer.hoveredIndex) {
-                    mCellRenderer.hoveredIndex = index
-                    mResultsList.repaint()
-                }
+                updateHoveredIndex(hoveredIndexAt(e?.point))
             }
         })
         val scrollPanel = JBScrollPane(mResultsList)
@@ -533,6 +526,20 @@ class SearchPopupInstance<ListItemType>(
         if (index < 0) return -1
         val bounds = mResultsList.getCellBounds(index, index) ?: return -1
         return if (bounds.contains(point)) index else -1
+    }
+
+    private fun updateHoveredIndex(index: Int) {
+        val oldIndex = mCellRenderer.hoveredIndex
+        if (index == oldIndex) return
+        mCellRenderer.hoveredIndex = index
+        repaintCell(oldIndex)
+        repaintCell(index)
+    }
+
+    private fun repaintCell(index: Int) {
+        if (index < 0) return
+        val bounds = mResultsList.getCellBounds(index, index) ?: return
+        mResultsList.repaint(bounds)
     }
 
     private fun addTitleBar(font: Font, headerBar: JPanel) {

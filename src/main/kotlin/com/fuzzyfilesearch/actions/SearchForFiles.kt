@@ -36,17 +36,38 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
             return
         }
 
-        mFiles = files.distinct()
+        // All callers already pass unique files (the VFS walk cannot produce
+        // duplicates), so avoid the extra full-list hash pass on popup open.
+        mFiles = files
         mProject = project
 
-        mFileNames = mFiles.map { file -> file.vf.name }
-        mFilePaths = mFiles.map { file ->
-            if (isFileInProject(project, file.vf)) {
-                file.vf.path.substring(project.basePath!!.length)
-            } else {
-                file.vf.path
-            }
+        // Build the name and display-path lists in one pass. The old code
+        // called isFileInProject() (a file-index lookup) once per file before
+        // the popup was shown, which made opening large searches slow. For
+        // display purposes a project-base-path prefix check is equivalent for
+        // files inside the project and avoids the per-file index access.
+        val basePath = project.basePath
+        val names = ArrayList<String>(mFiles.size)
+        val paths = ArrayList<String>(mFiles.size)
+        for (file in mFiles) {
+            val path = file.vf.path
+            names.add(file.vf.name)
+            val inProject = basePath != null && path.startsWith(basePath) &&
+                    (path.length == basePath.length || path[basePath.length] == '/')
+            paths.add(if (inProject) path.substring(basePath!!.length) else path)
         }
+        mFileNames = names
+        mFilePaths = paths
+
+        // Create the search index before showing the popup: the popup starts
+        // fetching results on a pooled thread immediately, and a restored
+        // non-empty query must not race the fzfSearchAction assignment.
+        fzfSearchAction = FzfSearchAction(mFilePaths!!,
+                                          mFileNames!!,
+                                          settings.common.searchCaseSensitivity,
+                                          settings.file.searchMultiThreaded,
+                                          settings.searchFileNameOnly,
+                                          settings.searchFileNameMultiplier)
 
         mPopup = SearchPopupInstance(
             FilePathCellRenderer(project, settings, searchDirectory), ::getSortedFileList, ::openFile,
@@ -56,12 +77,6 @@ class SearchForFiles(val settings: GlobalSettings.SettingsState) {
             utils.getVisualSearchDir(searchDirectory, settings, project.basePath.toString()),
             mPreviousSearchQuery)
         mPopup!!.showPopupInstance("", min(mFiles.size, settings.file.numberOfFilesInSearchView))
-        fzfSearchAction = FzfSearchAction(mFilePaths!!,
-                                          mFileNames!!,
-                                          settings.common.searchCaseSensitivity,
-                                          settings.file.searchMultiThreaded,
-                                          settings.searchFileNameOnly,
-                                          settings.searchFileNameMultiplier)
     }
 
     fun getSortedFileList(query: String): List<FileInstanceItem> {
