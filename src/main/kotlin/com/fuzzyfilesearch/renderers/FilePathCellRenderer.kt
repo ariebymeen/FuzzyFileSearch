@@ -43,7 +43,7 @@ class FilePathCellRenderer(
             value.mainPanel = RoundedCellPanel()
             if (mSettings.file.showFileIcon) {
                 value.iconLabel = JBLabel()
-                value.iconLabel!!.border = JBUI.Borders.emptyLeft(5)
+                value.iconLabel!!.border = JBUI.Borders.emptyLeft(8)
                 value.iconLabel!!.icon = value.icon
                 value.mainPanel?.add(value.iconLabel!!, BorderLayout.WEST)
             }
@@ -51,6 +51,9 @@ class FilePathCellRenderer(
             value.textPane!!.text = ""
             value.textPane!!.isOpaque = false
             value.textPane?.font = font
+            // The JTextPane default has a 3px left margin, which makes the
+            // file icon look detached from the filename. Keep a 1px gap.
+            value.textPane!!.margin = JBUI.insets(0, 1, 0, 3)
             italicStyle = value.textPane!!.addStyle("Italic", null).apply {
                 StyleConstants.setItalic(this, true)
                 StyleConstants.setForeground(this, UIUtil.getContextHelpForeground())

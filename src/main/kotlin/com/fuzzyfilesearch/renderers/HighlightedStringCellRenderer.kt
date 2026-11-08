@@ -11,6 +11,7 @@ import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.util.preferredWidth
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Font
@@ -65,7 +66,7 @@ class HighlightedStringCellRenderer(
         value.mainPanel = RoundedCellPanel()
         if (mSettings.string.showFileIcon) {
             value.iconLabel = JBLabel()
-            value.iconLabel!!.border = JBUI.Borders.emptyLeft(5)
+            value.iconLabel!!.border = JBUI.Borders.emptyLeft(8)
             value.iconLabel!!.icon = value.vf.fileType.icon
             value.mainPanel?.add(value.iconLabel!!, BorderLayout.WEST)
         }
@@ -73,10 +74,13 @@ class HighlightedStringCellRenderer(
         value.textPane!!.text = ""
         value.textPane!!.isOpaque = false
         value.textPane?.font = font
+        // Keep the match text visually attached to the file-type icon.
+        value.textPane!!.margin = JBUI.insets(0, 1, 0, 3)
         normalStyle = value.textPane!!.addStyle("Normal", null).apply {}
         tinyStyle = value.textPane!!.addStyle("Tiny", null).apply {
             StyleConstants.setItalic(this, false)
             StyleConstants.setFontSize(this, StyleConstants.getFontSize(normalStyle) - 1)
+            StyleConstants.setForeground(this, UIUtil.getContextHelpForeground())
         }
 
         if (mShowFileName) {
@@ -84,6 +88,7 @@ class HighlightedStringCellRenderer(
             value.fileNameTextPane!!.text = ""
             value.fileNameTextPane!!.font = font
             value.fileNameTextPane!!.isOpaque = false
+            value.fileNameTextPane!!.margin = JBUI.insets(0, 0, 0, JBUI.scale(8))
             value.fileNameTextPane!!.styledDocument.insertString(0, value.vf.name, tinyStyle)
             if (mSettings.showLineNumberWithFileName) {
                 value.fileNameTextPane!!.styledDocument.insertString(
